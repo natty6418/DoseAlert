@@ -12,8 +12,25 @@ import eyeHide from "../assets/icons/eye-hide.png";
 import eye from "../assets/icons/eye.png";
 import play from "../assets/icons/play.png";
 import capture from "../assets/icons/capture.png";
+import pill from "../assets/icons/pill.png";
+
+import { UserCircle } from "@nandorojo/heroicons/24/solid";
+import { Bars3, MagnifyingGlass } from '@nandorojo/heroicons/24/outline'
+// const MagnifyingGlass = ({ size, color }) => {
+//   return <MagnifyingGlassIcon size={size} color={color} />;
+// };
+// const Bars3 = () => {
+//   return <Bars3Icon color="black"/>;
+// }
+// const UserCircle = ({ size, color }) => {
+//   return <UserCircleIcon size={size} color={color} />;
+// }
 
 export default {
+  MagnifyingGlass,
+  Bars3,
+  UserCircle,
+  pill,
   play,
   bookmark,
   home,
