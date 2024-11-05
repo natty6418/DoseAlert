@@ -10,6 +10,7 @@ import { router } from 'expo-router';
 
 
 
+
 const Home = () => {
   return(
     <SafeAreaView className="bg-black-100 h-full py-4">
