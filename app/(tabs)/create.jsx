@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, StyleSheet, ScrollView } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
+import CustomButton from "../../components/CustomButton";
 
 const CreateScreen = () => {
   const [name, setName] = useState('');
@@ -12,6 +13,29 @@ const CreateScreen = () => {
   const [ampm, setAmPm] = useState('AM');
   const [directions, setDirections] = useState('');
   const [warning, setWarning] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+
+  const handleFocus = () => setIsTyping(true);
+  const handleBlur = () => setIsTyping(false);
+
+  // reset to default values
+  const resetForm = () => {
+    setName('');
+    setDosage('');
+    setPeriod('');
+    setFrequency('Daily');
+    setHour('10');
+    setMinute('00');
+    setAmPm('AM');
+    setDirections('');
+    setWarning('');
+  };
+
+  const handleAddMedication = () => {
+    // do something
+    
+    resetForm();
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -21,6 +45,8 @@ const CreateScreen = () => {
       <TextInput 
         value={name} 
         onChangeText={setName} 
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={styles.input} 
         placeholder="e.g., Aspirin" 
       />
@@ -29,6 +55,8 @@ const CreateScreen = () => {
       <TextInput 
         value={dosage} 
         onChangeText={setDosage} 
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={styles.input} 
         placeholder="e.g., 200 mg" 
       />
@@ -37,6 +65,8 @@ const CreateScreen = () => {
       <TextInput 
         value={period} 
         onChangeText={setPeriod} 
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={styles.input} 
         placeholder="e.g., 30 days" 
       />
@@ -90,6 +120,8 @@ const CreateScreen = () => {
       <TextInput
         value={directions}
         onChangeText={setDirections}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={styles.textArea}
         placeholder="Enter text here"
         multiline
@@ -99,10 +131,20 @@ const CreateScreen = () => {
       <TextInput
         value={warning}
         onChangeText={setWarning}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
         style={styles.textArea}
         placeholder="Enter warning text"
         multiline
       />
+
+      {!isTyping && (
+        <CustomButton
+          title="Add Medication"
+          handlePress={handleAddMedication}
+          containerStyles="mt-7"
+        />
+      )}
     </ScrollView>
   );
 };
@@ -121,7 +163,7 @@ const styles = StyleSheet.create({
   },
   timePicker: {
     height: 50,
-    width: '30%', // Set the width to fit the screen
+    width: '30%',
   },
 });
 
