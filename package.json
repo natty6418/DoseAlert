@@ -15,6 +15,7 @@
     "@react-native-community/datetimepicker": "^8.2.0",
     "@react-native-firebase/app": "^21.2.0",
     "@react-native-picker/picker": "^2.9.0",
+    "date-fns": "^4.1.0",
     "expo": "^51.0.38",
     "expo-camera": "^15.0.16",
     "expo-constants": "~16.0.2",
