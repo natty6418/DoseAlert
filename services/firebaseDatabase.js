@@ -53,25 +53,40 @@ export const addNewMedication = async ({ userId, dosage, startDate, endDate, fre
             while (isBefore(currentDate, new Date(end)) || currentDate.toDateString() === new Date(end).toDateString()) {
                 // Add reminder times to the current date
                 times.forEach(time => {
-                    // Parse the reminder time (e.g., "08:00 AM") and create a full date-time
-                    const [hours, minutes] = time.split(':');
-                    const ampm = time.includes('AM') ? 'AM' : 'PM';
-                    let dateTime = new Date(currentDate);
-                    dateTime.setHours(ampm === 'AM' ? parseInt(hours) : parseInt(hours) + 12);
-                    dateTime.setMinutes(parseInt(minutes));
-                    dateTime.setSeconds(0);
-                    dateTime.setMilliseconds(0);
-
-                    // Convert to Firebase Timestamp
-                    reminderDates.push(Timestamp.fromDate(dateTime));
+                    if (typeof time === 'string') {
+                        // Parse the reminder time (e.g., "08:00 AM") and create a full date-time
+                        const [hours, minutes] = time.split(':');
+                        const ampm = time.includes('AM') ? 'AM' : 'PM';
+                        let dateTime = new Date(currentDate);
+                        dateTime.setHours(ampm === 'AM' ? parseInt(hours) : parseInt(hours) + 12);
+                        dateTime.setMinutes(parseInt(minutes));
+                        dateTime.setSeconds(0);
+                        dateTime.setMilliseconds(0);
+        
+                        // Convert to Firebase Timestamp
+                        reminderDates.push(Timestamp.fromDate(dateTime));
+                    } else if (time instanceof Date) {
+                        // If time is already a Date object, use it directly
+                        let dateTime = new Date(currentDate);
+                        dateTime.setHours(time.getHours());
+                        dateTime.setMinutes(time.getMinutes());
+                        dateTime.setSeconds(0);
+                        dateTime.setMilliseconds(0);
+        
+                        // Convert to Firebase Timestamp
+                        reminderDates.push(Timestamp.fromDate(dateTime));
+                    } else {
+                        console.error('Invalid time format:', time);
+                    }
                 });
-
+        
                 // Move to the next day
                 currentDate = addDays(currentDate, 1);
             }
-
+        
             return reminderDates;
         };
+        
 
         const reminderTimes = reminder.reminderTimes || []; // Provided reminder times as an array of time strings
         const generatedReminderDates = generateReminderDates(startDate, endDate, reminderTimes);

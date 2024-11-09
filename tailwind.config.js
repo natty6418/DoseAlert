@@ -7,13 +7,13 @@ module.exports = {
       colors: {
         primary: "#FFFFFF", // White as the primary color
         secondary: {
-          DEFAULT: "#A3E635", // Lime
+          DEFAULT: "#c0ee77", // Lime
           100: "#B8F64E",     // Lighter lime shade
-          200: "#91D62A",     // Darker lime shade
+          200: "#8eda0b",     // Darker lime shade
         },
         black: {
           DEFAULT: "#000000",  // Black for contrast
-          100: "#1E1E1E",      // Slightly lighter black
+          100: "#1a1a1a",      // Slightly lighter black
           200: "#2B2B2B",      // Darker black
         },
         gray: {
