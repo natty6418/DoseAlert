@@ -70,7 +70,7 @@ const signIn = () => {
           <CustomButton
             title="Sign In"
             handlePress={handleLogin}
-            containerStyles="mt-7"
+            containerStyles="mt-7 bg-secondary-200"
             isLoading={loading}
           />
 
