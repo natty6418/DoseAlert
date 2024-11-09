@@ -1,22 +1,47 @@
 import { db } from "./firebaseConfig";
-import {collection, addDoc, Timestamp} from "firebase/firestore";
+import {collection, addDoc, Timestamp, doc, getDoc, getDocs, setDoc, query, where } from "firebase/firestore";
 import { addDays, isBefore } from 'date-fns';
 
 
-export const createNewUser = async ({firstName, lastName, email}) => {
+export const createNewUser = async ({uid, firstName, lastName, email}) => {
     try{
-        const docRef = await addDoc(collection(db, "users"), {
+        const userDocRef = doc(db, 'users', uid); // Correct document reference
+        await setDoc(userDocRef, {
             firstName,
             lastName,
             email,
         });
-        console.log("Document written with ID: ", docRef.id);
-        return docRef.id;
+        console.log('User document created with UID:', uid);
+       
     } catch(e){
         throw new Error(e.message);
     }
 };
+export const getUser = async (uid) => {
+    try {
+        // Create a reference to the specific user document using uid
+        const userDocRef = doc(db, 'users', uid);
+        
+        // Get the document
+        const userDoc = await getDoc(userDocRef);
+        
+        // Check if the document exists
+        if (!userDoc.exists()) {
+            throw new Error('No user found with the specified UID.');
+        }
 
+        // Extract and return the user data
+        const userData = {
+            id: userDoc.id,
+            ...userDoc.data(),
+        };
+
+        console.log('User found with ID: ', userData.id);
+        return userData;
+    } catch (e) {
+        throw new Error('Error fetching user: ' + e.message);
+    }
+};
 export const addNewMedication = async ({ userId, dosage, startDate, endDate, frequency, medicationSpecification, reminder }) => {
     try {
         // Generate reminder date-times between startDate and endDate as Firebase Timestamps
@@ -52,7 +77,7 @@ export const addNewMedication = async ({ userId, dosage, startDate, endDate, fre
         const generatedReminderDates = generateReminderDates(startDate, endDate, reminderTimes);
 
         const docRef = await addDoc(collection(db, 'medications'), {
-            user: `users/${userId}`, // Reference to the user's path
+            userId: `users/${userId}`, // Reference to the user's path
             dosage,
             startDate: Timestamp.fromDate(new Date(startDate)), // Convert startDate to Firebase Timestamp
             endDate: Timestamp.fromDate(new Date(endDate)), // Convert endDate to Firebase Timestamp
@@ -72,5 +97,38 @@ export const addNewMedication = async ({ userId, dosage, startDate, endDate, fre
         return docRef.id;
     } catch (e) {
         throw new Error(e.message);
+    }
+};
+
+export const getMedications = async (userId) => {
+    try {
+        // Create a reference to the 'medications' collection
+        const medicationsRef = collection(db, 'medications');
+        
+        // Create a query to get only the medications that belong to the specified user
+        const q = query(medicationsRef, where('userId', '==', `users/${userId}`));
+        
+        // Execute the query and get the documents
+        const querySnapshot = await getDocs(q);
+        let medications = [];
+
+        // Parse the documents into a structured array
+        querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            medications.push({
+                id: doc.id,
+                ...data,
+                startDate: data.startDate.toDate(), // Convert Firebase Timestamp to JavaScript Date
+                endDate: data.endDate.toDate(), // Convert Firebase Timestamp to JavaScript Date
+                reminder: {
+                    ...data.reminder,
+                    reminderTimes: data.reminder.reminderTimes.map(ts => ts.toDate()), // Convert Timestamps to Dates
+                },
+            });
+        });
+
+        return medications; // Return the list of medications
+    } catch (e) {
+        throw new Error('Error fetching medications: ' + e.message);
     }
 };

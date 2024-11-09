@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Modal, View, ScrollView, Text, Button, Switch, TouchableOpacity } from 'react-native';
+import { Modal, View, ScrollView, Text, Button, Switch, TouchableOpacity, FlatList, TextInput  } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import PickerComponent from '../../components/Picker';
 import FormField from '../../components/FormField';
 import CustomButton from '../../components/CustomButton';
 import { addNewMedication } from '../../services/firebaseDatabase';
 import { useFirebaseContext } from '../../contexts/FirebaseContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const AddMedicationPlanModal = ({ visible, onClose }) => {
   const [name, setName] = useState('');
@@ -220,7 +221,7 @@ const AddMedicationPlanModal = ({ visible, onClose }) => {
               <CustomButton 
                 title="Save Plan" 
                 handlePress={handleSavePlan} 
-                containerStyles="mt-4 flex-1 mx-2" 
+                containerStyles="mt-4 flex-1 mx-2 bg-secondary-200" 
                 textStyles="text-lg"
                 isLoading={isLoading}
               />
@@ -241,11 +242,49 @@ const AddMedicationPlanModal = ({ visible, onClose }) => {
 
 const CreateScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
+  const [medicationPlans, setMedicationPlans] = useState([]); // Replace with fetched data if applicable
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const handleSavePlan = (newPlan) => {
+    setMedicationPlans([...medicationPlans, newPlan]);
+    setModalVisible(false);
+  };
+
+  const filteredPlans = medicationPlans.filter(plan =>
+    plan.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
-    <View className="flex-1 justify-center items-center">
+    <SafeAreaView className="bg-black-200 h-full py-4">
+    <View className="flex-1 p-4">
       <Button title="Add Medication Plan" onPress={() => setModalVisible(true)} />
-      <AddMedicationPlanModal visible={modalVisible} onClose={() => setModalVisible(false)} />
+      <TextInput
+        placeholder="Search medication plans..."
+        value={searchTerm}
+        onChangeText={setSearchTerm}
+        className="border border-gray-400 text-white p-2 mt-4 rounded-lg"
+      />
+      <FlatList
+        data={filteredPlans}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <View className="p-4 bg-gray-100 mt-2 rounded-lg shadow-sm">
+            <Text className="text-lg font-semibold">{item.name}</Text>
+            <Text>Dosage: {item.dosage}</Text>
+            <Text>Frequency: {item.frequency}</Text>
+            <Text>Start Date: {item.startDate?.toDateString()}</Text>
+            <Text>End Date: {item.endDate?.toDateString()}</Text>
+          </View>
+        )}
+      />
+
+      <AddMedicationPlanModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSavePlan}
+      />
     </View>
+    </SafeAreaView>
   );
 };
 
