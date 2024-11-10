@@ -14,7 +14,7 @@ import { icons, images } from '../../constants';
 
 
 const Home = () => {
-  const [loading, isLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [medications, setMedications] = useState([]);
   const context = useFirebaseContext();
@@ -24,28 +24,27 @@ const Home = () => {
       const fetchUser = async () => {
         const user = await getUser(context.user.uid);
         setUser(user);
-        isLoading(false);
       }
       fetchUser();
     } catch (error) {
       console.log(error);
-    }
+    } 
   }, [])
-
+  
   useEffect(() => {
     try {
       const fetchMedications = async () => {
         const meds = await getMedications(context.user.uid);
         setMedications(meds);
+        setIsLoading(false);
       }
       fetchMedications();
     } catch (error) {
       console.log(error);
-    } finally {
-      isLoading(false);
-    }
+    } 
   }, [])
-
+  
+  if (isLoading) return <LoadingSpinner />;
   return (
     <SafeAreaView className="bg-black-100 h-full py-4">
       <View className="flex-1 h-full">
@@ -65,9 +64,7 @@ const Home = () => {
         <ScrollView>
           <Greeting name={user?.firstName} />
 
-          {loading ? (
-            <LoadingSpinner />
-          ) : (
+          
             <View className="px-4 mt-2">
               <Text className="text-gray-400 text-lg mb-2">Inventory</Text>
               {medications.length > 0 ? (
@@ -78,7 +75,7 @@ const Home = () => {
                 <Text className="text-gray-500 text-center mt-4">No medications found.</Text>
               )}
             </View>
-          )}
+          
 
           <TouchableOpacity
             className="bg-gray-900 p-4 rounded-xl mx-4 mt-2 border border-lime-500 shadow-lg active:opacity-80"
