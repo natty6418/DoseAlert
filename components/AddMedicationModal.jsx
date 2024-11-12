@@ -10,17 +10,20 @@ import LoadingSpinner from './Loading';
 import { icons } from '../constants';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync } from '../services/registerNotification';
+import SideEffectChecklist from './SideEffectChecklist';
 
-const AddMedicationPlanModal = ({ visible, onClose, onSave }) => {
-    const [name, setName] = useState('');
-    const [dosage, setDosage] = useState('');
+const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) => {
+    const [name, setName] = useState(medicationData?.name || '');
+    const [dosage, setDosage] = useState(medicationData?.dosage || '');
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
     const [frequency, setFrequency] = useState('Daily');
-    const [directions, setDirections] = useState('');
-    const [warning, setWarning] = useState('');
+    const [directions, setDirections] = useState(medicationData?.directions || '');
+    const [purpose, setPurpose] = useState(medicationData?.purpose || '');
+    const [sideEffects, setSideEffects] = useState(medicationData?.sideEffects || []);
+    const [warning, setWarning] = useState(medicationData?.warning || '');
     const [reminderEnabled, setReminderEnabled] = useState(false);
     const [reminderTimes, setReminderTimes] = useState([]);
     const [showTimePicker, setShowTimePicker] = useState(false);
@@ -132,8 +135,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave }) => {
             transparent={true}
             onRequestClose={onClose}
         >
-            <View className="flex-1 justify-center items-center bg-black-200 bg-opacity-50">
-                <View className="bg-black-100 w-11/12 h-5/6 rounded-2xl p-6 shadow-lg">
+            <View className="flex-1 justify-center items-center bg-black-70">
+                <View className="bg-black-100 w-11/12 h-5/6 rounded-2xl px-6">
                     <ScrollView className="flex-1">
                         <Text className="text-2xl font-semibold text-secondary-100 mt-5 font-psemibold">Add Medication Plan</Text>
 
@@ -255,7 +258,15 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave }) => {
                                 accentColor="#00000"
                             />
                         )}
-
+                        <FormField
+                            title="Purpose"
+                            value={purpose}
+                            handleChangeText={(e) => setPurpose(e)}
+                            otherStyles=""
+                            keyboardType="default"
+                            placeholder="Enter text"
+                            multiline
+                        />
                         <FormField
                             title="Directions"
                             value={directions}
@@ -274,6 +285,9 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave }) => {
                             placeholder="Enter text"
                             multiline
                         />
+                        {sideEffects.length > 0 && (
+                            <SideEffectChecklist sideEffects={sideEffects} />
+                        )}
 
                         {/* Close Button */}
                         <View className="flex flex-1 flex-row w-full justify-between">

@@ -8,19 +8,24 @@ import AddMedicationPlanModal from '../../components/AddMedicationModal';
 import SearchBar from '../../components/SearchBar';
 import { icons } from '../../constants';
 import CameraModal from '../../components/CameraModal';
-
+import MedicationCardModal from '../../components/MedicationCard';
+import MedicationItem from '../../components/MedicationItem';
+import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../services/externalDrugAPI';
 
 
 
 
 const CreateScreen = () => {
   const [addMedicationModalVisible, setAddMedicationModalVisible] = useState(false);
+  const [medicationCardModalVisible, setMedicationCardModalVisible] = useState(false);
   const [isScanned, setIsScanned] = useState(false);
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
   const [medicationPlans, setMedicationPlans] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const context = useFirebaseContext();
+  const [selectedMedication, setSelectedMedication] = useState(null);
+  const [scannedMedication, setScannedMedication] = useState(null);
 
 
   
@@ -42,6 +47,63 @@ const CreateScreen = () => {
     setMedicationPlans([...medicationPlans, newPlan]);
     setAddMedicationModalVisible(false);
   };
+  const extractSideEffectTerms = (sideEffectsData) => {
+    const terms = sideEffectsData.map(effect => effect.term);
+    return terms.length > 10 ? terms.slice(0, 10) : terms;
+  };
+  const extractDrugLabelData = (labelData) => {
+    const extractedData = {};
+  
+    if (labelData.openfda && labelData.openfda.brand_name) {
+      extractedData.name = labelData.openfda.brand_name[0];
+    }
+  
+    if (labelData.purpose) {
+      extractedData.dosage = labelData.purpose[0];
+    }
+  
+    if (labelData.warnings) {
+      extractedData.warnings = labelData.warnings[0];
+    }
+  
+    if (labelData.openfda && labelData.openfda.package_ndc) {
+      extractedData.package_ndc = labelData.openfda.package_ndc[0];
+    }
+  
+    if (labelData.dosage_and_administration) {
+      extractedData.directions = labelData.dosage_and_administration[0];
+    } 
+  
+    return extractedData;
+  };
+
+  const handleUPCScan = async (data) => {
+    setIsScanned(true);
+    setCameraModalVisible(false);
+    setIsLoading(true);
+    try{
+      const upc = data.data;
+      const label = await fetchDrugLabelInfo(upc);
+      if (!label) {
+        Alert.alert('No label information found for the provided NDC.');
+        return;
+      }
+      const sideEffects = await fetchDrugSideEffects(label.openfda.package_ndc[0]);
+      if (!sideEffects) {
+        Alert.alert('No side effects information found for the provided NDC.');
+        return;
+      }
+      setScannedMedication({
+        ...extractDrugLabelData(label),
+        sideEffects: extractSideEffectTerms(sideEffects),
+      });
+      setAddMedicationModalVisible(true);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const filteredPlans = medicationPlans.filter(plan =>
     plan.medicationSpecification.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -58,14 +120,15 @@ const CreateScreen = () => {
         <FlatList
           data={filteredPlans}
           keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item }) => (
-            <View className="p-4 bg-gray-800 mt-2 rounded-lg shadow-lg border border-lime-500">
-              <Text className="text-lime-400 text-xl font-semibold">{item.medicationSpecification.name}</Text>
-              <Text className="text-gray-300">Dosage: {item.dosage}</Text>
-              <Text className="text-gray-300">Frequency: {item.frequency}</Text>
-              <Text className="text-gray-300">Start Date: {item.startDate?.toDateString()}</Text>
-              <Text className="text-gray-300">End Date: {item.endDate?.toDateString()}</Text>
-            </View>
+          renderItem={({ item, index }) => (
+            <MedicationItem 
+              key={index}
+              item={item}
+              onPress={() => {
+                setSelectedMedication(item);
+                setMedicationCardModalVisible(true);
+              }}
+            />
           )}
         />
         <View className="absolute bottom-2 left-4 w-full">
@@ -90,20 +153,33 @@ const CreateScreen = () => {
             </TouchableOpacity>
           </View>
         </View>
+        {
+          selectedMedication && (
+            <MedicationCardModal
+              visible={medicationCardModalVisible}
+              onClose={() => setMedicationCardModalVisible(false)}
+              dosage={selectedMedication.dosage}
+              startDate={selectedMedication.startDate}
+              endDate={selectedMedication.endDate}
+              frequency={selectedMedication.frequency}
+              medicationSpecification={selectedMedication.medicationSpecification}
+              reminder={selectedMedication.reminder}
+            />
+          )
+        }
 
         <AddMedicationPlanModal
           visible={addMedicationModalVisible}
           onClose={() => setAddMedicationModalVisible(false)}
           onSave={handleSavePlan}
+          medicationData={scannedMedication}
         />
         <CameraModal
           isVisible={cameraModalVisible}
           onClose={() => setCameraModalVisible(false)}
           onScan={(data) => {
             if (isScanned) return;
-            Alert.alert('Scanned', data.data); 
-            setCameraModalVisible(false);
-            setIsScanned(true);
+            handleUPCScan(data);
           }}
         />
       </View>
