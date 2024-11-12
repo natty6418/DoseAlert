@@ -2,31 +2,25 @@ import { View, TextInput, TouchableOpacity } from 'react-native';
 import React from 'react'
 import { icons } from '../constants';
 
-const SearchBar = () => {
+const SearchBar = ({searchTerm, setSearchTerm}) => {
     return (
-        <View className="flex-row items-center justify-between px-4 py-2 bg-black-100">
-            <TouchableOpacity>
-                <icons.Bars3 color="white" size={24} />
-            </TouchableOpacity>
-
-            <View className="flex-row flex-1 w-full items-center bg-gray-800 rounded-full px-4 mx-2">
+        <View className="flex-row items-center px-4 py-2 rounded-b-2xl">
+            <View className="flex-row flex-1 items-center bg-gray-800 rounded-full px-4 mx-2 border border-lime-500">
                 <TextInput
                     className="flex-1 text-white py-2"
-                    placeholder="Search"
+                    placeholder="Search medication plans..."
                     placeholderTextColor="gray"
-                //   style={{ paddingRight: 2 }} // Add padding to make space for the icon
-                />
+                    style={{ paddingRight: 8 }} // Ensure there is space for the icon
+                    value={searchTerm}
+                    onChangeText={setSearchTerm}
+                    />
                 <TouchableOpacity className="ml-2">
-                    <icons.MagnifyingGlass color="#4ade80" size={24} />
+                    <icons.MagnifyingGlass color="#A3E635" size={24} /> 
                 </TouchableOpacity>
             </View>
-
-            <TouchableOpacity>
-                <icons.UserCircle color="white" size={36} />
-            </TouchableOpacity>
         </View>
+    );
+};
 
-    )
-}
 
 export default SearchBar

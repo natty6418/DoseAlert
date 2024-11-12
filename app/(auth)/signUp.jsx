@@ -26,7 +26,8 @@ const signUp = () => {
         const user = userCredential.user;
         console.log(user);
         setUser(user);
-        const userId = await createNewUser({
+        await createNewUser({
+          uid: user.uid,
           email: form.email,
           firstName: form.firstName,
           lastName: form.lastName,
@@ -89,7 +90,7 @@ const signUp = () => {
             <CustomButton
               title="Sign Up"
               handlePress={handleSignUp}
-              containerStyles="mt-7"
+              containerStyles="mt-7 bg-secondary-200"
               isLoading={loading}
             />
   

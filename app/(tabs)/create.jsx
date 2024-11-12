@@ -1,134 +1,190 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, ScrollView } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
+import React, { useEffect, useState } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
+import { useFirebaseContext } from '../../contexts/FirebaseContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import LoadingSpinner from '../../components/Loading';
+import { getMedications } from '../../services/firebaseDatabase';
+import AddMedicationPlanModal from '../../components/AddMedicationModal';
+import SearchBar from '../../components/SearchBar';
+import { icons } from '../../constants';
+import CameraModal from '../../components/CameraModal';
+import MedicationCardModal from '../../components/MedicationCard';
+import MedicationItem from '../../components/MedicationItem';
+import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../services/externalDrugAPI';
+
+
+
 
 const CreateScreen = () => {
-  const [name, setName] = useState('');
-  const [dosage, setDosage] = useState('');
-  const [period, setPeriod] = useState('');
-  const [frequency, setFrequency] = useState('Daily');
-  const [hour, setHour] = useState('10');
-  const [minute, setMinute] = useState('00');
-  const [ampm, setAmPm] = useState('AM');
-  const [directions, setDirections] = useState('');
-  const [warning, setWarning] = useState('');
+  const [addMedicationModalVisible, setAddMedicationModalVisible] = useState(false);
+  const [medicationCardModalVisible, setMedicationCardModalVisible] = useState(false);
+  const [isScanned, setIsScanned] = useState(false);
+  const [cameraModalVisible, setCameraModalVisible] = useState(false);
+  const [medicationPlans, setMedicationPlans] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const context = useFirebaseContext();
+  const [selectedMedication, setSelectedMedication] = useState(null);
+  const [scannedMedication, setScannedMedication] = useState(null);
+
+
+  
+  useEffect(() => {
+    try {
+      const fetchMedicationPlans = async () => {
+        const plans = await getMedications(context.user.uid);
+        setMedicationPlans(plans);
+      };
+      fetchMedicationPlans();
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const handleSavePlan = (newPlan) => {
+    setMedicationPlans([...medicationPlans, newPlan]);
+    setAddMedicationModalVisible(false);
+  };
+  const extractSideEffectTerms = (sideEffectsData) => {
+    const terms = sideEffectsData.map(effect => effect.term);
+    return terms.length > 10 ? terms.slice(0, 10) : terms;
+  };
+  const extractDrugLabelData = (labelData) => {
+    const extractedData = {};
+  
+    if (labelData.openfda && labelData.openfda.brand_name) {
+      extractedData.name = labelData.openfda.brand_name[0];
+    }
+  
+    if (labelData.purpose) {
+      extractedData.dosage = labelData.purpose[0];
+    }
+  
+    if (labelData.warnings) {
+      extractedData.warnings = labelData.warnings[0];
+    }
+  
+    if (labelData.openfda && labelData.openfda.package_ndc) {
+      extractedData.package_ndc = labelData.openfda.package_ndc[0];
+    }
+  
+    if (labelData.dosage_and_administration) {
+      extractedData.directions = labelData.dosage_and_administration[0];
+    } 
+  
+    return extractedData;
+  };
+
+  const handleUPCScan = async (data) => {
+    setIsScanned(true);
+    setCameraModalVisible(false);
+    setIsLoading(true);
+    try{
+      const upc = data.data;
+      const label = await fetchDrugLabelInfo(upc);
+      if (!label) {
+        Alert.alert('No label information found for the provided NDC.');
+        return;
+      }
+      const sideEffects = await fetchDrugSideEffects(label.openfda.package_ndc[0]);
+      if (!sideEffects) {
+        Alert.alert('No side effects information found for the provided NDC.');
+        return;
+      }
+      setScannedMedication({
+        ...extractDrugLabelData(label),
+        sideEffects: extractSideEffectTerms(sideEffects),
+      });
+      setAddMedicationModalVisible(true);
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredPlans = medicationPlans.filter(plan =>
+    plan.medicationSpecification.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
 
   return (
-    <ScrollView className="flex-1 p-6 bg-gray-100">
-  <Text className="text-2xl font-bold text-blue-800 mb-6">Add Medication Plan</Text>
+    <SafeAreaView className="bg-black-100 h-full pt-2">
+      <View className="flex-1 px-4">
+        <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+        <FlatList
+          data={filteredPlans}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item, index }) => (
+            <MedicationItem 
+              key={index}
+              item={item}
+              onPress={() => {
+                setSelectedMedication(item);
+                setMedicationCardModalVisible(true);
+              }}
+            />
+          )}
+        />
+        <View className="absolute bottom-2 left-4 w-full">
+          <View className="flex flex-row gap-4 justify-between mx-auto bg-secondary-200 rounded-full px-4">
+            <TouchableOpacity
+              onPress={() => setAddMedicationModalVisible(true)}
+              className="items-center  p-4 rounded-full"
+            >
+              <icons.PlusCircle color="#FFF" size={48} style={{ width: 48, height: 48 }}/>
+              <Text className="text-white text-xs font-pregular">Add</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() =>{ 
+                setCameraModalVisible(true);
+                setIsScanned(false);
+              }
+              }
+              className="items-center  p-4 rounded-2xl"
+            >
+              <icons.Camera color="#FFF" size={48} style={{ width: 48, height: 48 }}/>
+              <Text className="text-white text-xs font-pregular">scan</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        {
+          selectedMedication && (
+            <MedicationCardModal
+              visible={medicationCardModalVisible}
+              onClose={() => setMedicationCardModalVisible(false)}
+              dosage={selectedMedication.dosage}
+              startDate={selectedMedication.startDate}
+              endDate={selectedMedication.endDate}
+              frequency={selectedMedication.frequency}
+              medicationSpecification={selectedMedication.medicationSpecification}
+              reminder={selectedMedication.reminder}
+            />
+          )
+        }
 
-  <Text className="text-lg font-semibold text-gray-700 mb-2">Name</Text>
-  <TextInput
-    value={name}
-    onChangeText={setName}
-    className="border border-gray-300 p-4 rounded-lg mb-4 text-gray-900"
-    placeholder="e.g., Aspirin"
-  />
-
-  <Text className="text-lg font-semibold text-gray-700 mb-2">Dosage</Text>
-  <TextInput
-    value={dosage}
-    onChangeText={setDosage}
-    className="border border-gray-300 p-4 rounded-lg mb-4 text-gray-900"
-    placeholder="e.g., 200 mg"
-  />
-
-  <Text className="text-lg font-semibold text-gray-700 mb-2">Period</Text>
-  <TextInput
-    value={period}
-    onChangeText={setPeriod}
-    className="border border-gray-300 p-4 rounded-lg mb-4 text-gray-900"
-    placeholder="e.g., 30 days"
-  />
-
-  <Text className="text-lg font-semibold text-gray-700 mb-2">Frequency</Text>
-  <View className="border border-gray-300 rounded-lg mb-4">
-    <Picker
-      selectedValue={frequency}
-      onValueChange={(itemValue) => setFrequency(itemValue)}
-      className="text-gray-700"
-    >
-      <Picker.Item label="Daily" value="Daily" />
-      <Picker.Item label="Weekly" value="Weekly" />
-      <Picker.Item label="Monthly" value="Monthly" />
-    </Picker>
-  </View>
-
-  <Text className="text-lg font-semibold text-gray-700 mb-2">Reminder Time</Text>
-  <View className="flex-row justify-between mb-4">
-    <View className="flex-1 border border-gray-300 rounded-lg mr-2">
-      <Picker
-        selectedValue={hour}
-        onValueChange={(itemValue) => setHour(itemValue)}
-        className="text-gray-700"
-      >
-        {[...Array(12).keys()].map((num) => (
-          <Picker.Item key={num} label={`${num + 1}`} value={`${num + 1}`} />
-        ))}
-      </Picker>
-    </View>
-    
-    <View className="flex-1 border border-gray-300 rounded-lg mr-2">
-      <Picker
-        selectedValue={minute}
-        onValueChange={(itemValue) => setMinute(itemValue)}
-        className="text-gray-700"
-      >
-        {[0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55].map((num) => (
-          <Picker.Item key={num} label={`${num < 10 ? `0${num}` : num}`} value={`${num < 10 ? `0${num}` : num}`} />
-        ))}
-      </Picker>
-    </View>
-    
-    <View className="flex-1 border border-gray-300 rounded-lg">
-      <Picker
-        selectedValue={ampm}
-        onValueChange={(itemValue) => setAmPm(itemValue)}
-        className="text-gray-700"
-      >
-        <Picker.Item label="AM" value="AM" />
-        <Picker.Item label="PM" value="PM" />
-      </Picker>
-    </View>
-  </View>
-
-  <Text className="text-lg font-semibold text-gray-700 mb-2">Directions</Text>
-  <TextInput
-    value={directions}
-    onChangeText={setDirections}
-    className="border border-gray-300 p-4 rounded-lg mb-4 text-gray-900"
-    placeholder="Enter text here"
-    multiline
-  />
-
-  <Text className="text-lg font-semibold text-gray-700 mb-2">Warning</Text>
-  <TextInput
-    value={warning}
-    onChangeText={setWarning}
-    className="border border-gray-300 p-4 rounded-lg mb-4 text-gray-900"
-    placeholder="Enter warning text"
-    multiline
-  />
-</ScrollView>
+        <AddMedicationPlanModal
+          visible={addMedicationModalVisible}
+          onClose={() => setAddMedicationModalVisible(false)}
+          onSave={handleSavePlan}
+          medicationData={scannedMedication}
+        />
+        <CameraModal
+          isVisible={cameraModalVisible}
+          onClose={() => setCameraModalVisible(false)}
+          onScan={(data) => {
+            if (isScanned) return;
+            handleUPCScan(data);
+          }}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
-
-// const styles = StyleSheet.create({
-//   container: { flexGrow: 1, padding: 20, backgroundColor: '#F3F3F3' },
-//   title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20 },
-//   input: { padding: 10, backgroundColor: '#fff', borderRadius: 8, marginVertical: 10 },
-//   textArea: { padding: 10, backgroundColor: '#fff', borderRadius: 8, marginVertical: 10, height: 100 },
-//   pickerContainer: { backgroundColor: '#fff', borderRadius: 8, marginVertical: 10 },
-//   picker: { height: 50, width: '100%' },
-//   timePickerContainer: { 
-//     flexDirection: 'row', 
-//     justifyContent: 'space-between', 
-//     marginVertical: 10,
-//   },
-//   timePicker: {
-//     height: 50,
-//     width: '30%', // Set the width to fit the screen
-//   },
-// });
 
 export default CreateScreen;

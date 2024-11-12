@@ -15,11 +15,13 @@
     "@react-native-community/datetimepicker": "^8.2.0",
     "@react-native-firebase/app": "^21.2.0",
     "@react-native-picker/picker": "^2.9.0",
-    "expo": "^51.0.38",
-    "expo-camera": "^15.0.16",
+    "date-fns": "^4.1.0",
+    "expo": "^51.0.28",
     "expo-constants": "~16.0.2",
     "expo-dev-client": "~4.0.28",
+    "expo-device": "~6.0.2",
     "expo-linking": "~6.3.1",
+    "expo-notifications": "~0.28.19",
     "expo-router": "^3.1.0",
     "expo-status-bar": "~1.12.1",
     "firebase": "^11.0.1",
@@ -37,7 +39,8 @@
     "react-native-svg": "^15.8.0",
     "react-native-url-polyfill": "^2.0.0",
     "rimraf": "^6.0.1",
-    "tailwindcss": "^3.4.14"
+    "tailwindcss": "^3.4.14",
+    "expo-camera": "~15.0.15"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
