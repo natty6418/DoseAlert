@@ -38,7 +38,7 @@ const CameraModal = ({ isVisible, onClose, onScan }) => {
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <SafeAreaView className=" h-full bg-black-200 justify-center items-center">
+      <SafeAreaView className=" h-full bg-black-70 justify-center items-center">
         <View className="flex flex-col w-[90%] rounded-lg overflow-hidden shadow-2xl p-4">
           <View className="flex h-[65vh] rounded-lg overflow-hidden">
             <CameraView

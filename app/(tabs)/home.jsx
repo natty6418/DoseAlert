@@ -43,6 +43,8 @@ const Home = () => {
       console.log(error);
     } 
   }, [])
+
+  const upcomingMedicationReminders = medications.filter(med => med.reminder.enabled);
   
   if (isLoading) return <LoadingSpinner />;
   return (
@@ -66,10 +68,10 @@ const Home = () => {
 
           
             <View className="px-4 mt-2">
-              <Text className="text-gray-400 text-lg mb-2">Inventory</Text>
-              {medications.length > 0 ? (
-                medications.map((med, index) => (
-                  <MedicationItem key={index} name={med.medicationSpecification.name} time={med.time} />
+              <Text className="text-gray-400 text-lg mb-2">Upcoming Reminders</Text>
+              {upcomingMedicationReminders.length > 0 ? (
+                upcomingMedicationReminders.map((med, index) => (
+                  <MedicationItem key={index} item={med} onPress={()=>{}}/>
                 ))
               ) : (
                 <Text className="text-gray-500 text-center mt-4">No medications found.</Text>
