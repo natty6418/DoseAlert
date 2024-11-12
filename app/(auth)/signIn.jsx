@@ -15,16 +15,12 @@ const signIn = () => {
         email: "",
         password: "",
       });
-    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(false);
 
     const handleLogin = async () => {
       setLoading(true);
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, form.email, form.password);
-        const user = userCredential.user;
-        console.log(user);
-        setUser(user);
+        await signInWithEmailAndPassword(auth, form.email, form.password);
         router.replace("/home");
       } catch (error) {
         console.log(error);

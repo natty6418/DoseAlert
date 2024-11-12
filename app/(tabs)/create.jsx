@@ -59,7 +59,7 @@ const CreateScreen = () => {
     }
   
     if (labelData.purpose) {
-      extractedData.dosage = labelData.purpose[0];
+      extractedData.purpose = labelData.purpose[0];
     }
   
     if (labelData.warnings) {
