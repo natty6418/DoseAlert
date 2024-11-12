@@ -29,6 +29,12 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const context = useFirebaseContext();
+    const today = new Date();
+    const oneYearFromToday = new Date();
+    oneYearFromToday.setFullYear(today.getFullYear() + 1); 
+    const twoYearsFromToday = new Date();
+    twoYearsFromToday.setFullYear(today.getFullYear() + 2);
+
 
     useEffect(() => {
         (async () => {
@@ -47,7 +53,6 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             setStartDate(selectedDate);
         }
     };
-
 
     const handleEndDateChange = (event, selectedDate) => {
         setShowEndDatePicker(false);
@@ -124,6 +129,23 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
         }
     };
 
+    const handleClose = () => {
+        // Reset all state variables to their initial values
+        setName(medicationData?.name || '');
+        setDosage(medicationData?.dosage || '');
+        setStartDate(null); 
+        setEndDate(null);
+        setFrequency('Daily');
+        setDirections(medicationData?.directions || '');
+        setPurpose(medicationData?.purpose || '');
+        setSideEffects(medicationData?.sideEffects || []);
+        setWarning(medicationData?.warning || '');
+        setReminderEnabled(false);
+        setReminderTimes([]);
+
+        onClose(); // Call the onClose prop passed from the parent component
+    };
+
     if (isLoading) {
         return <LoadingSpinner />;
     }
@@ -163,22 +185,27 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                         </TouchableOpacity>
                         {showStartDatePicker && (
                             <DateTimePicker
-                                value={startDate || new Date()}
-                                mode="date"
-                                display="default"
-                                onChange={handleStartDateChange}
+                            value={startDate || today} // Default to one year from today
+                            mode="date"
+                            display="default"
+                            onChange={handleStartDateChange}
+                            minimumDate={today}
+                            maximumDate={oneYearFromToday} // Limit start date to one year from today
                             />
                         )}
+
                         <Text className="text-base text-gray-100 font-pmedium mt-7">End Date</Text>
                         <TouchableOpacity onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{endDate?.toDateString()}</Text>
                         </TouchableOpacity>
                         {showEndDatePicker && (
                             <DateTimePicker
-                                value={endDate || new Date()}
-                                mode="date"
-                                display="default"
-                                onChange={handleEndDateChange}
+                            value={endDate || startDate} // Default to one year from today
+                            mode="date"
+                            display="default"
+                            onChange={handleEndDateChange}
+                            minimumDate={startDate || today} // Cannot be before start date or one year from today
+                            maximumDate={twoYearsFromToday}      // Limit end date to two years from today
                             />
                         )}
                         {/* End Date Picker */}
@@ -300,7 +327,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             />
                             <CustomButton
                                 title="Cancel"
-                                handlePress={onClose}
+                                handlePress={handleClose}
                                 containerStyles="mt-4 flex-1 mx-2 bg-red-400"
                                 textStyles="text-lg"
                                 isLoading={isLoading}
