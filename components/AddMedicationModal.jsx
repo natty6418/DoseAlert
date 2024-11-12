@@ -136,7 +136,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             onRequestClose={onClose}
         >
             <View className="flex-1 justify-center items-center bg-black-70">
-                <View className="bg-black-100 w-11/12 h-5/6 rounded-2xl px-6">
+                <View className="bg-black-100  px-6">
                     <ScrollView className="flex-1">
                         <Text className="text-2xl font-semibold text-secondary-100 mt-5 font-psemibold">Add Medication Plan</Text>
 
@@ -208,9 +208,9 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
 
                         {/* Reminder Times Section */}
                         {reminderEnabled && (
-                            <View className="mb-4 w-full text-center p-4 border-2 border-black-200 rounded-lg">
+                            <View className="w-full text-center p-4 border-2 border-black-200 rounded-lg">
                                 <Text className="text-base text-white font-pmedium mb-3 mx-auto">Reminder Times</Text>
-                                {reminderTimes.length > 0 ? (
+                                {reminderTimes.length > 0 && (
                                     reminderTimes.map((time, index) => (
                                         <View
                                             key={index}
@@ -231,9 +231,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                             </TouchableOpacity>
                                         </View>
                                     ))
-                                ) : (
-                                    <Text className="text-gray-400">No reminders set yet.</Text>
-                                )}
+                                ) }
                         
                                 <TouchableOpacity
                                     onPress={() => setShowTimePicker(true)}
@@ -262,19 +260,19 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             title="Purpose"
                             value={purpose}
                             handleChangeText={(e) => setPurpose(e)}
-                            otherStyles=""
+                            otherStyles="mt-5"
                             keyboardType="default"
                             placeholder="Enter text"
-                            multiline
+                            
                         />
                         <FormField
                             title="Directions"
                             value={directions}
                             handleChangeText={(e) => setDirections(e)}
-                            otherStyles=""
+                            otherStyles="mt-7"
                             keyboardType="default"
                             placeholder="Enter text"
-                            multiline
+                            multiline = {true}
                         />
                         <FormField
                             title="Warning"
@@ -283,7 +281,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             otherStyles="mt-7"
                             keyboardType="default"
                             placeholder="Enter text"
-                            multiline
+                            multiline = {true}
                         />
                         {sideEffects.length > 0 && (
                             <SideEffectChecklist sideEffects={sideEffects} />
