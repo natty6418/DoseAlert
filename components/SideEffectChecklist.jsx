@@ -2,25 +2,22 @@ import React, { useState } from 'react';
 import { View, Text,TextInput, FlatList, TouchableOpacity } from 'react-native';
 import { icons } from '../constants';
 
-const SideEffectChecklist = ({ sideEffects }) => {
+const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) => {
   // Initialize each side effect with unchecked status
-  const [checkedItems, setCheckedItems] = useState(
-    sideEffects.map(effect => ({ term: effect, checked: false }))
-  );
   const [newItem, setNewItem] = useState('');
 
   // Toggle the checked status of a side effect
   const toggleChecked = (index) => {
-    const updatedItems = [...checkedItems];
+    const updatedItems = [...sideEffects];
     updatedItems[index].checked = !updatedItems[index].checked;
-    setCheckedItems(updatedItems);
+    setSideEffects(updatedItems);
   };
 
   return (
-    <View className="bg-black-100 rounded-lg mt-7">
+    <View className={`${darker ? "bg-black-100" : "bg-black-200"} rounded-lg mt-7`}>
       <Text className="text-base text-gray-100 font-pmedium mb-2">Side Effects Checklist</Text>
       <FlatList
-        data={checkedItems}
+        data={sideEffects}
         scrollEnabled={false}
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item, index }) => (
@@ -38,11 +35,11 @@ const SideEffectChecklist = ({ sideEffects }) => {
         <TextInput 
         value={newItem}
         onChangeText={(e) => setNewItem(e)}
-        className="ml-2 text-white font-pregular" 
+        className="ml-2 w-full text-white font-pregular" 
         placeholder='Add item....'
         placeholderTextColor='#9CA3AF'
         onSubmitEditing={() => {
-                setCheckedItems([...checkedItems, { term: newItem, checked: true }]);
+                setSideEffects([...sideEffects, { term: newItem, checked: true }]);
                 setNewItem('');
         }}
         />

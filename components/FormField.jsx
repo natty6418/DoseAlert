@@ -10,13 +10,17 @@ const FormField = ({
   handleChangeText,
   otherStyles,
   multiline=false,
+  required=false,
   ...props
 }) => {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
     <View className={`space-y-2 ${otherStyles}`}>
+    <View className={'flex flex-row'}>
       <Text className="text-base text-gray-100 font-pmedium">{title}</Text>
+      {required && <Text className="text-red-500 text-base font-pmedium">*</Text>}
+    </View>
 
       <View 
       className={`w-full ${
