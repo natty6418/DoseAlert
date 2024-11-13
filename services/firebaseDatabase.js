@@ -45,52 +45,8 @@ export const getUser = async (uid) => {
 export const addNewMedication = async ({ userId, dosage, startDate, endDate, frequency, medicationSpecification, reminder }) => {
     try {
         // Generate reminder date-times between startDate and endDate as Firebase Timestamps
-        const generateReminderDates = (start, end, times) => {
-            let reminderDates = [];
-            let currentDate = new Date(start);
-            
-            // Iterate over each day from startDate to endDate
-            while (isBefore(currentDate, new Date(end)) || currentDate.toDateString() === new Date(end).toDateString()) {
-                // Add reminder times to the current date
-                times.forEach(time => {
-                    if (typeof time === 'string') {
-                        // Parse the reminder time (e.g., "08:00 AM") and create a full date-time
-                        const [hours, minutes] = time.split(':');
-                        const ampm = time.includes('AM') ? 'AM' : 'PM';
-                        let dateTime = new Date(currentDate);
-                        dateTime.setHours(ampm === 'AM' ? parseInt(hours) : parseInt(hours) + 12);
-                        dateTime.setMinutes(parseInt(minutes));
-                        dateTime.setSeconds(0);
-                        dateTime.setMilliseconds(0);
-        
-                        // Convert to Firebase Timestamp
-                        reminderDates.push(Timestamp.fromDate(dateTime));
-                    } else if (time instanceof Date) {
-                        // If time is already a Date object, use it directly
-                        let dateTime = new Date(currentDate);
-                        dateTime.setHours(time.getHours());
-                        dateTime.setMinutes(time.getMinutes());
-                        dateTime.setSeconds(0);
-                        dateTime.setMilliseconds(0);
-        
-                        // Convert to Firebase Timestamp
-                        reminderDates.push(Timestamp.fromDate(dateTime));
-                    } else {
-                        console.error('Invalid time format:', time);
-                    }
-                });
-        
-                // Move to the next day
-                currentDate = addDays(currentDate, 1);
-            }
-        
-            return reminderDates;
-        };
-        
-
-        const reminderTimes = reminder.reminderTimes || []; // Provided reminder times as an array of time strings
-        const generatedReminderDates = generateReminderDates(startDate, endDate, reminderTimes);
-
+         // Provided reminder times as an array of time strings
+        const reminderTimes = reminder.reminders.map(r=>({ time: Timestamp.fromDate(r.time), id: r.id}));
         const docRef = await addDoc(collection(db, 'medications'), {
             userId: `users/${userId}`, // Reference to the user's path
             dosage,
@@ -100,12 +56,12 @@ export const addNewMedication = async ({ userId, dosage, startDate, endDate, fre
             medicationSpecification: {
                 name: medicationSpecification.name,
                 directions: medicationSpecification.directions || '',
-                sideEffects: medicationSpecification.sideEffects || '', // Optional field with default empty string
+                sideEffects: medicationSpecification.sideEffects || [], // Optional field with default empty string
                 warnings: medicationSpecification.warnings || '', // Optional field with default empty string
             },
             reminder: {
                 enabled: reminder.enabled,
-                reminderTimes: generatedReminderDates, // Array of generated reminder Timestamps
+                reminderTimes, // Array of generated reminder Timestamps
             },
         });
         console.log("Document written with ID: ", docRef.id);
@@ -137,7 +93,7 @@ export const getMedications = async (userId) => {
                 endDate: data.endDate.toDate(), // Convert Firebase Timestamp to JavaScript Date
                 reminder: {
                     ...data.reminder,
-                    reminderTimes: data.reminder.reminderTimes.map(ts => ts.toDate()), // Convert Timestamps to Dates
+                    reminderTimes: data.reminder.reminderTimes.map(r => ({time: r.time.toDate(), id: r.id})), // Convert Timestamps to Dates
                 },
             });
         });

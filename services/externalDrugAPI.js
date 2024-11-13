@@ -1,9 +1,12 @@
 export const fetchDrugLabelInfo = async (upc) => {
     try {
         console.log('UPC: ', upc);
-      const response = await fetch(`https://api.fda.gov/drug/label.json?search=openfda.upc:"${upc}"&limit=1`);
+      let response = await fetch(`https://api.fda.gov/drug/label.json?search=openfda.package_ndc:"${upc}"&limit=1`);
+      if (!response.ok) {
+        response = await fetch(`https://api.fda.gov/drug/label.json?search=openfda.upc:"${upc}"&limit=1`);
       if (!response.ok) {
         throw new Error('Failed to fetch drug label information');
+      }
       }
   
       const data = await response.json();

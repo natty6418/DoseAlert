@@ -11,10 +11,11 @@ import { icons } from '../constants';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync } from '../services/registerNotification';
 import SideEffectChecklist from './SideEffectChecklist';
+import ErrorModal from './ErrorModal';
 
 const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) => {
     const [name, setName] = useState(medicationData?.name || '');
-    const [dosage, setDosage] = useState(medicationData?.dosage || '');
+    const [dosage, setDosage] = useState({ amount: '', unit: '' });
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -22,19 +23,16 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const [frequency, setFrequency] = useState('Daily');
     const [directions, setDirections] = useState(medicationData?.directions || '');
     const [purpose, setPurpose] = useState(medicationData?.purpose || '');
-    const [sideEffects, setSideEffects] = useState(medicationData?.sideEffects || []);
+    const [sideEffects, setSideEffects] = useState(
+        medicationData?.sideEffects.map(effect => ({ term: effect, checked: false })) || []);
     const [warning, setWarning] = useState(medicationData?.warning || '');
     const [reminderEnabled, setReminderEnabled] = useState(false);
     const [reminderTimes, setReminderTimes] = useState([]);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+    
     const context = useFirebaseContext();
-    const today = new Date();
-    const oneYearFromToday = new Date();
-    oneYearFromToday.setFullYear(today.getFullYear() + 1); 
-    const twoYearsFromToday = new Date();
-    twoYearsFromToday.setFullYear(today.getFullYear() + 2);
-
 
     useEffect(() => {
         (async () => {
@@ -47,12 +45,51 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
 
       }, []);
 
+    const resetToDefault = () => {
+        setName('');
+        setDosage({ amount: '', unit: '' });
+        setStartDate(null);
+        setEndDate(null);
+        setFrequency('Daily');
+        setDirections('');
+        setPurpose('');
+        setSideEffects([]);
+        setWarning('');
+        setReminderEnabled(false);
+        setReminderTimes([]);
+        setShowStartDatePicker(false);
+        setShowEndDatePicker(false);
+        setShowTimePicker(false);
+        setError(null);
+    };
+
+    const checkForErrors = () => {
+        if (!name || !dosage || !startDate || !endDate || !frequency) {
+            setError('Please fill out all required fields.');
+            return true;
+        }
+        if(isNaN(parseInt(dosage.amount))){
+            setError('Dosage amount must be a number.');
+            return true;
+        }
+        if (endDate < startDate) {
+            setError('End date must be after the start date.');
+            return
+        }
+        if (reminderEnabled && reminderTimes.length === 0) {
+            setError('Please add at least one reminder time.');
+            return true;
+        }
+        return false;
+    };
+
     const handleStartDateChange = (event, selectedDate) => {
         setShowStartDatePicker(false);
         if (event.type === 'set' && selectedDate) {
             setStartDate(selectedDate);
         }
     };
+
 
     const handleEndDateChange = (event, selectedDate) => {
         setShowEndDatePicker(false);
@@ -72,13 +109,13 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const toggleReminder = () => setReminderEnabled(!reminderEnabled);
 
     const scheduleReminders = async () => {
+        const reminders = [];
         for (const time of reminderTimes) {
-            console.log(time);
             const triggerDate = new Date();
             triggerDate.setHours(time.getHours(), time.getMinutes(), 0, 0);
             
             // Schedule notification at the specified time, daily
-            await Notifications.scheduleNotificationAsync({
+            const id = await Notifications.scheduleNotificationAsync({
                 content: {
                     title: "Medication Reminder",
                     body: `It's time to take ${name}.`,
@@ -89,37 +126,40 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                     repeats: true,
                 },
             });
+            reminders.push({ id, time: triggerDate });
         }
+        return reminders;
     };
 
     const handleSavePlan = async () => {
         setIsLoading(true);
         try {
-            // Add medication plan to database
-            console.log('Saving medication plan...');
+            
+            // Schedule reminders if enabled
+            let reminders = [];
+            if (reminderEnabled && reminderTimes.length > 0) {
+                reminders = await scheduleReminders();
+            }
             const data = {
                 userId: context.user.uid,
-                dosage,
+                dosage: dosage.amount + ' ' + dosage.unit,
                 startDate,
                 endDate,
                 frequency,
                 medicationSpecification: {
                     name,
                     directions,
+                    sideEffects
                 },
                 reminder: {
                     enabled: reminderEnabled,
-                    reminderTimes,
+                    reminders,
                 },
+                purpose,
+                
             };
             onSave(data);
             await addNewMedication(data);
-
-            // Schedule reminders if enabled
-            if (reminderEnabled && reminderTimes.length > 0) {
-                console.log('Scheduling reminders...');
-                await scheduleReminders();
-            }
 
             onClose();
         } catch (error) {
@@ -129,22 +169,10 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
         }
     };
 
-    const handleClose = () => {
-        // Reset all state variables to their initial values
-        setName(medicationData?.name || '');
-        setDosage(medicationData?.dosage || '');
-        setStartDate(null); 
-        setEndDate(null);
-        setFrequency('Daily');
-        setDirections(medicationData?.directions || '');
-        setPurpose(medicationData?.purpose || '');
-        setSideEffects(medicationData?.sideEffects || []);
-        setWarning(medicationData?.warning || '');
-        setReminderEnabled(false);
-        setReminderTimes([]);
-
-        onClose(); // Call the onClose prop passed from the parent component
-    };
+    if (error) {
+        console.log('Error:', error);
+        return <ErrorModal message={error} onClose={() => setError(null)} />;
+    }
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -158,7 +186,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             onRequestClose={onClose}
         >
             <View className="flex-1 justify-center items-center bg-black-70">
-                <View className="bg-black-100 w-11/12 h-5/6 rounded-2xl px-6">
+                <View className="bg-black-100  px-6">
                     <ScrollView className="flex-1">
                         <Text className="text-2xl font-semibold text-secondary-100 mt-5 font-psemibold">Add Medication Plan</Text>
 
@@ -170,42 +198,59 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             otherStyles="mt-7"
                             keyboardType="default"
                             placeholder="e.g. Aspirin"
+                            required={true}
                         />
-                        <FormField
-                            title="Dosage"
-                            value={dosage}
-                            handleChangeText={(e) => setDosage(e)}
-                            otherStyles="mt-7"
-                            keyboardType="default"
-                            placeholder="e.g. 200 mg"
-                        />
-                        <Text className="text-base text-gray-100 font-pmedium mt-7">Start Date</Text>
+                        <View className={'flex-1 flex-row w-full justify-between gap-2'}>
+                            <FormField
+                                title="Dosage"
+                                value={dosage.amount}
+                                handleChangeText={(e) => setDosage({...dosage, amount: e})}
+                                otherStyles="mt-7 flex-1"
+                                keyboardType="default"
+                                placeholder="Amount (e.g. 200)"
+                                required={true}
+                            />
+                            <FormField
+                                title=" "
+                                value={dosage.unit}
+                                handleChangeText={(e) => setDosage({...dosage, unit: e})}
+                                otherStyles="mt-7 flex-1"
+                                keyboardType="default"
+                                placeholder="Units (e.g. mg)"
+                            />
+                        </View>
+                        <View className={'flex flex-row mt-7'}>
+                            <Text className="text-base text-gray-100 font-pmedium">Start Date</Text>
+                            <Text className="text-red-500 text-base font-pmedium">*</Text>
+                        </View>
                         <TouchableOpacity onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{startDate?.toDateString()}</Text>
                         </TouchableOpacity>
                         {showStartDatePicker && (
                             <DateTimePicker
-                            value={startDate || today} // Default to one year from today
-                            mode="date"
-                            display="default"
-                            onChange={handleStartDateChange}
-                            minimumDate={today}
-                            maximumDate={oneYearFromToday} // Limit start date to one year from today
+                                value={startDate || new Date()}
+                                mode="date"
+                                display="default"
+                                onChange={handleStartDateChange}
+                                minimumDate={new Date()}
+                                maximumDate={new Date(new Date().setMonth(new Date().getMonth() + 1))}
                             />
                         )}
-
-                        <Text className="text-base text-gray-100 font-pmedium mt-7">End Date</Text>
+                        <View className={'flex flex-row mt-7'}>
+                            <Text className="text-base text-gray-100 font-pmedium">End Date</Text>
+                            <Text className="text-red-500 text-base font-pmedium">*</Text>
+                        </View>
                         <TouchableOpacity onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{endDate?.toDateString()}</Text>
                         </TouchableOpacity>
                         {showEndDatePicker && (
                             <DateTimePicker
-                            value={endDate || startDate} // Default to one year from today
-                            mode="date"
-                            display="default"
-                            onChange={handleEndDateChange}
-                            minimumDate={startDate || today} // Cannot be before start date or one year from today
-                            maximumDate={twoYearsFromToday}      // Limit end date to two years from today
+                                value={endDate || new Date()}
+                                mode="date"
+                                display="default"
+                                onChange={handleEndDateChange}
+                                minimumDate={startDate || new Date()}
+                                maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
                             />
                         )}
                         {/* End Date Picker */}
@@ -235,9 +280,9 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
 
                         {/* Reminder Times Section */}
                         {reminderEnabled && (
-                            <View className="mb-4 w-full text-center p-4 border-2 border-black-200 rounded-lg">
+                            <View className="w-full text-center p-4 border-2 border-black-200 rounded-lg">
                                 <Text className="text-base text-white font-pmedium mb-3 mx-auto">Reminder Times</Text>
-                                {reminderTimes.length > 0 ? (
+                                {reminderTimes.length > 0 && (
                                     reminderTimes.map((time, index) => (
                                         <View
                                             key={index}
@@ -258,9 +303,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                             </TouchableOpacity>
                                         </View>
                                     ))
-                                ) : (
-                                    <Text className="text-gray-400">No reminders set yet.</Text>
-                                )}
+                                ) }
                         
                                 <TouchableOpacity
                                     onPress={() => setShowTimePicker(true)}
@@ -289,19 +332,19 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             title="Purpose"
                             value={purpose}
                             handleChangeText={(e) => setPurpose(e)}
-                            otherStyles=""
+                            otherStyles="mt-5"
                             keyboardType="default"
                             placeholder="Enter text"
-                            multiline
+                            
                         />
                         <FormField
                             title="Directions"
                             value={directions}
                             handleChangeText={(e) => setDirections(e)}
-                            otherStyles=""
+                            otherStyles="mt-7"
                             keyboardType="default"
                             placeholder="Enter text"
-                            multiline
+                            multiline = {true}
                         />
                         <FormField
                             title="Warning"
@@ -310,24 +353,31 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             otherStyles="mt-7"
                             keyboardType="default"
                             placeholder="Enter text"
-                            multiline
+                            multiline = {true}
                         />
-                        {sideEffects.length > 0 && (
-                            <SideEffectChecklist sideEffects={sideEffects} />
-                        )}
+                        
+                        <SideEffectChecklist sideEffects={sideEffects} setSideEffects={setSideEffects} />
+                        
 
                         {/* Close Button */}
                         <View className="flex flex-1 flex-row w-full justify-between">
                             <CustomButton
                                 title="Save Plan"
-                                handlePress={handleSavePlan}
+                                handlePress={()=>{
+                                    if(!checkForErrors()){
+                                        handleSavePlan();
+                                    }
+                                }}
                                 containerStyles="mt-4 flex-1 mx-2 bg-secondary-200"
                                 textStyles="text-lg"
                                 isLoading={isLoading}
                             />
                             <CustomButton
                                 title="Cancel"
-                                handlePress={handleClose}
+                                handlePress={()=>{
+                                    onClose();
+                                    resetToDefault();
+                                }}
                                 containerStyles="mt-4 flex-1 mx-2 bg-red-400"
                                 textStyles="text-lg"
                                 isLoading={isLoading}

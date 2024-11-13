@@ -33,6 +33,7 @@ const CreateScreen = () => {
     try {
       const fetchMedicationPlans = async () => {
         const plans = await getMedications(context.user.uid);
+        console.log(plans);
         setMedicationPlans(plans);
       };
       fetchMedicationPlans();
@@ -59,7 +60,7 @@ const CreateScreen = () => {
     }
   
     if (labelData.purpose) {
-      extractedData.dosage = labelData.purpose[0];
+      extractedData.purpose = labelData.purpose[0];
     }
   
     if (labelData.warnings) {
