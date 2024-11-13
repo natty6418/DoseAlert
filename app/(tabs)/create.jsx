@@ -33,6 +33,7 @@ const CreateScreen = () => {
     try {
       const fetchMedicationPlans = async () => {
         const plans = await getMedications(context.user.uid);
+        console.log(plans);
         setMedicationPlans(plans);
       };
       fetchMedicationPlans();

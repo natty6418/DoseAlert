@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Modal, TouchableOpacity } from 'react-native';
 
-const ErrorModal = ({ visible, errorMessage, onClose }) => {
+const ErrorModal = ({ visible, message, onClose }) => {
   return (
     <Modal
       animationType="fade"
@@ -10,9 +10,9 @@ const ErrorModal = ({ visible, errorMessage, onClose }) => {
       onRequestClose={onClose} // Allows closing on back button press on Android
     >
       <View className="flex-1 justify-center items-center">
-        <View className="bg-white rounded-lg shadow-lg p-6 w-4/5 max-w-md">
+        <View className="bg-black-200 rounded-lg shadow-lg p-6 w-4/5 max-w-md">
           <Text className="text-lg font-bold text-red-600 mb-4">Error</Text>
-          <Text className="text-gray-800 text-base mb-6">{errorMessage}</Text>
+          <Text className="text-white text-base mb-6">{message}</Text>
 
           <TouchableOpacity
             onPress={onClose}

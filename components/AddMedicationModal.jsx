@@ -23,13 +23,15 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const [frequency, setFrequency] = useState('Daily');
     const [directions, setDirections] = useState(medicationData?.directions || '');
     const [purpose, setPurpose] = useState(medicationData?.purpose || '');
-    const [sideEffects, setSideEffects] = useState(medicationData?.sideEffects || []);
+    const [sideEffects, setSideEffects] = useState(
+        medicationData?.sideEffects.map(effect => ({ term: effect, checked: false })) || []);
     const [warning, setWarning] = useState(medicationData?.warning || '');
     const [reminderEnabled, setReminderEnabled] = useState(false);
     const [reminderTimes, setReminderTimes] = useState([]);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    
     const context = useFirebaseContext();
 
     useEffect(() => {
@@ -42,6 +44,24 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
         })();
 
       }, []);
+
+    const resetToDefault = () => {
+        setName('');
+        setDosage({ amount: '', unit: '' });
+        setStartDate(null);
+        setEndDate(null);
+        setFrequency('Daily');
+        setDirections('');
+        setPurpose('');
+        setSideEffects([]);
+        setWarning('');
+        setReminderEnabled(false);
+        setReminderTimes([]);
+        setShowStartDatePicker(false);
+        setShowEndDatePicker(false);
+        setShowTimePicker(false);
+        setError(null);
+    };
 
     const checkForErrors = () => {
         if (!name || !dosage || !startDate || !endDate || !frequency) {
@@ -89,13 +109,13 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const toggleReminder = () => setReminderEnabled(!reminderEnabled);
 
     const scheduleReminders = async () => {
+        const reminders = [];
         for (const time of reminderTimes) {
-            console.log(time);
             const triggerDate = new Date();
             triggerDate.setHours(time.getHours(), time.getMinutes(), 0, 0);
             
             // Schedule notification at the specified time, daily
-            await Notifications.scheduleNotificationAsync({
+            const id = await Notifications.scheduleNotificationAsync({
                 content: {
                     title: "Medication Reminder",
                     body: `It's time to take ${name}.`,
@@ -106,14 +126,20 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                     repeats: true,
                 },
             });
+            reminders.push({ id, time: triggerDate });
         }
+        return reminders;
     };
 
     const handleSavePlan = async () => {
         setIsLoading(true);
         try {
-            // Add medication plan to database
-            console.log('Saving medication plan...');
+            
+            // Schedule reminders if enabled
+            let reminders = [];
+            if (reminderEnabled && reminderTimes.length > 0) {
+                reminders = await scheduleReminders();
+            }
             const data = {
                 userId: context.user.uid,
                 dosage: dosage.amount + ' ' + dosage.unit,
@@ -123,20 +149,17 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                 medicationSpecification: {
                     name,
                     directions,
+                    sideEffects
                 },
                 reminder: {
                     enabled: reminderEnabled,
-                    reminderTimes,
+                    reminders,
                 },
+                purpose,
+                
             };
             onSave(data);
             await addNewMedication(data);
-
-            // Schedule reminders if enabled
-            if (reminderEnabled && reminderTimes.length > 0) {
-                console.log('Scheduling reminders...');
-                await scheduleReminders();
-            }
 
             onClose();
         } catch (error) {
@@ -145,6 +168,11 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             setIsLoading(false);
         }
     };
+
+    if (error) {
+        console.log('Error:', error);
+        return <ErrorModal message={error} onClose={() => setError(null)} />;
+    }
 
     if (isLoading) {
         return <LoadingSpinner />;
@@ -172,28 +200,27 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             placeholder="e.g. Aspirin"
                             required={true}
                         />
-                        <View className={'flex flex-row'}>
+                        <View className={'flex-1 flex-row w-full justify-between gap-2'}>
                             <FormField
                                 title="Dosage"
                                 value={dosage.amount}
                                 handleChangeText={(e) => setDosage({...dosage, amount: e})}
-                                otherStyles="mt-7"
+                                otherStyles="mt-7 flex-1"
                                 keyboardType="default"
-                                placeholder="e.g. 200"
+                                placeholder="Amount (e.g. 200)"
                                 required={true}
                             />
                             <FormField
-                                title=""
+                                title=" "
                                 value={dosage.unit}
                                 handleChangeText={(e) => setDosage({...dosage, unit: e})}
-                                otherStyles="mt-7"
+                                otherStyles="mt-7 flex-1"
                                 keyboardType="default"
-                                placeholder="e.g. mg"
-                                required={true}
+                                placeholder="Units (e.g. mg)"
                             />
                         </View>
-                        <View className={'flex flex-row'}>
-                            <Text className="text-base text-gray-100 font-pmedium mt-7">Start Date</Text>
+                        <View className={'flex flex-row mt-7'}>
+                            <Text className="text-base text-gray-100 font-pmedium">Start Date</Text>
                             <Text className="text-red-500 text-base font-pmedium">*</Text>
                         </View>
                         <TouchableOpacity onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
@@ -209,8 +236,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 maximumDate={new Date(new Date().setMonth(new Date().getMonth() + 1))}
                             />
                         )}
-                        <View className={'flex flex-row'}>
-                            <Text className="text-base text-gray-100 font-pmedium mt-7">End Date</Text>
+                        <View className={'flex flex-row mt-7'}>
+                            <Text className="text-base text-gray-100 font-pmedium">End Date</Text>
                             <Text className="text-red-500 text-base font-pmedium">*</Text>
                         </View>
                         <TouchableOpacity onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
@@ -329,21 +356,28 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             multiline = {true}
                         />
                         
-                        <SideEffectChecklist sideEffects={sideEffects} />
+                        <SideEffectChecklist sideEffects={sideEffects} setSideEffects={setSideEffects} />
                         
 
                         {/* Close Button */}
                         <View className="flex flex-1 flex-row w-full justify-between">
                             <CustomButton
                                 title="Save Plan"
-                                handlePress={handleSavePlan}
+                                handlePress={()=>{
+                                    if(!checkForErrors()){
+                                        handleSavePlan();
+                                    }
+                                }}
                                 containerStyles="mt-4 flex-1 mx-2 bg-secondary-200"
                                 textStyles="text-lg"
                                 isLoading={isLoading}
                             />
                             <CustomButton
                                 title="Cancel"
-                                handlePress={onClose}
+                                handlePress={()=>{
+                                    onClose();
+                                    resetToDefault();
+                                }}
                                 containerStyles="mt-4 flex-1 mx-2 bg-red-400"
                                 textStyles="text-lg"
                                 isLoading={isLoading}
