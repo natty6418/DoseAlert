@@ -11,10 +11,11 @@ import { icons } from '../constants';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync } from '../services/registerNotification';
 import SideEffectChecklist from './SideEffectChecklist';
+import ErrorModal from './ErrorModal';
 
 const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) => {
     const [name, setName] = useState(medicationData?.name || '');
-    const [dosage, setDosage] = useState(medicationData?.dosage || '');
+    const [dosage, setDosage] = useState({ amount: '', unit: '' });
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -28,6 +29,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const [reminderTimes, setReminderTimes] = useState([]);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
     const context = useFirebaseContext();
 
     useEffect(() => {
@@ -40,6 +42,26 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
         })();
 
       }, []);
+
+    const checkForErrors = () => {
+        if (!name || !dosage || !startDate || !endDate || !frequency) {
+            setError('Please fill out all required fields.');
+            return true;
+        }
+        if(isNaN(parseInt(dosage.amount))){
+            setError('Dosage amount must be a number.');
+            return true;
+        }
+        if (endDate < startDate) {
+            setError('End date must be after the start date.');
+            return
+        }
+        if (reminderEnabled && reminderTimes.length === 0) {
+            setError('Please add at least one reminder time.');
+            return true;
+        }
+        return false;
+    };
 
     const handleStartDateChange = (event, selectedDate) => {
         setShowStartDatePicker(false);
@@ -94,7 +116,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             console.log('Saving medication plan...');
             const data = {
                 userId: context.user.uid,
-                dosage,
+                dosage: dosage.amount + ' ' + dosage.unit,
                 startDate,
                 endDate,
                 frequency,
@@ -148,16 +170,32 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             otherStyles="mt-7"
                             keyboardType="default"
                             placeholder="e.g. Aspirin"
+                            required={true}
                         />
-                        <FormField
-                            title="Dosage"
-                            value={dosage}
-                            handleChangeText={(e) => setDosage(e)}
-                            otherStyles="mt-7"
-                            keyboardType="default"
-                            placeholder="e.g. 200 mg"
-                        />
-                        <Text className="text-base text-gray-100 font-pmedium mt-7">Start Date</Text>
+                        <View className={'flex flex-row'}>
+                            <FormField
+                                title="Dosage"
+                                value={dosage.amount}
+                                handleChangeText={(e) => setDosage({...dosage, amount: e})}
+                                otherStyles="mt-7"
+                                keyboardType="default"
+                                placeholder="e.g. 200"
+                                required={true}
+                            />
+                            <FormField
+                                title=""
+                                value={dosage.unit}
+                                handleChangeText={(e) => setDosage({...dosage, unit: e})}
+                                otherStyles="mt-7"
+                                keyboardType="default"
+                                placeholder="e.g. mg"
+                                required={true}
+                            />
+                        </View>
+                        <View className={'flex flex-row'}>
+                            <Text className="text-base text-gray-100 font-pmedium mt-7">Start Date</Text>
+                            <Text className="text-red-500 text-base font-pmedium">*</Text>
+                        </View>
                         <TouchableOpacity onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{startDate?.toDateString()}</Text>
                         </TouchableOpacity>
@@ -167,9 +205,14 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 mode="date"
                                 display="default"
                                 onChange={handleStartDateChange}
+                                minimumDate={new Date()}
+                                maximumDate={new Date(new Date().setMonth(new Date().getMonth() + 1))}
                             />
                         )}
-                        <Text className="text-base text-gray-100 font-pmedium mt-7">End Date</Text>
+                        <View className={'flex flex-row'}>
+                            <Text className="text-base text-gray-100 font-pmedium mt-7">End Date</Text>
+                            <Text className="text-red-500 text-base font-pmedium">*</Text>
+                        </View>
                         <TouchableOpacity onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{endDate?.toDateString()}</Text>
                         </TouchableOpacity>
@@ -179,6 +222,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 mode="date"
                                 display="default"
                                 onChange={handleEndDateChange}
+                                minimumDate={startDate || new Date()}
+                                maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
                             />
                         )}
                         {/* End Date Picker */}
@@ -283,9 +328,9 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             placeholder="Enter text"
                             multiline = {true}
                         />
-                        {sideEffects.length > 0 && (
-                            <SideEffectChecklist sideEffects={sideEffects} />
-                        )}
+                        
+                        <SideEffectChecklist sideEffects={sideEffects} />
+                        
 
                         {/* Close Button */}
                         <View className="flex flex-1 flex-row w-full justify-between">
