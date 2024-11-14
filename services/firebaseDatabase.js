@@ -36,7 +36,7 @@ export const createNewUser = async ({uid, firstName, lastName, email}) => {
             email,
         });
         console.log('User document created with UID:', uid);
-       
+       return uid;
     } catch(e){
         throw new Error(e.message);
     }
@@ -213,7 +213,7 @@ export const deleteMedication = async (medicationId) => {
             throw new Error("Medication not found");
         }
 
-        // await deleteDoc(medicationDocRef);
+        await deleteDoc(medicationDocRef);
         
         console.log("Medication deleted successfully:", medicationId);
         return medicationId;

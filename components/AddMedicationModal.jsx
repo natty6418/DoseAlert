@@ -172,6 +172,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             keyboardType="default"
                             placeholder="e.g. Aspirin"
                             required={true}
+                            maxLength={32}
                         />
                         <View className={'flex-1 flex-row w-full justify-between gap-2'}>
                             <FormField
@@ -182,6 +183,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 keyboardType="default"
                                 placeholder="Amount (e.g. 200)"
                                 required={true}
+                            maxLength={5}
+
                             />
                             <FormField
                                 title=" "
@@ -190,6 +193,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 otherStyles="mt-7 flex-1"
                                 keyboardType="default"
                                 placeholder="Units (e.g. mg)"
+                            maxLength={8}
+
                             />
                         </View>
                         <View className={'flex flex-row mt-7'}>
@@ -308,6 +313,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             otherStyles="mt-5"
                             keyboardType="default"
                             placeholder="Enter text"
+                            maxLength={255}
                             
                         />
                         <FormField
@@ -318,6 +324,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             keyboardType="default"
                             placeholder="Enter text"
                             multiline = {true}
+                            maxLength={255}
+
                         />
                         <FormField
                             title="Warning"
@@ -327,6 +335,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             keyboardType="default"
                             placeholder="Enter text"
                             multiline = {true}
+                            maxLength={255}
                         />
                         
                         <SideEffectChecklist sideEffects={sideEffects} setSideEffects={setSideEffects} />
