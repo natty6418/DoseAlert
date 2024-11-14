@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import PickerComponent from './Picker';
 import FormField from './FormField';
 import CustomButton from './CustomButton';
-import { addNewMedication } from '../services/firebaseDatabase';
+import { editMedication } from '../services/firebaseDatabase';
 import { useFirebaseContext } from '../contexts/FirebaseContext';
 import LoadingSpinner from './Loading';
 import { icons } from '../constants';
@@ -12,28 +12,28 @@ import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync } from '../services/registerNotification';
 import SideEffectChecklist from './SideEffectChecklist';
 import ErrorModal from './ErrorModal';
+import { deleteMedication } from '../services/firebaseDatabase';
 
-const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) => {
-    const [name, setName] = useState(medicationData?.name || '');
-    const [dosage, setDosage] = useState({ amount: '', unit: '' });
-    const [startDate, setStartDate] = useState(null);
-    const [endDate, setEndDate] = useState(null);
+const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication, medicationData }) => {
+    const [name, setName] = useState(medicationData?.medicationSpecification.name || '');
+    const [dosage, setDosage] = useState(medicationData?.dosage || { amount: '', unit: '' });
+    const [startDate, setStartDate] = useState(medicationData?.startDate || null);
+    const [endDate, setEndDate] = useState(medicationData?.endDate || null);
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
     const [frequency, setFrequency] = useState('Daily');
-    const [directions, setDirections] = useState(medicationData?.directions || '');
+    const [directions, setDirections] = useState(medicationData?.medicationSpecification.directions || '');
     const [purpose, setPurpose] = useState(medicationData?.purpose || '');
     const [sideEffects, setSideEffects] = useState(
-        medicationData?.sideEffects.map(effect => ({ term: effect, checked: false })) || []);
-    const [warning, setWarning] = useState(medicationData?.warning || '');
-    const [reminderEnabled, setReminderEnabled] = useState(false);
-    const [reminderTimes, setReminderTimes] = useState([]);
+        medicationData?.medicationSpecification.sideEffects || []);
+    const [warning, setWarning] = useState(medicationData?.medicationSpecification.warning || '');
+    const [reminderEnabled, setReminderEnabled] = useState(medicationData?.reminder.enabled || false);
+    const [reminderTimes, setReminderTimes] = useState(medicationData?.reminder.reminderTimes || []);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     
     const context = useFirebaseContext();
-
     useEffect(() => {
         (async () => {
           const { status } = await Notifications.requestPermissionsAsync();
@@ -44,6 +44,21 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
         })();
 
       }, []);
+      useEffect(()=>{
+        if(medicationData){
+            setName(medicationData.medicationSpecification.name);
+            setDosage(medicationData.dosage);
+            setStartDate(medicationData.startDate);
+            setEndDate(medicationData.endDate);
+            setFrequency(medicationData.frequency);
+            setDirections(medicationData.medicationSpecification.directions);
+            setPurpose(medicationData.purpose || '');
+            setSideEffects(medicationData.medicationSpecification.sideEffects);
+            setWarning(medicationData.medicationSpecification.warning || '');
+            setReminderEnabled(medicationData.reminder.enabled);
+            setReminderTimes(medicationData.reminder.reminderTimes);
+        }
+      },[medicationData]);
 
     const resetToDefault = () => {
         setName('');
@@ -88,10 +103,10 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
 
     const toggleReminder = () => setReminderEnabled(!reminderEnabled);
 
-    const handleSavePlan = async () => {
+    const handleEditPlan = async () => {
         setIsLoading(true);
         try {            
-            const response = await addNewMedication({
+            const response = await editMedication(medicationData.id, {
                 userId: context.user.uid,
                 dosage,
                 startDate,
@@ -122,6 +137,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                     reminderTimes,
                 },
                 purpose,
+                id: medicationData.id,
             };
             if(response.error){
                 setError(response.error);
@@ -129,7 +145,6 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             } else{
                 onSave({
                     ...data,
-                    id: response.data,
                 });
                 resetToDefault();
             }
@@ -142,6 +157,26 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
         }
     };
 
+    const handleDeletePlan = async () => {
+        setIsLoading(true);
+        try {
+            const response = await deleteMedication(medicationData.id);
+            if(response.error){
+                setError(response.error);
+                return;
+            } 
+            onDeleteMedication(medicationData.id);
+            resetToDefault();
+            
+            onClose();
+        } catch (error) {
+            console.error('Error deleting medication plan:', error);
+            setError(error.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    // reminderTimes.length > 0 && console.log(new Date(reminderTimes[0].time).toLocaleTimeString());
     if (error) {
         console.log('Error:', error);
         return <ErrorModal message={error} onClose={() => setError(null)} />;
@@ -161,8 +196,14 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             <View className="flex-1 justify-center items-center bg-black-70">
                 <View className="bg-black-100  px-6">
                     <ScrollView className="flex-1">
-                        <Text className="text-2xl font-semibold text-secondary-100 mt-5 font-psemibold">Add Medication Plan</Text>
-
+                        <Text className="text-2xl font-semibold text-secondary-100 mt-5 font-psemibold">Edit Medication Plan</Text>
+                        <TouchableOpacity
+                            onPress={handleDeletePlan}
+                        >
+                            <Text
+                                className="text-base text-red-500 font-plight mt-1 underline"
+                            >Delete</Text>
+                        </TouchableOpacity>
                         {/* Form Fields */}
                         <FormField
                             title="Name"
@@ -256,13 +297,14 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             <View className="w-full text-center p-4 border-2 border-black-200 rounded-lg">
                                 <Text className="text-base text-white font-pmedium mb-3 mx-auto">Reminder Times</Text>
                                 {reminderTimes.length > 0 && (
-                                    reminderTimes.map((time, index) => (
+                                    reminderTimes.map((reminder, index) => (
+                                        
                                         <View
                                             key={index}
                                             className="bg-gray-700 py-2 px-4 rounded-lg mb-2 flex-row justify-between items-center"
                                         >
                                             <Text className="text-white font-pmedium">
-                                                {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                { reminder.time.toLocaleTimeString() }
                                             </Text>
                                             <TouchableOpacity
                                                 onPress={() => {
@@ -338,7 +380,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 title="Save Plan"
                                 handlePress={()=>{
                                     
-                                        handleSavePlan();
+                                        handleEditPlan();
                                     
                                 }}
                                 containerStyles="mt-4 flex-1 mx-2 bg-secondary-200"
@@ -363,4 +405,4 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     );
 };
 
-export default AddMedicationPlanModal;
+export default EditMedicationPlanModal;

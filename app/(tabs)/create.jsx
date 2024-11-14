@@ -11,12 +11,14 @@ import CameraModal from '../../components/CameraModal';
 import MedicationCardModal from '../../components/MedicationCard';
 import MedicationItem from '../../components/MedicationItem';
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../services/externalDrugAPI';
+import EditMedicationPlanModal from '../../components/EditMedicationModal';
 
 
 
 
 const CreateScreen = () => {
   const [addMedicationModalVisible, setAddMedicationModalVisible] = useState(false);
+  const [editMedicationModalVisible, setEditMedicationModalVisible] = useState(false);
   const [medicationCardModalVisible, setMedicationCardModalVisible] = useState(false);
   const [isScanned, setIsScanned] = useState(false);
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
@@ -33,7 +35,6 @@ const CreateScreen = () => {
     try {
       const fetchMedicationPlans = async () => {
         const plans = await getMedications(context.user.uid);
-        console.log(plans);
         setMedicationPlans(plans);
       };
       fetchMedicationPlans();
@@ -47,6 +48,10 @@ const CreateScreen = () => {
   const handleSavePlan = (newPlan) => {
     setMedicationPlans([...medicationPlans, newPlan]);
     setAddMedicationModalVisible(false);
+  };
+  const handleEditPlan = (editedPlan) => {
+    setMedicationPlans(medicationPlans.map(plan => plan.id === editedPlan.id ? editedPlan : plan));
+    setEditMedicationModalVisible(false);
   };
   const extractSideEffectTerms = (sideEffectsData) => {
     const terms = sideEffectsData.map(effect => effect.term);
@@ -105,6 +110,10 @@ const CreateScreen = () => {
       setIsLoading(false);
     }
   };
+  const handleDeletePlan = (medicationId) => {
+    setMedicationPlans(medicationPlans.filter(plan => plan.id !== medicationId));
+    setEditMedicationModalVisible(false);
+  }
 
   const filteredPlans = medicationPlans.filter(plan =>
     plan.medicationSpecification.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -165,6 +174,11 @@ const CreateScreen = () => {
               frequency={selectedMedication.frequency}
               medicationSpecification={selectedMedication.medicationSpecification}
               reminder={selectedMedication.reminder}
+              medicationId={selectedMedication.id}
+              onEdit={() =>{
+                  setMedicationCardModalVisible(false)
+                  setEditMedicationModalVisible(true)
+                }}
             />
           )
         }
@@ -174,6 +188,13 @@ const CreateScreen = () => {
           onClose={() => setAddMedicationModalVisible(false)}
           onSave={handleSavePlan}
           medicationData={scannedMedication}
+        />
+        <EditMedicationPlanModal
+          visible={editMedicationModalVisible}
+          onClose={() => setEditMedicationModalVisible(false)}
+          onSave={handleEditPlan}
+          medicationData={selectedMedication}
+          onDeleteMedication={handleDeletePlan}
         />
         <CameraModal
           isVisible={cameraModalVisible}

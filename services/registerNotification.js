@@ -52,3 +52,26 @@ export async function registerForPushNotificationsAsync() {
   
     return token;
   }
+
+export const scheduleReminders = async (reminderTimes, message) => {
+    const reminders = [];
+    for (const time of reminderTimes) {
+        const triggerDate = new Date();
+        triggerDate.setHours(time.getHours(), time.getMinutes(), 0, 0);
+        
+        // Schedule notification at the specified time, daily
+        const id = await Notifications.scheduleNotificationAsync({
+            content: {
+                title: "Medication Reminder",
+                body: message,
+            },
+            trigger: {
+                hour: triggerDate.getHours(),
+                minute: triggerDate.getMinutes(),
+                repeats: true,
+            },
+        });
+        reminders.push({ id, time: triggerDate });
+    }
+    return reminders;
+};
