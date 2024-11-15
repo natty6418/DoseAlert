@@ -12,7 +12,9 @@ import MedicationCardModal from '../../components/MedicationCard';
 import MedicationItem from '../../components/MedicationItem';
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../services/externalDrugAPI';
 import EditMedicationPlanModal from '../../components/EditMedicationModal';
-
+import ErrorModal from '../../components/ErrorModal';
+import { set } from 'date-fns';
+import { th } from 'date-fns/locale';
 
 
 
@@ -28,7 +30,7 @@ const CreateScreen = () => {
   const context = useFirebaseContext();
   const [selectedMedication, setSelectedMedication] = useState(null);
   const [scannedMedication, setScannedMedication] = useState(null);
-
+  const [error, setError] = useState(null);
 
   
   useEffect(() => {
@@ -91,20 +93,21 @@ const CreateScreen = () => {
       const upc = data.data;
       const label = await fetchDrugLabelInfo(upc);
       if (!label) {
-        Alert.alert('No label information found for the provided NDC.');
+        setError('No drug label information found for the provided UPC.');
         return;
       }
       const sideEffects = await fetchDrugSideEffects(label.openfda.package_ndc[0]);
-      if (!sideEffects) {
-        Alert.alert('No side effects information found for the provided NDC.');
-        return;
-      }
+      // if (!sideEffects) {
+      // //  setError('No side effects information found for the provided NDC.');
+      //   return;
+      // }
       setScannedMedication({
         ...extractDrugLabelData(label),
         sideEffects: extractSideEffectTerms(sideEffects),
       });
       setAddMedicationModalVisible(true);
     } catch (error) {
+      setError("Failed to fetch drug label information. Try again or add manually instead.");
       console.log(error);
     } finally {
       setIsLoading(false);
@@ -118,7 +121,7 @@ const CreateScreen = () => {
   const filteredPlans = medicationPlans.filter(plan =>
     plan.medicationSpecification.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
+  error && console.log("error", error);
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -205,6 +208,8 @@ const CreateScreen = () => {
             handleUPCScan(data);
           }}
         />
+        {error && <ErrorModal visible={Boolean(error)} message={error} onClose={() => setError(null)} />}
+        
       </View>
     </SafeAreaView>
   );

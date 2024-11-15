@@ -280,9 +280,9 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                                     const updatedTimes = reminderTimes.filter((_, i) => i !== index);
                                                     setReminderTimes(updatedTimes);
                                                 }}
-                                                className="bg-red-500 p-2 rounded-full ml-2"
+                                                className="p-2 rounded-full ml-2"
                                             >
-                                                <icons.XMark color="#A3E635" size={12} />
+                                                <icons.XMark color="#ef4444" size={12} />
                                             </TouchableOpacity>
                                         </View>
                                     ))
