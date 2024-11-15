@@ -15,7 +15,7 @@ const MedicationCardModal = ({
     onEdit,
 }) => {
     // Filter unique reminder times
-    const uniqueReminderTimes = [...new Set(reminder.reminderTimes.map(rt => rt.time.toLocaleTimeString()))];
+    const uniqueReminderTimes = [...new Set(reminder.reminderTimes.map(rt => rt.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })))];
     // const uniqueReminderTimes = [...reminder.reminderTimes];
     return (
         <Modal
@@ -43,6 +43,7 @@ const MedicationCardModal = ({
                             <TouchableOpacity 
                                 className="flex-row items-center rounded-full bg-blue-800 p-2"
                                 onPress={onEdit}
+                                testID='edit-medication-button'
                                 >
                                     <icons.Pencil size={25} color="#fff"/>
                             </TouchableOpacity>
@@ -105,6 +106,7 @@ const MedicationCardModal = ({
                         </View>
 
                         {/* Reminder Section */}
+                        {reminder.enabled && uniqueReminderTimes.length > 0 && (
                         <View className="border-t border-gray-300 mt-4 pt-4">
                         <View className="flex flex-row items-center gap-1">
                         <icons.Bell size={25} color="#65a30d" /> 
@@ -112,16 +114,14 @@ const MedicationCardModal = ({
                             Reminder:
                         </Text>
                         </View>
-                            {reminder.enabled && uniqueReminderTimes.length > 0 && (
+                            
                                 <View className="ml-6 mt-2">
                                     {uniqueReminderTimes.map((time, index) => (
-                                        <Text key={index} className="text-sm text-white">
-                                            - {time}
-                                        </Text>
+                                        <Text key={index} className="text-sm text-white">- {time}</Text>
                                     ))}
                                 </View>
-                            )}
                         </View>
+                        )}
                         {/*sideEffects*/}
                         <SideEffectChecklist darker={false} sideEffects={medicationSpecification.sideEffects.filter(se=>se.checked)} setSideEffects={() => {}} />
 

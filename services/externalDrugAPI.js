@@ -33,7 +33,7 @@ export const fetchDrugSideEffects = async (packageNdc) => {
         return data.results; // Return the list of side effects with counts
       } else {
         console.log('No side effects information found for the provided NDC.');
-        return null;
+        return [];
       }
     } catch (error) {
       throw new Error(`Error fetching drug side effects information: ${error.message}`);

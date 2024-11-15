@@ -15,13 +15,15 @@ import {
 } from 'firebase/firestore';
 
 import { scheduleReminders } from "../services/registerNotification";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 
 import {
-    createNewUser, getUser, addNewMedication, getMedications, editMedication, deleteMedication
+    createNewUser, getUser, addNewMedication, getMedications, editMedication, deleteMedication, createNewAccount, logIn
+
 } from "../services/firebaseDatabase";
-import { toDate } from "date-fns";
 jest.mock('../services/firebaseConfig', () => ({
-    db: jest.fn()
+    db: jest.fn(),
+    auth: jest.fn().mockReturnValue({}),
 }));
 jest.mock("firebase/firestore", () => ({
     collection: jest.fn(),
@@ -41,6 +43,11 @@ jest.mock("firebase/firestore", () => ({
 
 jest.mock("../services/registerNotification", () => ({
     scheduleReminders: jest.fn(),
+}));
+
+jest.mock('firebase/auth', () => ({
+    createUserWithEmailAndPassword: jest.fn(),
+    signInWithEmailAndPassword: jest.fn(),
 }));
 
 
@@ -242,5 +249,94 @@ describe("deleteMedication", () => {
     it("should throw error if medication does not exist", async () => {
         getDoc.mockResolvedValueOnce({ exists: () => false });
         await expect(deleteMedication("med1")).rejects.toThrow("Medication not found");
+    });
+});
+
+describe("createNewAccount", () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test("should create a new account and add user to Firestore", async () => {
+        // Mock a successful response from createUserWithEmailAndPassword
+        createUserWithEmailAndPassword.mockResolvedValueOnce({
+            user: { uid: "123", email: "john.doe@example.com" },
+        });
+        doc.mockReturnValueOnce("users/123");
+        // Mock a successful response from setDoc
+        setDoc.mockResolvedValueOnce();
+
+        const result = await createNewAccount("john.doe@example.com", "password123", "John", "Doe");
+
+        // Check if the Firebase auth method was called correctly
+        expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(expect.any(Function), "john.doe@example.com", "password123");
+
+        // Check if setDoc was called to add user data to Firestore
+        expect(setDoc).toHaveBeenCalledWith("users/123", {
+            firstName: "John",
+            lastName: "Doe",
+            email: "john.doe@example.com",
+        });
+
+        // Check the result
+        expect(result).toBe("123");
+    });
+
+    test("should throw an error if email format is invalid", async () => {
+        await expect(createNewAccount("invalid-email", "password123", "John", "Doe"))
+            .rejects.toThrow("Invalid email format");
+    });
+
+    test("should throw an error if password is too short", async () => {
+        await expect(createNewAccount("john.doe@example.com", "12345", "John", "Doe"))
+            .rejects.toThrow("Password must be at least 8 characters long");
+    });
+
+    test("should throw an error if required fields are missing", async () => {
+        await expect(createNewAccount("", "password123", "John", "Doe"))
+            .rejects.toThrow("Please fill out all required fields.");
+    });
+
+    test("should throw an error if createUserWithEmailAndPassword fails", async () => {
+        createUserWithEmailAndPassword.mockRejectedValueOnce(new Error("Failed to create user"));
+        await expect(createNewAccount("john.doe@example.com", "password123", "John", "Doe"))
+            .rejects.toThrow("Failed to create user");
+    });
+});
+
+describe("logIn", () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    test("should log in successfully with valid credentials", async () => {
+        // Mock a successful response from signInWithEmailAndPassword
+        signInWithEmailAndPassword.mockResolvedValueOnce({
+            user: { uid: "123" },
+        });
+
+        const result = await logIn("john.doe@example.com", "password123");
+
+        // Check if the Firebase auth method was called correctly
+        expect(signInWithEmailAndPassword).toHaveBeenCalledWith(expect.any(Function), "john.doe@example.com", "password123");
+
+        // Check the result
+        expect(result).toBe("123");
+    });
+
+    test("should throw an error if email format is invalid", async () => {
+        await expect(logIn("invalid-email", "password123"))
+            .rejects.toThrow("Invalid email format");
+    });
+
+    test("should throw an error if password is too short", async () => {
+        await expect(logIn("john.doe@example.com", "12345"))
+            .rejects.toThrow("Password must be at least 8 characters long");
+    });
+
+    test("should throw an error if login fails", async () => {
+        signInWithEmailAndPassword.mockRejectedValueOnce(new Error("Login failed"));
+        await expect(logIn("john.doe@example.com", "password123"))
+            .rejects.toThrow("Invalid email or password");
     });
 });

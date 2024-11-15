@@ -53,7 +53,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
             setFrequency(medicationData.frequency);
             setDirections(medicationData.medicationSpecification.directions);
             setPurpose(medicationData.purpose || '');
-            setSideEffects(medicationData.medicationSpecification.sideEffects);
+            setSideEffects(medicationData.medicationSpecification.sideEffects || []);
             setWarning(medicationData.medicationSpecification.warning || '');
             setReminderEnabled(medicationData.reminder.enabled);
             setReminderTimes(medicationData.reminder.reminderTimes);
