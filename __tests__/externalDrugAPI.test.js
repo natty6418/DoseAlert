@@ -135,7 +135,7 @@ describe('fetchDrugSideEffects', () => {
 
         const result = await fetchDrugSideEffects(validPackageNdc);
 
-        expect(result).toBeNull();
+        expect(result.length).toEqual(0);
         expect(fetch).toHaveBeenCalledTimes(1);
     });
 

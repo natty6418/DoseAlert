@@ -52,7 +52,7 @@ const SignUp = () => {
             />
   
             <Text className="text-2xl font-semibold text-white mt-10 font-psemibold">
-              Sign Up
+              Create an account
             </Text>
   
             <FormField
