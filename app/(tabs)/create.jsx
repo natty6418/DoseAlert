@@ -188,6 +188,7 @@ const CreateScreen = () => {
           onClose={() => setAddMedicationModalVisible(false)}
           onSave={handleSavePlan}
           medicationData={scannedMedication}
+          testID={"add-medication-modal"}
         />
         <EditMedicationPlanModal
           visible={editMedicationModalVisible}

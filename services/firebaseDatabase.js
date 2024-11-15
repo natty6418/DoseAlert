@@ -1,6 +1,7 @@
-import { db } from "./firebaseConfig";
+import { db, auth } from "./firebaseConfig";
 import {collection, addDoc, Timestamp, doc, getDoc, getDocs, setDoc, query, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { scheduleReminders } from "./registerNotification";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
 const checkForErrors = ({name, dosage, startDate, endDate, frequency, reminderEnabled, reminderTimes}) => {
     if (!name || !dosage.amount || !dosage.unit || !startDate || !endDate || !frequency) {
@@ -26,6 +27,58 @@ const checkForErrors = ({name, dosage, startDate, endDate, frequency, reminderEn
     }
     return null;
 };
+
+const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
+
+const isValidPassword = (password) => {
+    return password.length >= 8;
+};
+
+export const logIn = async (email, password) => {
+    if (!isValidEmail(email)) {
+        throw new Error("Invalid email format");
+    }
+
+    if (!isValidPassword(password)) {
+        throw new Error("Password must be at least 8 characters long");
+    }
+
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        return user.uid;
+    } catch (e) {
+        throw new Error("Invalid email or password");
+    }
+};
+
+export const createNewAccount = async (email, password, firstName, lastName) => {
+    if (!firstName || !lastName || !email || !password) {
+        throw new Error("Please fill out all required fields.");
+    }
+    if (!isValidEmail(email)) {
+        throw new Error("Invalid email format");
+    }
+    if (!isValidPassword(password)) {
+        throw new Error("Password must be at least 8 characters long");
+    }
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        await createNewUser({
+            uid: user.uid,
+            firstName,
+            lastName,
+            email,
+        });
+        return user.uid;
+    } catch (e) {
+        throw new Error(e.message);
+    }
+}
 
 export const createNewUser = async ({uid, firstName, lastName, email}) => {
     try{

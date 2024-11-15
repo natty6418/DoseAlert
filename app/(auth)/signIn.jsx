@@ -2,33 +2,36 @@ import React from 'react'
 import { useState } from "react";
 import { Link, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { View, Text, ScrollView, Dimensions, Alert, Image } from "react-native";
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../services/firebaseConfig';
+import { View, Text, ScrollView, Dimensions, Image } from "react-native";
+// import { signInWithEmailAndPassword } from 'firebase/auth';
+// import { auth } from '../../services/firebaseConfig';
 import { images } from "../../constants";
 import CustomButton from "../../components/CustomButton";
 import FormField from "../../components/FormField";
-
-
-const signIn = () => {
+import ErrorModal from '../../components/ErrorModal';
+import { logIn } from '../../services/firebaseDatabase';
+const SignIn = () => {
     const [form, setForm] = useState({
         email: "",
         password: "",
       });
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const handleLogin = async () => {
       setLoading(true);
       try {
-        await signInWithEmailAndPassword(auth, form.email, form.password);
+        // await signInWithEmailAndPassword(auth, form.email, form.password);
+        await logIn(form.email, form.password);
         router.replace("/home");
       } catch (error) {
         console.log(error);
-        Alert.alert("Error", error.message);
+        setError(error.message);
       } finally {
         setLoading(false);
       }
     };
+    
   return (
     <SafeAreaView className="bg-black-100 h-full">
       <ScrollView>
@@ -82,10 +85,18 @@ const signIn = () => {
             </Link>
           </View>
         </View>
+        <ErrorModal
+          visible={error !== null}
+          message={error}
+          onClose={() => {
+            setForm({ email: "", password: "" });
+            setError(null)
+          }}
+        />
       </ScrollView>
 
     </SafeAreaView>
   )
 }
 
-export default signIn
+export default SignIn

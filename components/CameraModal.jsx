@@ -37,13 +37,14 @@ const CameraModal = ({ isVisible, onClose, onScan }) => {
       animationType="slide"
       visible={isVisible}
       onRequestClose={onClose}
+      testID='camera-modal'
     >
       <SafeAreaView className=" h-full bg-black-70 justify-center items-center">
         <View className="flex flex-col w-[90%] rounded-lg overflow-hidden shadow-2xl p-4">
-          <View className="flex h-[65vh] rounded-lg overflow-hidden">
+          <Text className="text-white text-lg font-semibold mb-4">Scan Barcode</Text>  
+        <View className="flex h-[65vh] rounded-lg overflow-hidden">
             <CameraView
-            ref={camera}
-
+              testID="camera-view"
               className="h-full flex-1"
               facing={facing}
               barcodeScannerSettings={{
@@ -58,6 +59,7 @@ const CameraModal = ({ isVisible, onClose, onScan }) => {
             />
           </View>
           <TouchableOpacity
+          testID="close-button"
             onPress={onClose}
             className="w-14 items-center mt-4 mx-auto p-2 bg-red-400 rounded-full"
           >

@@ -1,41 +1,36 @@
 import { useState } from "react";
 import { Link, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { View, Text, ScrollView, Dimensions, Alert, Image } from "react-native";
+import { View, Text, ScrollView, Dimensions, Image } from "react-native";
 import { images } from "../../constants";
 import CustomButton from "../../components/CustomButton";
 import FormField from "../../components/FormField";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../../services/firebaseConfig";
-import { createNewUser } from "../../services/firebaseDatabase";
+// import { createUserWithEmailAndPassword } from "firebase/auth";
+// import { auth } from "../../services/firebaseConfig";
+// import { createNewUser } from "../../services/firebaseDatabase";
+import ErrorModal from "../../components/ErrorModal";
+import { createNewAccount } from "../../services/firebaseDatabase";
 
-const signUp = () => {
+const SignUp = () => {
     const [form, setForm] = useState({
       firstName: "",
       lastName: "",
       email: "",
       password: "",
     });
-    const [user, setUser] = useState(null);
+    // const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
   
     const handleSignUp = async () => {
       setLoading(true);
       try{
-        const userCredential = await createUserWithEmailAndPassword(auth, form.email, form.password);
-        const user = userCredential.user;
-        console.log(user);
-        setUser(user);
-        await createNewUser({
-          uid: user.uid,
-          email: form.email,
-          firstName: form.firstName,
-          lastName: form.lastName,
-        });
+        console.log(form);
+        await createNewAccount(form.email, form.password, form.firstName, form.lastName);
         router.replace("/home");
       } catch(error){
         console.log(error);
-        Alert.alert("Error", error.message);
+        setError(error.message);
       } finally {
         setLoading(false);
       }
@@ -65,12 +60,14 @@ const signUp = () => {
               value={form.firstName}
               handleChangeText={(e) => setForm({ ...form, firstName: e })}
               otherStyles="mt-7"
+              testID="firstName"
             />
             <FormField
               title="Last Name"
               value={form.lastName}
               handleChangeText={(e) => setForm({ ...form, lastName: e })}
               otherStyles="mt-7"
+              testID="lastName"
             />
             <FormField
               title="Email"
@@ -78,6 +75,7 @@ const signUp = () => {
               handleChangeText={(e) => setForm({ ...form, email: e })}
               otherStyles="mt-7"
               keyboardType="email-address"
+              testID="email"
             />
   
             <FormField
@@ -85,6 +83,7 @@ const signUp = () => {
               value={form.password}
               handleChangeText={(e) => setForm({ ...form, password: e })}
               otherStyles="mt-7"
+              testID="password"
             />
   
             <CustomButton
@@ -106,9 +105,16 @@ const signUp = () => {
               </Link>
             </View>
           </View>
+          <ErrorModal
+          visible={error !== null}
+          message={error}
+          onClose={() => {
+            setError(null)
+          }}
+        />
         </ScrollView>
       </SafeAreaView>
     )
   }
   
-  export default signUp
+  export default SignUp

@@ -14,6 +14,7 @@ import SideEffectChecklist from './SideEffectChecklist';
 import ErrorModal from './ErrorModal';
 
 const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) => {
+    // console.log(medicationData)
     const [name, setName] = useState(medicationData?.name || '');
     const [dosage, setDosage] = useState({ amount: '', unit: '' });
     const [startDate, setStartDate] = useState(null);
@@ -25,7 +26,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const [purpose, setPurpose] = useState(medicationData?.purpose || '');
     const [sideEffects, setSideEffects] = useState(
         medicationData?.sideEffects.map(effect => ({ term: effect, checked: false })) || []);
-    const [warning, setWarning] = useState(medicationData?.warning || '');
+    const [warning, setWarning] = useState(medicationData?.warnings || '');
     const [reminderEnabled, setReminderEnabled] = useState(false);
     const [reminderTimes, setReminderTimes] = useState([]);
     const [showTimePicker, setShowTimePicker] = useState(false);
@@ -135,7 +136,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             }
             onClose();
         } catch (error) {
-            console.error('Error saving medication plan:', error);
+            console.log('Error saving medication plan:', error);
             setError(error.message);
         } finally {
             setIsLoading(false);
@@ -148,7 +149,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     }
 
     if (isLoading) {
-        return <LoadingSpinner />;
+        return <LoadingSpinner testID="loading-spinner"/>;
     }
 
     return (
@@ -157,6 +158,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             animationType="slide"
             transparent={true}
             onRequestClose={onClose}
+            testID='add-medication-modal'
         >
             <View className="flex-1 justify-center items-center bg-black-70">
                 <View className="bg-black-100  px-6">
@@ -201,7 +203,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             <Text className="text-base text-gray-100 font-pmedium">Start Date</Text>
                             <Text className="text-red-500 text-base font-pmedium">*</Text>
                         </View>
-                        <TouchableOpacity onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
+                        <TouchableOpacity testID='start-date-field' onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{startDate?.toDateString()}</Text>
                         </TouchableOpacity>
                         {showStartDatePicker && (
@@ -212,13 +214,14 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 onChange={handleStartDateChange}
                                 minimumDate={new Date()}
                                 maximumDate={new Date(new Date().setMonth(new Date().getMonth() + 1))}
+                                testID='start-date-picker'
                             />
                         )}
                         <View className={'flex flex-row mt-7'}>
                             <Text className="text-base text-gray-100 font-pmedium">End Date</Text>
                             <Text className="text-red-500 text-base font-pmedium">*</Text>
                         </View>
-                        <TouchableOpacity onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
+                        <TouchableOpacity testID='end-date-field' onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{endDate?.toDateString()}</Text>
                         </TouchableOpacity>
                         {showEndDatePicker && (
@@ -229,7 +232,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 onChange={handleEndDateChange}
                                 minimumDate={startDate || new Date()}
                                 maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
-                            />
+                                testID='end-date-picker'
+                                />
                         )}
                         {/* End Date Picker */}
 
@@ -253,6 +257,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 onValueChange={toggleReminder}
                                 trackColor={{ false: '#d1d5db', true: '#0099ff' }}
                                 thumbColor={reminderEnabled ? '#66c2ff' : '#f3f4f6'}
+                                testID="enable-reminders-switch"
                             />
                         </View>
 
@@ -287,6 +292,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                     onPress={() => setShowTimePicker(true)}
                                     className="bg-blue-400 p-3 rounded-full flex-row items-center justify-center shadow-md"
                                     style={{ alignSelf: 'center' }}
+                                    testID={"add-reminder-button"}
                                 >
                                     <icons.PlusCircle color="#FFF" size={48} style={{ width: 48, height: 48 }} />
                                 </TouchableOpacity>
@@ -304,6 +310,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 onChange={addReminderTime}
                                 textColor="#00000"
                                 accentColor="#00000"
+                                testID="date-time-picker"
                             />
                         )}
                         <FormField
