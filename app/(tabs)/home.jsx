@@ -18,8 +18,8 @@ const Home = () => {
   const [user, setUser] = useState(null);
   const [medications, setMedications] = useState([]);
   const context = useFirebaseContext();
+  if (!context.isLoggedIn) {return router.replace('/signIn')};
   useEffect(() => {
-    if (!context.isLoggedIn) router.replace('/signIn');
     try {
       const fetchUser = async () => {
         const user = await getUser(context.user.uid);
