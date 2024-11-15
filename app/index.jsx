@@ -10,7 +10,7 @@ import { useFirebaseContext } from "../contexts/FirebaseContext";
 
 export default function App() {
   const context = useFirebaseContext();
-  if(!context.loading && context.isLoggedIn) return <Redirect href="/signout" />
+  if(!context.loading && context.isLoggedIn) return <Redirect href="/home" />
   return (
     <SafeAreaView className="bg-black-100 h-full">
     <ScrollView
