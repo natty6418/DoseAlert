@@ -54,5 +54,6 @@ export default {
   logout,
   eyeHide,
   eye,
-  capture
+  capture,
+  //add cog6tooth
 };

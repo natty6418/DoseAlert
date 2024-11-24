@@ -71,6 +71,22 @@ const TabsLayout = () => {
         ),
       }}
     />
+
+    <Tabs.Screen
+      name="settings"
+      options={{
+        title: "Settings",
+        headerShown: false,
+        tabBarIcon: ({ color, focused }) => (
+          <TabIcon
+            icon={icons.profile}  //Put cog6 tooth icon
+            color={color}
+            name="Settings"
+            focused={focused}
+          />
+        ),
+      }}
+    />
     
   </Tabs>
   <StatusBar
