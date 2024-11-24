@@ -73,17 +73,20 @@ const TabsLayout = () => {
     />
 
     <Tabs.Screen
-      name="settings"
+      name="(settings)"
       options={{
         title: "Settings",
         headerShown: false,
         tabBarIcon: ({ color, focused }) => (
-          <TabIcon
-            icon={icons.Cog}  //Put cog6 tooth icon
-            color={color}
-            name="Settings"
-            focused={focused}
-          />
+          <View className="flex items-center justify-center gap-2">
+      <icons.Cog size={24} color={color} />
+      <Text
+        className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
+        style={{ color: color }}
+      >
+        Settings
+      </Text>
+    </View>
         ),
       }}
     />

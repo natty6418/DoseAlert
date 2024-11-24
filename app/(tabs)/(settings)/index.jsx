@@ -22,9 +22,6 @@ const SettingsScreen = ({ navigation }) => {
         {/* Grid layout for settings */}
         <View className="flex flex-wrap flex-row justify-between mt-4">
         {settingsOptions
-            .filter((option) =>
-            option.name.toLowerCase().includes(searchTerm.toLowerCase())
-            )
             .map((option, index) => (
             <TouchableOpacity
                 key={index}
