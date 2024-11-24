@@ -79,7 +79,7 @@ const TabsLayout = () => {
         headerShown: false,
         tabBarIcon: ({ color, focused }) => (
           <TabIcon
-            icon={icons.profile}  //Put cog6 tooth icon
+            icon={icons.Cog}  //Put cog6 tooth icon
             color={color}
             name="Settings"
             focused={focused}
