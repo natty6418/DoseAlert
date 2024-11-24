@@ -56,7 +56,8 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
             setSideEffects(medicationData.medicationSpecification.sideEffects || []);
             setWarning(medicationData.medicationSpecification.warning || '');
             setReminderEnabled(medicationData.reminder.enabled);
-            setReminderTimes(medicationData.reminder.reminderTimes);
+            setReminderTimes(medicationData.reminder.reminderTimes || []);
+            // console.log("reminderTimes",medicationData.reminder);
         }
       },[medicationData]);
 
@@ -391,7 +392,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                                 title="Cancel"
                                 handlePress={()=>{
                                     onClose();
-                                    resetToDefault();
+                                    // resetToDefault();
                                 }}
                                 containerStyles="mt-4 flex-1 mx-2 bg-red-400"
                                 textStyles="text-lg"

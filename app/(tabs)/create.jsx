@@ -138,6 +138,7 @@ const CreateScreen = () => {
               key={index}
               item={item}
               onPress={() => {
+                // console.log("item", item.reminder);
                 setSelectedMedication(item);
                 setMedicationCardModalVisible(true);
               }}

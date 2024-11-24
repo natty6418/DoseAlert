@@ -226,9 +226,10 @@ export const editMedication = async (medicationId, newData) => {
 
         let reminders = [];
         if (newData.reminderEnabled && (newData.reminderTimes.length > 0)) {
-            console.log("newData", newData.reminderTimes.length);
-            reminders = await scheduleReminders(newData.reminderTimes, `Time to take your ${newData.name}!`);
+            console.log("newData", newData.reminderTimes);
+            reminders = await scheduleReminders(newData.reminderTimes.map(({id, time})=>time), `Time to take your ${newData.name}!`);
         }
+        console.log("reminders at edit", reminders);
         const reminderTimeStamps = reminders.map(r=>({ time: Timestamp.fromDate(r.time), id: r.id}));
         // Update the document with the new data
         await updateDoc(medicationDocRef, {
