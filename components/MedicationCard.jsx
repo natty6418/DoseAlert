@@ -16,7 +16,6 @@ const MedicationCardModal = ({
 }) => {
     // Filter unique reminder times
     const uniqueReminderTimes = [...new Set(reminder.reminderTimes.map(rt => rt.time?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })))];
-    console.log(reminder);
     // const uniqueReminderTimes = [...reminder.reminderTimes];
     return (
         <Modal

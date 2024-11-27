@@ -56,7 +56,6 @@ export async function registerForPushNotificationsAsync() {
 export const scheduleReminders = async (reminderTimes, message) => {
     const reminders = [];
     for (const time of reminderTimes) {
-      console.log("time schedule", time);
         const triggerDate = new Date();
         triggerDate.setHours(time.getHours(), time.getMinutes(), 0, 0);
         
