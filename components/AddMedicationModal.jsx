@@ -14,6 +14,7 @@ import SideEffectChecklist from './SideEffectChecklist';
 import ErrorModal from './ErrorModal';
 
 const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) => {
+    // console.log(medicationData)
     const [name, setName] = useState(medicationData?.name || '');
     const [dosage, setDosage] = useState({ amount: '', unit: '' });
     const [startDate, setStartDate] = useState(null);
@@ -25,7 +26,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const [purpose, setPurpose] = useState(medicationData?.purpose || '');
     const [sideEffects, setSideEffects] = useState(
         medicationData?.sideEffects.map(effect => ({ term: effect, checked: false })) || []);
-    const [warning, setWarning] = useState(medicationData?.warning || '');
+    const [warning, setWarning] = useState(medicationData?.warnings || '');
     const [reminderEnabled, setReminderEnabled] = useState(false);
     const [reminderTimes, setReminderTimes] = useState([]);
     const [showTimePicker, setShowTimePicker] = useState(false);
@@ -63,26 +64,6 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
         setError(null);
     };
 
-    const checkForErrors = () => {
-        if (!name || !dosage || !startDate || !endDate || !frequency) {
-            setError('Please fill out all required fields.');
-            return true;
-        }
-        if(isNaN(parseInt(dosage.amount))){
-            setError('Dosage amount must be a number.');
-            return true;
-        }
-        if (endDate < startDate) {
-            setError('End date must be after the start date.');
-            return
-        }
-        if (reminderEnabled && reminderTimes.length === 0) {
-            setError('Please add at least one reminder time.');
-            return true;
-        }
-        return false;
-    };
-
     const handleStartDateChange = (event, selectedDate) => {
         setShowStartDatePicker(false);
         if (event.type === 'set' && selectedDate) {
@@ -108,62 +89,55 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
 
     const toggleReminder = () => setReminderEnabled(!reminderEnabled);
 
-    const scheduleReminders = async () => {
-        const reminders = [];
-        for (const time of reminderTimes) {
-            const triggerDate = new Date();
-            triggerDate.setHours(time.getHours(), time.getMinutes(), 0, 0);
-            
-            // Schedule notification at the specified time, daily
-            const id = await Notifications.scheduleNotificationAsync({
-                content: {
-                    title: "Medication Reminder",
-                    body: `It's time to take ${name}.`,
-                },
-                trigger: {
-                    hour: triggerDate.getHours(),
-                    minute: triggerDate.getMinutes(),
-                    repeats: true,
-                },
-            });
-            reminders.push({ id, time: triggerDate });
-        }
-        return reminders;
-    };
-
     const handleSavePlan = async () => {
         setIsLoading(true);
-        try {
-            
-            // Schedule reminders if enabled
-            let reminders = [];
-            if (reminderEnabled && reminderTimes.length > 0) {
-                reminders = await scheduleReminders();
-            }
+        try {            
+            const response = await addNewMedication({
+                userId: context.user.uid,
+                dosage,
+                startDate,
+                endDate,
+                frequency,
+                name,
+                directions,
+                sideEffects,
+                reminderEnabled,
+                reminderTimes,
+                purpose,
+                warning,                
+            });
             const data = {
                 userId: context.user.uid,
-                dosage: dosage.amount + ' ' + dosage.unit,
+                dosage,
                 startDate,
                 endDate,
                 frequency,
                 medicationSpecification: {
                     name,
                     directions,
-                    sideEffects
+                    sideEffects,
+                    warning
                 },
                 reminder: {
                     enabled: reminderEnabled,
-                    reminders,
+                    reminderTimes,
                 },
                 purpose,
-                
             };
-            onSave(data);
-            await addNewMedication(data);
-
+            if(response.error){
+                setError(response.error);
+                return;
+            } else{
+                onSave({
+                    ...data,
+                    id: response.data,
+                });
+                resetToDefault();
+            }
             onClose();
         } catch (error) {
-            console.error('Error saving medication plan:', error);
+            console.log('Error saving medication plan:', error);
+            setError(error.message);
         } finally {
             setIsLoading(false);
         }
@@ -175,7 +149,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     }
 
     if (isLoading) {
-        return <LoadingSpinner />;
+        return <LoadingSpinner testID="loading-spinner"/>;
     }
 
     return (
@@ -184,6 +158,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             animationType="slide"
             transparent={true}
             onRequestClose={onClose}
+            testID='add-medication-modal'
         >
             <View className="flex-1 justify-center items-center bg-black-70">
                 <View className="bg-black-100  px-6">
@@ -199,6 +174,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             keyboardType="default"
                             placeholder="e.g. Aspirin"
                             required={true}
+                            maxLength={32}
                         />
                         <View className={'flex-1 flex-row w-full justify-between gap-2'}>
                             <FormField
@@ -209,6 +185,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 keyboardType="default"
                                 placeholder="Amount (e.g. 200)"
                                 required={true}
+                            maxLength={5}
+
                             />
                             <FormField
                                 title=" "
@@ -217,13 +195,15 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 otherStyles="mt-7 flex-1"
                                 keyboardType="default"
                                 placeholder="Units (e.g. mg)"
+                            maxLength={8}
+
                             />
                         </View>
                         <View className={'flex flex-row mt-7'}>
                             <Text className="text-base text-gray-100 font-pmedium">Start Date</Text>
                             <Text className="text-red-500 text-base font-pmedium">*</Text>
                         </View>
-                        <TouchableOpacity onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
+                        <TouchableOpacity testID='start-date-field' onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{startDate?.toDateString()}</Text>
                         </TouchableOpacity>
                         {showStartDatePicker && (
@@ -234,13 +214,14 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 onChange={handleStartDateChange}
                                 minimumDate={new Date()}
                                 maximumDate={new Date(new Date().setMonth(new Date().getMonth() + 1))}
+                                testID='start-date-picker'
                             />
                         )}
                         <View className={'flex flex-row mt-7'}>
                             <Text className="text-base text-gray-100 font-pmedium">End Date</Text>
                             <Text className="text-red-500 text-base font-pmedium">*</Text>
                         </View>
-                        <TouchableOpacity onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
+                        <TouchableOpacity testID='end-date-field' onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{endDate?.toDateString()}</Text>
                         </TouchableOpacity>
                         {showEndDatePicker && (
@@ -251,7 +232,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 onChange={handleEndDateChange}
                                 minimumDate={startDate || new Date()}
                                 maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
-                            />
+                                testID='end-date-picker'
+                                />
                         )}
                         {/* End Date Picker */}
 
@@ -275,6 +257,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 onValueChange={toggleReminder}
                                 trackColor={{ false: '#d1d5db', true: '#0099ff' }}
                                 thumbColor={reminderEnabled ? '#66c2ff' : '#f3f4f6'}
+                                testID="enable-reminders-switch"
                             />
                         </View>
 
@@ -297,9 +280,9 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                                     const updatedTimes = reminderTimes.filter((_, i) => i !== index);
                                                     setReminderTimes(updatedTimes);
                                                 }}
-                                                className="bg-red-500 p-2 rounded-full ml-2"
+                                                className="p-2 rounded-full ml-2"
                                             >
-                                                <icons.XMark color="#A3E635" size={12} />
+                                                <icons.XMark color="#ef4444" size={12} />
                                             </TouchableOpacity>
                                         </View>
                                     ))
@@ -309,6 +292,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                     onPress={() => setShowTimePicker(true)}
                                     className="bg-blue-400 p-3 rounded-full flex-row items-center justify-center shadow-md"
                                     style={{ alignSelf: 'center' }}
+                                    testID={"add-reminder-button"}
                                 >
                                     <icons.PlusCircle color="#FFF" size={48} style={{ width: 48, height: 48 }} />
                                 </TouchableOpacity>
@@ -326,6 +310,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 onChange={addReminderTime}
                                 textColor="#00000"
                                 accentColor="#00000"
+                                testID="date-time-picker"
                             />
                         )}
                         <FormField
@@ -335,6 +320,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             otherStyles="mt-5"
                             keyboardType="default"
                             placeholder="Enter text"
+                            maxLength={255}
                             
                         />
                         <FormField
@@ -345,6 +331,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             keyboardType="default"
                             placeholder="Enter text"
                             multiline = {true}
+                            maxLength={255}
+
                         />
                         <FormField
                             title="Warning"
@@ -354,6 +342,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             keyboardType="default"
                             placeholder="Enter text"
                             multiline = {true}
+                            maxLength={255}
                         />
                         
                         <SideEffectChecklist sideEffects={sideEffects} setSideEffects={setSideEffects} />
@@ -364,9 +353,9 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             <CustomButton
                                 title="Save Plan"
                                 handlePress={()=>{
-                                    if(!checkForErrors()){
+                                    
                                         handleSavePlan();
-                                    }
+                                    
                                 }}
                                 containerStyles="mt-4 flex-1 mx-2 bg-secondary-200"
                                 textStyles="text-lg"

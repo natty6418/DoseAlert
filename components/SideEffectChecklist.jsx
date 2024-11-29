@@ -16,7 +16,7 @@ const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) => {
   return (
     <View className={`${darker ? "bg-black-100" : "bg-black-200"} rounded-lg mt-7`}>
       <Text className="text-base text-gray-100 font-pmedium mb-2">Side Effects Checklist</Text>
-      <FlatList
+      {sideEffects.length > 0 && <FlatList
         data={sideEffects}
         scrollEnabled={false}
         keyExtractor={(item, index) => index.toString()}
@@ -25,11 +25,11 @@ const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) => {
             onPress={() => toggleChecked(index)}
             className="flex-row items-center"
           >
-            {item.checked ? <icons.CheckCircle color="#A3E635" size={24} /> : <icons.PlusCircle color="#9CA3AF" size={24} />}
+            {item.checked ? <View testID='checked'><icons.CheckCircle color="#A3E635" size={24} /></View> : <View testID='not-checked'><icons.PlusCircle color="#9CA3AF" size={24} /></View> }
             <Text className="ml-2 text-white font-pregular">{item.term}</Text>
           </TouchableOpacity>
         )}
-      />
+      />}
       <View className='flex flex-row'>
         <icons.PlusCircle color="#9CA3AF" size={24} />
         <TextInput 

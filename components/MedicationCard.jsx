@@ -12,9 +12,10 @@ const MedicationCardModal = ({
     frequency,
     medicationSpecification,
     reminder,
+    onEdit,
 }) => {
     // Filter unique reminder times
-    const uniqueReminderTimes = [...new Set(reminder.reminderTimes.map(rt => rt.time.toLocaleTimeString()))];
+    const uniqueReminderTimes = [...new Set(reminder.reminderTimes.map(rt => rt.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })))];
     // const uniqueReminderTimes = [...reminder.reminderTimes];
     return (
         <Modal
@@ -27,23 +28,32 @@ const MedicationCardModal = ({
                 <View className="bg-black-200 rounded-lg shadow-lg p-6 w-11/12 max-h-3/4">
                     <ScrollView>
                         {/* Header Section with Medication Name */}
-                        <View className="flex-row items-center mb-4">
-                        <Image
-          source={icons.pill}
-          resizeMode="contain"
-          tintColor="#91D62A" // Lime color for the icon
-          className="w-8 h-8 mr-2"
-        />
-                            <Text className="text-lg font-semibold text-lime-600 ml-2">
-                                {medicationSpecification.name}
-                            </Text>
+                        <View className='flex flex-row justify-between'>
+                            <View className="flex-row items-center mb-4">
+                            <Image
+            source={icons.pill}
+            resizeMode="contain"
+            tintColor="#91D62A" // Lime color for the icon
+            className="w-8 h-8 mr-2"
+            />
+                                <Text className="text-lg font-semibold text-lime-600 ml-2">
+                                    {medicationSpecification.name}
+                                </Text>
+                            </View>
+                            <TouchableOpacity 
+                                className="flex-row items-center rounded-full bg-blue-800 p-2"
+                                onPress={onEdit}
+                                testID='edit-medication-button'
+                                >
+                                    <icons.Pencil size={25} color="#fff"/>
+                            </TouchableOpacity>
                         </View>
 
                         {/* Dosage and Frequency */}
                         <View className="flex-row items-center my-2">
                             
                             <Text className="text-white ml-2">
-                                <Text className="font-medium">Dosage:</Text> {dosage}
+                                <Text className="font-medium">Dosage:</Text> {dosage.amount} {dosage.unit}
                             </Text>
                         </View>
                         <View className="flex-row items-center my-2">
@@ -96,6 +106,7 @@ const MedicationCardModal = ({
                         </View>
 
                         {/* Reminder Section */}
+                        {reminder.enabled && uniqueReminderTimes.length > 0 && (
                         <View className="border-t border-gray-300 mt-4 pt-4">
                         <View className="flex flex-row items-center gap-1">
                         <icons.Bell size={25} color="#65a30d" /> 
@@ -103,16 +114,14 @@ const MedicationCardModal = ({
                             Reminder:
                         </Text>
                         </View>
-                            {reminder.enabled && uniqueReminderTimes.length > 0 && (
+                            
                                 <View className="ml-6 mt-2">
                                     {uniqueReminderTimes.map((time, index) => (
-                                        <Text key={index} className="text-sm text-white">
-                                            - {time}
-                                        </Text>
+                                        <Text key={index} className="text-sm text-white">- {time}</Text>
                                     ))}
                                 </View>
-                            )}
                         </View>
+                        )}
                         {/*sideEffects*/}
                         <SideEffectChecklist darker={false} sideEffects={medicationSpecification.sideEffects.filter(se=>se.checked)} setSideEffects={() => {}} />
 

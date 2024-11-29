@@ -1,7 +1,84 @@
-import { db } from "./firebaseConfig";
-import {collection, addDoc, Timestamp, doc, getDoc, getDocs, setDoc, query, where } from "firebase/firestore";
-import { addDays, isBefore } from 'date-fns';
+import { db, auth } from "./firebaseConfig";
+import {collection, addDoc, Timestamp, doc, getDoc, getDocs, setDoc, query, where, updateDoc, deleteDoc } from "firebase/firestore";
+import { scheduleReminders } from "./registerNotification";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
+const checkForErrors = ({name, dosage, startDate, endDate, frequency, reminderEnabled, reminderTimes}) => {
+    if (!name || !dosage.amount || !dosage.unit || !startDate || !endDate || !frequency) {
+        return { error: 'Please fill out all required fields.' };
+    }
+    if (name.length < 3) {
+        return { error: 'Medication name must be at least 3 characters long.' };
+    }
+    if (dosage.amount <= 0) {
+        return { error: 'Dosage amount must be greater than 0.' };
+    }
+    if (dosage.unit.length < 1) {
+        return { error: 'Please select a dosage unit.' };
+    }
+    if(isNaN(parseInt(dosage.amount))){
+        return { error: 'Dosage amount must be a number.' };
+    }
+    if (endDate < startDate) {
+        return { error: 'End date must be after start date.' };
+    }
+    if (reminderEnabled && reminderTimes.length === 0) {
+        return { error: 'Please select at least one reminder time.' };
+    }
+    return null;
+};
+
+const isValidEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
+
+const isValidPassword = (password) => {
+    return password.length >= 8;
+};
+
+export const logIn = async (email, password) => {
+    if (!isValidEmail(email)) {
+        throw new Error("Invalid email format");
+    }
+
+    if (!isValidPassword(password)) {
+        throw new Error("Password must be at least 8 characters long");
+    }
+
+    try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        return user.uid;
+    } catch (e) {
+        throw new Error("Invalid email or password");
+    }
+};
+
+export const createNewAccount = async (email, password, firstName, lastName) => {
+    if (!firstName || !lastName || !email || !password) {
+        throw new Error("Please fill out all required fields.");
+    }
+    if (!isValidEmail(email)) {
+        throw new Error("Invalid email format");
+    }
+    if (!isValidPassword(password)) {
+        throw new Error("Password must be at least 8 characters long");
+    }
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        await createNewUser({
+            uid: user.uid,
+            firstName,
+            lastName,
+            email,
+        });
+        return user.uid;
+    } catch (e) {
+        throw new Error(e.message);
+    }
+}
 
 export const createNewUser = async ({uid, firstName, lastName, email}) => {
     try{
@@ -12,7 +89,7 @@ export const createNewUser = async ({uid, firstName, lastName, email}) => {
             email,
         });
         console.log('User document created with UID:', uid);
-       
+       return uid;
     } catch(e){
         throw new Error(e.message);
     }
@@ -42,11 +119,33 @@ export const getUser = async (uid) => {
         throw new Error('Error fetching user: ' + e.message);
     }
 };
-export const addNewMedication = async ({ userId, dosage, startDate, endDate, frequency, medicationSpecification, reminder }) => {
+export const addNewMedication = async ({ 
+    userId, 
+    dosage, 
+    startDate, 
+    endDate, 
+    frequency, 
+    name, 
+    directions, 
+    sideEffects, 
+    reminderEnabled, 
+    reminderTimes, 
+    purpose, 
+    warning }) => {
     try {
-        // Generate reminder date-times between startDate and endDate as Firebase Timestamps
-         // Provided reminder times as an array of time strings
-        const reminderTimes = reminder.reminders.map(r=>({ time: Timestamp.fromDate(r.time), id: r.id}));
+        const errors = checkForErrors({name, dosage, startDate, endDate, frequency, reminderEnabled, reminderTimes});
+        if (errors) {
+            return {
+                data: null,
+                error: errors.error,
+            }
+        }
+        let reminders = [];
+            if (reminderEnabled && reminderTimes.length > 0) {
+                reminders = await scheduleReminders(reminderTimes, `Time to take your ${name}!`);
+        }
+        const reminderTimeStamps = reminders.map(r=>({ time: Timestamp.fromDate(r.time), id: r.id}));
+        console.log(reminderTimeStamps);
         const docRef = await addDoc(collection(db, 'medications'), {
             userId: `users/${userId}`, // Reference to the user's path
             dosage,
@@ -54,18 +153,19 @@ export const addNewMedication = async ({ userId, dosage, startDate, endDate, fre
             endDate: Timestamp.fromDate(new Date(endDate)), // Convert endDate to Firebase Timestamp
             frequency,
             medicationSpecification: {
-                name: medicationSpecification.name,
-                directions: medicationSpecification.directions || '',
-                sideEffects: medicationSpecification.sideEffects || [], // Optional field with default empty string
-                warnings: medicationSpecification.warnings || '', // Optional field with default empty string
+                name,
+                directions,
+                sideEffects, // Optional field with default empty string
+                warning, // Optional field with default empty string
             },
             reminder: {
-                enabled: reminder.enabled,
-                reminderTimes, // Array of generated reminder Timestamps
+                enabled: reminderEnabled,
+                reminderTimes: reminderTimeStamps, // Array of generated reminder Timestamps
             },
+            purpose,
         });
         console.log("Document written with ID: ", docRef.id);
-        return docRef.id;
+        return {data: docRef.id, error: null};
     } catch (e) {
         throw new Error(e.message);
     }
@@ -101,5 +201,76 @@ export const getMedications = async (userId) => {
         return medications; // Return the list of medications
     } catch (e) {
         throw new Error('Error fetching medications: ' + e.message);
+    }
+};
+
+export const editMedication = async (medicationId, newData) => {
+    try {
+        // Validate the updatedFields input before proceeding
+        const errors = checkForErrors({...newData});
+        if (errors) {
+            return {
+                data: null,
+                error: errors.error,
+            }
+        }
+
+        // Reference to the specific medication document
+        const medicationDocRef = doc(db, 'medications', medicationId);
+        
+        // Check if the medication document exists
+        const medicationDoc = await getDoc(medicationDocRef);
+        if (!medicationDoc.exists()) {
+            throw new Error("Medication not found");
+        }
+
+        let reminders = [];
+        if (newData.reminderEnabled && (newData.reminderTimes.length > 0)) {
+            console.log("newData", newData.reminderTimes.length);
+            reminders = await scheduleReminders(newData.reminderTimes, `Time to take your ${newData.name}!`);
+        }
+        const reminderTimeStamps = reminders.map(r=>({ time: Timestamp.fromDate(r.time), id: r.id}));
+        // Update the document with the new data
+        await updateDoc(medicationDocRef, {
+            userId: `users/${newData.userId}`, // Reference to the user's path
+            dosage: newData.dosage,
+            startDate: Timestamp.fromDate(new Date(newData.startDate)), // Convert startDate to Firebase Timestamp
+            endDate: Timestamp.fromDate(new Date(newData.endDate)), // Convert endDate to Firebase Timestamp
+            frequency: newData.frequency,
+            medicationSpecification: {
+                name: newData.name,
+                directions: newData.directions,
+                sideEffects:newData.sideEffects, // Optional field with default empty string
+                warning: newData.warning, // Optional field with default empty string
+            },
+            reminder: {
+                enabled: newData.reminderEnabled,
+                reminderTimes: reminderTimeStamps, // Array of generated reminder Timestamps
+            },
+            purpose: newData.purpose,
+        });
+        
+        console.log("Medication updated successfully:", medicationId);
+        return medicationId;
+    } catch (e) {
+        throw new Error("Error updating medication: " + e.message);
+    }
+};
+
+export const deleteMedication = async (medicationId) => {
+    try {
+        const medicationDocRef = doc(db, 'medications', medicationId);
+        
+        const medicationDoc = await getDoc(medicationDocRef);
+        if (!medicationDoc.exists()) {
+            throw new Error("Medication not found");
+        }
+
+        await deleteDoc(medicationDocRef);
+        
+        console.log("Medication deleted successfully:", medicationId);
+        return medicationId;
+    } catch (e) {
+        throw new Error("Error deleting medication: " + e.message);
     }
 };

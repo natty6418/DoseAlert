@@ -11,12 +11,16 @@ import CameraModal from '../../components/CameraModal';
 import MedicationCardModal from '../../components/MedicationCard';
 import MedicationItem from '../../components/MedicationItem';
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../services/externalDrugAPI';
-
+import EditMedicationPlanModal from '../../components/EditMedicationModal';
+import ErrorModal from '../../components/ErrorModal';
+import { set } from 'date-fns';
+import { th } from 'date-fns/locale';
 
 
 
 const CreateScreen = () => {
   const [addMedicationModalVisible, setAddMedicationModalVisible] = useState(false);
+  const [editMedicationModalVisible, setEditMedicationModalVisible] = useState(false);
   const [medicationCardModalVisible, setMedicationCardModalVisible] = useState(false);
   const [isScanned, setIsScanned] = useState(false);
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
@@ -26,14 +30,13 @@ const CreateScreen = () => {
   const context = useFirebaseContext();
   const [selectedMedication, setSelectedMedication] = useState(null);
   const [scannedMedication, setScannedMedication] = useState(null);
-
+  const [error, setError] = useState(null);
 
   
   useEffect(() => {
     try {
       const fetchMedicationPlans = async () => {
         const plans = await getMedications(context.user.uid);
-        console.log(plans);
         setMedicationPlans(plans);
       };
       fetchMedicationPlans();
@@ -47,6 +50,10 @@ const CreateScreen = () => {
   const handleSavePlan = (newPlan) => {
     setMedicationPlans([...medicationPlans, newPlan]);
     setAddMedicationModalVisible(false);
+  };
+  const handleEditPlan = (editedPlan) => {
+    setMedicationPlans(medicationPlans.map(plan => plan.id === editedPlan.id ? editedPlan : plan));
+    setEditMedicationModalVisible(false);
   };
   const extractSideEffectTerms = (sideEffectsData) => {
     const terms = sideEffectsData.map(effect => effect.term);
@@ -86,30 +93,35 @@ const CreateScreen = () => {
       const upc = data.data;
       const label = await fetchDrugLabelInfo(upc);
       if (!label) {
-        Alert.alert('No label information found for the provided NDC.');
+        setError('No drug label information found for the provided UPC.');
         return;
       }
       const sideEffects = await fetchDrugSideEffects(label.openfda.package_ndc[0]);
-      if (!sideEffects) {
-        Alert.alert('No side effects information found for the provided NDC.');
-        return;
-      }
+      // if (!sideEffects) {
+      // //  setError('No side effects information found for the provided NDC.');
+      //   return;
+      // }
       setScannedMedication({
         ...extractDrugLabelData(label),
         sideEffects: extractSideEffectTerms(sideEffects),
       });
       setAddMedicationModalVisible(true);
     } catch (error) {
+      setError("Failed to fetch drug label information. Try again or add manually instead.");
       console.log(error);
     } finally {
       setIsLoading(false);
     }
   };
+  const handleDeletePlan = (medicationId) => {
+    setMedicationPlans(medicationPlans.filter(plan => plan.id !== medicationId));
+    setEditMedicationModalVisible(false);
+  }
 
   const filteredPlans = medicationPlans.filter(plan =>
     plan.medicationSpecification.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
+  error && console.log("error", error);
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -165,6 +177,11 @@ const CreateScreen = () => {
               frequency={selectedMedication.frequency}
               medicationSpecification={selectedMedication.medicationSpecification}
               reminder={selectedMedication.reminder}
+              medicationId={selectedMedication.id}
+              onEdit={() =>{
+                  setMedicationCardModalVisible(false)
+                  setEditMedicationModalVisible(true)
+                }}
             />
           )
         }
@@ -174,6 +191,14 @@ const CreateScreen = () => {
           onClose={() => setAddMedicationModalVisible(false)}
           onSave={handleSavePlan}
           medicationData={scannedMedication}
+          testID={"add-medication-modal"}
+        />
+        <EditMedicationPlanModal
+          visible={editMedicationModalVisible}
+          onClose={() => setEditMedicationModalVisible(false)}
+          onSave={handleEditPlan}
+          medicationData={selectedMedication}
+          onDeleteMedication={handleDeletePlan}
         />
         <CameraModal
           isVisible={cameraModalVisible}
@@ -183,6 +208,8 @@ const CreateScreen = () => {
             handleUPCScan(data);
           }}
         />
+        {error && <ErrorModal visible={Boolean(error)} message={error} onClose={() => setError(null)} />}
+        
       </View>
     </SafeAreaView>
   );
