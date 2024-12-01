@@ -55,22 +55,7 @@ const TabsLayout = () => {
           }}
         />
 
-        <Tabs.Screen
-          name="create"
-          options={{
-            title: "Create",
-            headerShown: false,
-            tabBarIcon: ({ color, focused }) => (
-              <TabIcon
-                icon={icons.plus}
-                color={color}
-                name="Create"
-                focused={focused}
-              />
-            ),
-          }}
-        />
-
+        
 
         {/* Updated "Report" Tab */}
         <Tabs.Screen
@@ -79,16 +64,18 @@ const TabsLayout = () => {
             title: "Report", 
             headerShown: false,
             tabBarIcon: ({ color, focused }) => (
-              <TabIcon
-                icon={Newspaper} 
-                color={color}
-                name="Report" 
-                focused={focused}
-              />
-            ),
+              <View className="flex items-center justify-center gap-2">
+          <icons.Newspaper size={24} color={color} />
+          <Text
+            className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
+            style={{ color: color }}
+          >
+            Report
+          </Text>
+        </View>),
           }}
         />
-      </Tabs>
+  
 
     <Tabs.Screen
       name="create"
