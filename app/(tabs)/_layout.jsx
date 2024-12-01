@@ -105,6 +105,25 @@ const TabsLayout = () => {
         ),
       }}
     />
+
+    <Tabs.Screen
+      name="(settings)"
+      options={{
+        title: "Settings",
+        headerShown: false,
+        tabBarIcon: ({ color, focused }) => (
+          <View className="flex items-center justify-center gap-2">
+      <icons.Cog size={24} color={color} />
+      <Text
+        className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
+        style={{ color: color }}
+      >
+        Settings
+      </Text>
+    </View>
+        ),
+      }}
+    />
     
   </Tabs>
   <StatusBar
