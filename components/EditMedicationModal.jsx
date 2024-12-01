@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, ScrollView, Text, Switch, TouchableOpacity } from 'react-native';
+import { Modal, View, ScrollView, Text, TextInput, Switch, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import PickerComponent from './Picker';
 import FormField from './FormField';
@@ -32,6 +32,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [newSideEffect, setNewSideEffect] = useState('');
     
     const context = useFirebaseContext();
     useEffect(() => {
@@ -353,7 +354,21 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                         />
                         
                         <SideEffectChecklist sideEffects={sideEffects} setSideEffects={setSideEffects} />
-                        
+                        <View className='flex flex-row'>
+                            <icons.PlusCircle color="#9CA3AF" size={24} />
+                            <TextInput
+                                value={newSideEffect}
+                                onChangeText={(e) => setNewSideEffect(e)}
+                                className="ml-2 w-full text-white font-pregular"
+                                placeholder='Add item....'
+                                placeholderTextColor='#9CA3AF'
+                                onSubmitEditing={() => {
+                                    setSideEffects([...sideEffects, { term: newSideEffect, checked: true }]);
+                                    setNewSideEffect('');
+                                }}
+                            />
+
+                        </View>
 
                         {/* Close Button */}
                         <View className="flex flex-1 flex-row w-full justify-between">
