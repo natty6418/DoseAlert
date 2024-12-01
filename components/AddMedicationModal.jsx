@@ -106,32 +106,12 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                 purpose,
                 warning,                
             });
-            const data = {
-                userId: context.user.uid,
-                dosage,
-                startDate,
-                endDate,
-                frequency,
-                medicationSpecification: {
-                    name,
-                    directions,
-                    sideEffects,
-                    warning
-                },
-                reminder: {
-                    enabled: reminderEnabled,
-                    reminderTimes,
-                },
-                purpose,
-            };
+            
             if(response.error){
                 setError(response.error);
                 return;
             } else{
-                onSave({
-                    ...data,
-                    id: response.data,
-                });
+                onSave(response.data);
                 resetToDefault();
             }
             onClose();

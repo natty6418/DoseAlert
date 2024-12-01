@@ -13,8 +13,7 @@ import MedicationItem from '../../components/MedicationItem';
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../services/externalDrugAPI';
 import EditMedicationPlanModal from '../../components/EditMedicationModal';
 import ErrorModal from '../../components/ErrorModal';
-import { set } from 'date-fns';
-import { th } from 'date-fns/locale';
+
 
 
 
@@ -125,7 +124,6 @@ const CreateScreen = () => {
   if (isLoading) {
     return <LoadingSpinner />;
   }
-
   return (
     <SafeAreaView className="bg-black-100 h-full pt-2">
       <View className="flex-1 px-4">
@@ -138,6 +136,7 @@ const CreateScreen = () => {
               key={index}
               item={item}
               onPress={() => {
+                // console.log("item", item.reminder);
                 setSelectedMedication(item);
                 setMedicationCardModalVisible(true);
               }}

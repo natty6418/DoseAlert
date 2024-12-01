@@ -144,9 +144,9 @@ export const addNewMedication = async ({
             if (reminderEnabled && reminderTimes.length > 0) {
                 reminders = await scheduleReminders(reminderTimes, `Time to take your ${name}!`);
         }
-        const reminderTimeStamps = reminders.map(r=>({ time: Timestamp.fromDate(r.time), id: r.id}));
-        console.log(reminderTimeStamps);
-        const docRef = await addDoc(collection(db, 'medications'), {
+        const reminderTimeStamps = reminders.map(r=>({...r, time: Timestamp.fromDate(r.time)}));
+        console.log("reminderTimeStamps", reminderTimeStamps);
+        const data = {
             userId: `users/${userId}`, // Reference to the user's path
             dosage,
             startDate: Timestamp.fromDate(new Date(startDate)), // Convert startDate to Firebase Timestamp
@@ -163,9 +163,9 @@ export const addNewMedication = async ({
                 reminderTimes: reminderTimeStamps, // Array of generated reminder Timestamps
             },
             purpose,
-        });
-        console.log("Document written with ID: ", docRef.id);
-        return {data: docRef.id, error: null};
+        };
+        const docRef = await addDoc(collection(db, 'medications'), data);
+        return {data: {...data, id: docRef.id, startDate, endDate, reminder: {...data.reminder, reminderTimes: reminders}}, error: null};
     } catch (e) {
         throw new Error(e.message);
     }
@@ -193,7 +193,7 @@ export const getMedications = async (userId) => {
                 endDate: data.endDate.toDate(), // Convert Firebase Timestamp to JavaScript Date
                 reminder: {
                     ...data.reminder,
-                    reminderTimes: data.reminder.reminderTimes.map(r => ({time: r.time.toDate(), id: r.id})), // Convert Timestamps to Dates
+                    reminderTimes: data.reminder.reminderTimes.map(r => ({...r, time: r.time.toDate()})), // Convert Timestamps to Dates
                 },
             });
         });
@@ -226,12 +226,11 @@ export const editMedication = async (medicationId, newData) => {
 
         let reminders = [];
         if (newData.reminderEnabled && (newData.reminderTimes.length > 0)) {
-            console.log("newData", newData.reminderTimes.length);
             reminders = await scheduleReminders(newData.reminderTimes, `Time to take your ${newData.name}!`);
         }
-        const reminderTimeStamps = reminders.map(r=>({ time: Timestamp.fromDate(r.time), id: r.id}));
+        const reminderTimeStamps = reminders.map(r=>({...r, time: Timestamp.fromDate(r.time)}));
         // Update the document with the new data
-        await updateDoc(medicationDocRef, {
+        const data =  {
             userId: `users/${newData.userId}`, // Reference to the user's path
             dosage: newData.dosage,
             startDate: Timestamp.fromDate(new Date(newData.startDate)), // Convert startDate to Firebase Timestamp
@@ -248,10 +247,11 @@ export const editMedication = async (medicationId, newData) => {
                 reminderTimes: reminderTimeStamps, // Array of generated reminder Timestamps
             },
             purpose: newData.purpose,
-        });
+        };
+        await updateDoc(medicationDocRef,data);
         
         console.log("Medication updated successfully:", medicationId);
-        return medicationId;
+        return {data: {...data, id: medicationId, startDate: new Date(newData.startDate), endDate: new Date(newData.endDate), reminder: {...data.reminder, reminderTimes: reminders}}, error: null};
     } catch (e) {
         throw new Error("Error updating medication: " + e.message);
     }
