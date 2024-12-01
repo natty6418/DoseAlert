@@ -60,7 +60,12 @@ export default {
   eye,
   capture,
   Cog,
+<<<<<<< HEAD
   medication,
   ChevronUp
 
+=======
+  ChevronDoubleUp,
+  ChevronDoubleDown
+>>>>>>> d4272c7 (Privacy Policy)
 };
