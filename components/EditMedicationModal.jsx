@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, ScrollView, Text, Switch, TouchableOpacity } from 'react-native';
+import { Modal, View, ScrollView, Text, TextInput, Switch, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import PickerComponent from './Picker';
 import FormField from './FormField';
@@ -28,10 +28,11 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
         medicationData?.medicationSpecification.sideEffects || []);
     const [warning, setWarning] = useState(medicationData?.medicationSpecification.warning || '');
     const [reminderEnabled, setReminderEnabled] = useState(medicationData?.reminder.enabled || false);
-    const [reminderTimes, setReminderTimes] = useState(medicationData?.reminder.reminderTimes || []);
+    const [reminderTimes, setReminderTimes] = useState([]);
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
+    const [newSideEffect, setNewSideEffect] = useState('');
     
     const context = useFirebaseContext();
     useEffect(() => {
@@ -56,7 +57,8 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
             setSideEffects(medicationData.medicationSpecification.sideEffects || []);
             setWarning(medicationData.medicationSpecification.warning || '');
             setReminderEnabled(medicationData.reminder.enabled);
-            setReminderTimes(medicationData.reminder.reminderTimes);
+            setReminderTimes(medicationData.reminder.reminderTimes.map(r=>r.time) || []);
+            // console.log("reminderTimes",medicationData.reminder);
         }
       },[medicationData]);
 
@@ -120,32 +122,13 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                 purpose,
                 warning,                
             });
-            const data = {
-                userId: context.user.uid,
-                dosage,
-                startDate,
-                endDate,
-                frequency,
-                medicationSpecification: {
-                    name,
-                    directions,
-                    sideEffects,
-                    warning
-                },
-                reminder: {
-                    enabled: reminderEnabled,
-                    reminderTimes,
-                },
-                purpose,
-                id: medicationData.id,
-            };
+           
             if(response.error){
                 setError(response.error);
                 return;
             } else{
-                onSave({
-                    ...data,
-                });
+                onSave(response.data);
+                console.log("saved")
                 resetToDefault();
             }
             onClose();
@@ -185,7 +168,6 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
     if (isLoading) {
         return <LoadingSpinner />;
     }
-
     return (
         <Modal
             visible={visible}
@@ -304,7 +286,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                                             className="bg-gray-700 py-2 px-4 rounded-lg mb-2 flex-row justify-between items-center"
                                         >
                                             <Text className="text-white font-pmedium">
-                                                { reminder.time.toLocaleTimeString() }
+                                                { reminder.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
                                             </Text>
                                             <TouchableOpacity
                                                 onPress={() => {
@@ -312,9 +294,9 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                                                     const updatedTimes = reminderTimes.filter((_, i) => i !== index);
                                                     setReminderTimes(updatedTimes);
                                                 }}
-                                                className="bg-red-500 p-2 rounded-full ml-2"
+                                                className="p-2 rounded-full ml-2"
                                             >
-                                                <icons.XMark color="#A3E635" size={12} />
+                                                <icons.XMark color="#ef4444" size={12} />
                                             </TouchableOpacity>
                                         </View>
                                     ))
@@ -372,7 +354,21 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                         />
                         
                         <SideEffectChecklist sideEffects={sideEffects} setSideEffects={setSideEffects} />
-                        
+                        <View className='flex flex-row'>
+                            <icons.PlusCircle color="#9CA3AF" size={24} />
+                            <TextInput
+                                value={newSideEffect}
+                                onChangeText={(e) => setNewSideEffect(e)}
+                                className="ml-2 w-full text-white font-pregular"
+                                placeholder='Add item....'
+                                placeholderTextColor='#9CA3AF'
+                                onSubmitEditing={() => {
+                                    setSideEffects([...sideEffects, { term: newSideEffect, checked: true }]);
+                                    setNewSideEffect('');
+                                }}
+                            />
+
+                        </View>
 
                         {/* Close Button */}
                         <View className="flex flex-1 flex-row w-full justify-between">
@@ -391,7 +387,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                                 title="Cancel"
                                 handlePress={()=>{
                                     onClose();
-                                    resetToDefault();
+                                    // resetToDefault();
                                 }}
                                 containerStyles="mt-4 flex-1 mx-2 bg-red-400"
                                 textStyles="text-lg"

@@ -79,7 +79,7 @@ describe("SignUp Component", () => {
   
       await waitFor(() => {
         expect(createNewAccount).toHaveBeenCalledWith("john.doe@example.com", "password123", "John", "Doe");
-        expect(router.replace).toHaveBeenCalledWith("/home");
+        expect(router.replace).toHaveBeenCalledWith("/signIn");
       });
     });
   

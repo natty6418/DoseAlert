@@ -33,15 +33,15 @@ const CameraModal = ({ isVisible, onClose, onScan }) => {
       }
   return (
     <Modal
-      transparent={true}
+      transparent={false}
       animationType="slide"
       visible={isVisible}
       onRequestClose={onClose}
       testID='camera-modal'
     >
-      <SafeAreaView className=" h-full bg-black-70 justify-center items-center">
+      <SafeAreaView className=" h-full bg-black-100 justify-center items-center">
         <View className="flex flex-col w-[90%] rounded-lg overflow-hidden shadow-2xl p-4">
-          <Text className="text-white text-lg font-semibold mb-4">Scan Barcode</Text>  
+          <Text className="text-white font-psemibold mx-auto mb-4">Scan Barcode</Text>  
         <View className="flex h-[65vh] rounded-lg overflow-hidden">
             <CameraView
               testID="camera-view"

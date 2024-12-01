@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text,TextInput, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { icons } from '../constants';
 
 const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) => {
   // Initialize each side effect with unchecked status
-  const [newItem, setNewItem] = useState('');
 
   // Toggle the checked status of a side effect
   const toggleChecked = (index) => {
@@ -30,21 +29,7 @@ const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) => {
           </TouchableOpacity>
         )}
       />}
-      <View className='flex flex-row'>
-        <icons.PlusCircle color="#9CA3AF" size={24} />
-        <TextInput 
-        value={newItem}
-        onChangeText={(e) => setNewItem(e)}
-        className="ml-2 w-full text-white font-pregular" 
-        placeholder='Add item....'
-        placeholderTextColor='#9CA3AF'
-        onSubmitEditing={() => {
-                setSideEffects([...sideEffects, { term: newItem, checked: true }]);
-                setNewItem('');
-        }}
-        />
       
-      </View>
     </View>
   );
 };
