@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, ScrollView, Text, Switch, TouchableOpacity } from 'react-native';
+import { Modal, View, ScrollView,TextInput, Text, Switch, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import PickerComponent from './Picker';
 import FormField from './FormField';
@@ -32,19 +32,20 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    
+    const [newSideEffect, setNewSideEffect] = useState('');
+
     const context = useFirebaseContext();
 
     useEffect(() => {
         (async () => {
-          const { status } = await Notifications.requestPermissionsAsync();
-          if (status !== 'granted') {
-            alert('Permission not granted for notifications.');
-          }
-        await registerForPushNotificationsAsync();
+            const { status } = await Notifications.requestPermissionsAsync();
+            if (status !== 'granted') {
+                alert('Permission not granted for notifications.');
+            }
+            await registerForPushNotificationsAsync();
         })();
 
-      }, []);
+    }, []);
 
     const resetToDefault = () => {
         setName('');
@@ -91,7 +92,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
 
     const handleSavePlan = async () => {
         setIsLoading(true);
-        try {            
+        try {
             const response = await addNewMedication({
                 userId: context.user.uid,
                 dosage,
@@ -104,13 +105,13 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                 reminderEnabled,
                 reminderTimes,
                 purpose,
-                warning,                
+                warning,
             });
-            
-            if(response.error){
+
+            if (response.error) {
                 setError(response.error);
                 return;
-            } else{
+            } else {
                 onSave(response.data);
                 resetToDefault();
             }
@@ -129,7 +130,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     }
 
     if (isLoading) {
-        return <LoadingSpinner testID="loading-spinner"/>;
+        return <LoadingSpinner testID="loading-spinner" />;
     }
 
     return (
@@ -160,22 +161,22 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             <FormField
                                 title="Dosage"
                                 value={dosage.amount}
-                                handleChangeText={(e) => setDosage({...dosage, amount: e})}
+                                handleChangeText={(e) => setDosage({ ...dosage, amount: e })}
                                 otherStyles="mt-7 flex-1"
                                 keyboardType="default"
                                 placeholder="Amount (e.g. 200)"
                                 required={true}
-                            maxLength={5}
+                                maxLength={5}
 
                             />
                             <FormField
                                 title=" "
                                 value={dosage.unit}
-                                handleChangeText={(e) => setDosage({...dosage, unit: e})}
+                                handleChangeText={(e) => setDosage({ ...dosage, unit: e })}
                                 otherStyles="mt-7 flex-1"
                                 keyboardType="default"
                                 placeholder="Units (e.g. mg)"
-                            maxLength={8}
+                                maxLength={8}
 
                             />
                         </View>
@@ -213,7 +214,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 minimumDate={startDate || new Date()}
                                 maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
                                 testID='end-date-picker'
-                                />
+                            />
                         )}
                         {/* End Date Picker */}
 
@@ -266,8 +267,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                             </TouchableOpacity>
                                         </View>
                                     ))
-                                ) }
-                        
+                                )}
+
                                 <TouchableOpacity
                                     onPress={() => setShowTimePicker(true)}
                                     className="bg-blue-400 p-3 rounded-full flex-row items-center justify-center shadow-md"
@@ -278,7 +279,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 </TouchableOpacity>
                             </View>
                         )}
-                        
+
 
                         {/* Show DateTimePicker if triggered */}
                         {showTimePicker && (
@@ -301,7 +302,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             keyboardType="default"
                             placeholder="Enter text"
                             maxLength={255}
-                            
+
                         />
                         <FormField
                             title="Directions"
@@ -310,7 +311,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             otherStyles="mt-7"
                             keyboardType="default"
                             placeholder="Enter text"
-                            multiline = {true}
+                            multiline={true}
                             maxLength={255}
 
                         />
@@ -321,21 +322,35 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             otherStyles="mt-7"
                             keyboardType="default"
                             placeholder="Enter text"
-                            multiline = {true}
+                            multiline={true}
                             maxLength={255}
                         />
-                        
-                        <SideEffectChecklist sideEffects={sideEffects} setSideEffects={setSideEffects} />
-                        
+
+                        <SideEffectChecklist sideEffects={sideEffects} setSideEffects={setSideEffects}/>
+                        <View className='flex flex-row'>
+                            <icons.PlusCircle color="#9CA3AF" size={24} />
+                            <TextInput
+                                value={newSideEffect}
+                                onChangeText={(e) => setNewSideEffect(e)}
+                                className="ml-2 w-full text-white font-pregular"
+                                placeholder='Add item....'
+                                placeholderTextColor='#9CA3AF'
+                                onSubmitEditing={() => {
+                                    setSideEffects([...sideEffects, { term: newSideEffect, checked: true }]);
+                                    setNewSideEffect('');
+                                }}
+                            />
+
+                        </View>
 
                         {/* Close Button */}
                         <View className="flex flex-1 flex-row w-full justify-between">
                             <CustomButton
                                 title="Save Plan"
-                                handlePress={()=>{
-                                    
-                                        handleSavePlan();
-                                    
+                                handlePress={() => {
+
+                                    handleSavePlan();
+
                                 }}
                                 containerStyles="mt-4 flex-1 mx-2 bg-secondary-200"
                                 textStyles="text-lg"
@@ -343,7 +358,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             />
                             <CustomButton
                                 title="Cancel"
-                                handlePress={()=>{
+                                handlePress={() => {
                                     onClose();
                                     resetToDefault();
                                 }}
