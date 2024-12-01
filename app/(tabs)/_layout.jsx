@@ -71,6 +71,7 @@ const TabsLayout = () => {
           }}
         />
 
+
         {/* Updated "Report" Tab */}
         <Tabs.Screen
           name="report" 
@@ -88,7 +89,29 @@ const TabsLayout = () => {
           }}
         />
       </Tabs>
-      <StatusBar backgroundColor="#161622" style="light" />
+
+    <Tabs.Screen
+      name="create"
+      options={{
+        title: "Repository",
+        headerShown: false,
+        tabBarIcon: ({ color, focused }) => (
+          <TabIcon
+            icon={icons.medication}
+            color={color}
+            name="Repository"
+            focused={focused}
+          />
+        ),
+      }}
+    />
+    
+  </Tabs>
+  <StatusBar
+        backgroundColor='#161622'
+        style='light'
+    />
+
     </>
   );
 };

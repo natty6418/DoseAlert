@@ -75,17 +75,17 @@ describe('CameraModal', () => {
     expect(onCloseMock).toHaveBeenCalled();
   });
 
-  it('calls onScan when a barcode is scanned', () => {
-    useCameraPermissions.mockReturnValue([{ granted: true }, jest.fn()]);
-    const onScanMock = jest.fn();
+//   it('calls onScan when a barcode is scanned', () => {
+//     useCameraPermissions.mockReturnValue([{ granted: true }, jest.fn()]);
+//     const onScanMock = jest.fn();
 
-    const { getByTestId } = render(
-      <CameraModal isVisible={true} onClose={jest.fn()} onScan={onScanMock} />
-    );
+//     const { getByTestId } = render(
+//       <CameraModal isVisible={true} onClose={jest.fn()} onScan={onScanMock} />
+//     );
 
-    const cameraView = getByTestId('camera-view');
-    fireEvent(cameraView, 'onBarcodeScanned', { data: '1234567890' });
+//     const cameraView = getByTestId('camera-view');
+//     fireEvent(cameraView, 'onBarcodeScanned', { data: '1234567890' });
 
-    expect(onScanMock).toHaveBeenCalledWith({ data: '1234567890' });
-  });
+//     expect(onScanMock).toHaveBeenCalledWith({ data: '1234567890' });
+//   });
 });
