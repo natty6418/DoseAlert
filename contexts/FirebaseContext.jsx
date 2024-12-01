@@ -6,7 +6,7 @@ const FirebaseContext = createContext();
 
 export const useFirebaseContext = () => useContext(FirebaseContext);
 
-const FibaseProvider = ({children}) => {
+const FirebaseProvider = ({children}) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -34,4 +34,4 @@ const FibaseProvider = ({children}) => {
     );
 };
 
-export default FibaseProvider;
+export default FirebaseProvider;
