@@ -89,7 +89,16 @@ describe('EditMedicationPlanModal', () => {
     });
 
     it('calls editMedication service and onSave on form submission', async () => {
-        editMedication.mockResolvedValueOnce({ data: 'mockMedicationId', error: null });
+        editMedication.mockResolvedValueOnce({ data: {
+            id: 'med123',
+            medicationSpecification: { name: 'Updated Medication', directions: 'Take daily' },
+            dosage: { amount: '200', unit: 'mg' },
+            startDate: new Date(),
+            endDate: new Date(),
+            frequency: 'Daily',
+            reminder: { enabled: false, reminderTimes: [] },
+            purpose: 'Pain relief'
+        }, error: null });
         const mockOnSave = jest.fn();
         const mockOnClose = jest.fn();
         const medicationData = {

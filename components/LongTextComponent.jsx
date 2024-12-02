@@ -8,7 +8,6 @@ const LongTextComponent = ({Icon, title, content }) => {
     const toggleExpanded = () => {
         setIsExpanded(!isExpanded);
     };
-
     return (
         <View className="mb-2">
             <View className="flex flex-row items-center gap-1">
