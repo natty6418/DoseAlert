@@ -1,7 +1,7 @@
 // Import necessary components and hooks
-import { View, ScrollView, Image, Text, TouchableOpacity } from 'react-native';
+import { View, ScrollView, Image, Text, TouchableOpacity, Button } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import Greeting from '../../components/Greeting';
 import MedicationItem from '../../components/MedicationItem';
 import Footer from '../../components/Footer';
@@ -12,6 +12,8 @@ import LoadingSpinner from '../../components/Loading';
 import { icons, images } from '../../constants';
 import MedicationItemExpanded from '../../components/MedicationItemExpanded';
 import { editMedication } from '../../services/firebaseDatabase';
+import { cancelReminders, Notifications } from '../../services/registerNotification';
+import { registerForPushNotificationsAsync } from '../../services/registerNotification';
 
 const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -20,6 +22,7 @@ const Home = () => {
   const [expandedIndex, setExpandedIndex] = useState(null);
   const context = useFirebaseContext();
   const [upcomingMedicationReminders, setUpcomingMedicationReminders] = useState([]);
+
   if (!context.isLoggedIn) {
     router.replace('/signIn');
     return null;
@@ -36,6 +39,38 @@ const Home = () => {
     };
     fetchUser();
   }, []);
+  useEffect(() => {
+    let subscription;
+
+    (async () => {
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== 'granted') {
+            alert('Permission not granted for notifications.');
+            return;
+        }
+
+        await registerForPushNotificationsAsync();
+
+        subscription = Notifications.addNotificationResponseReceivedListener(response => {
+            console.log("Notification response received:", response.notification.request.content.data);
+            const { medicationId } = response.notification.request.content.data;
+
+            if (medicationId) {
+                console.log('Navigating to:', `/response/${medicationId}`);
+                setTimeout(() => {
+                context.setAdherenceResponseId(medicationId);
+                router.push(`/report`);
+                }, 100);
+            }
+        });
+    })();
+
+    return () => {
+        if (subscription) {
+            subscription.remove();
+        }
+    };
+}, []);
 
   useEffect(() => {
     const fetchMedications = async () => {
@@ -52,12 +87,10 @@ const Home = () => {
 
   useEffect(() => {
     const upcomingReminders = medications.filter(med => med.reminder.enabled);
-    // console.log("upcomingReminders", upcomingReminders);
     setUpcomingMedicationReminders(upcomingReminders);
   }, [medications]);
 
   const ReminderItem = ({ item, isExpanded, toggleExpand, onToggleReminder, onUpdateReminderTimes }) => {
-  
     return !isExpanded ? (
       <MedicationItem item={item} onPress={toggleExpand} />
     ) : (
@@ -71,17 +104,24 @@ const Home = () => {
   };
 
   const handleUpdateReminder = (index, times, enabled) => {
+    if (!enabled){
+      cancelReminders(times).then(() => {
+        console.log('Cancelled reminders successfully');
+      }).catch((error) => {
+        console.error('Error cancelling reminders:', error);
+      });
+    }
     const updatedMedications = [...upcomingMedicationReminders];
     updatedMedications[index] = {
       ...updatedMedications[index],
       reminder: {
         ...updatedMedications[index].reminder,
-        reminderTimes: times,
+        reminderTimes: enabled ? times:[],
         enabled,
       },
     };
     setUpcomingMedicationReminders(updatedMedications);
-   
+
     editMedication(updatedMedications[index].id, {
       userId: context.user.uid,
       dosage: updatedMedications[index].dosage,
@@ -95,17 +135,14 @@ const Home = () => {
       purpose: updatedMedications[index].purpose,
       reminderEnabled: enabled,
       reminderTimes: times.map((time) => time.time),
-      
-    }).then(() => {
-      console.log('Medication updated successfully');
-    }).catch((error) => {
-      console.log('Error updating medication', error);
-    }
-    );  
+    })
+      .then(() => {
+        console.log('Medication updated successfully');
+      })
+      .catch((error) => {
+        console.log('Error updating medication', error);
+      });
   };
-
-
-  
 
   if (isLoading) return <LoadingSpinner />;
 
@@ -137,7 +174,7 @@ const Home = () => {
                   item={med}
                   isExpanded={expandedIndex === index}
                   toggleExpand={() => setExpandedIndex(expandedIndex === index ? null : index)}
-                  onToggleReminder={(enabled) => handleUpdateReminder(index, [], enabled)}
+                  onToggleReminder={(enabled) => handleUpdateReminder(index, med.reminder.reminderTimes, enabled)}
                   onUpdateReminderTimes={(times) => handleUpdateReminder(index, times, true)}
                 />
               ))
@@ -154,9 +191,27 @@ const Home = () => {
           </TouchableOpacity>
           <Footer />
         </ScrollView>
+        
       </View>
     </SafeAreaView>
   );
 };
 
 export default Home;
+
+// <Button title="Logout" onPress={() =>{ 
+//           context.setAdherenceResponseId('9DByO0Q9annwYW9ltvSo');
+//           router.replace('/report')}
+//           } />
+//         <Button title="send notification" onPress={async () => {
+//           await Notifications.scheduleNotificationAsync({
+//             content: {
+//               title: 'Medication Reminder',
+//               body: 'Take your medication now',
+//               data: {medicationId:'9DByO0Q9annwYW9ltvSo'} ,
+//             },
+//             trigger: {
+//               seconds: 5,
+//             },
+//           });
+//         }} />

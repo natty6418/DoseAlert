@@ -6,12 +6,12 @@ import Constants from 'expo-constants';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
-    shouldPlaySound: false,
+    shouldPlaySound: true,
     shouldSetBadge: false,
-  }),
+  })
 });
 
-export async function registerForPushNotificationsAsync() {
+async function registerForPushNotificationsAsync() {
     let token;
   
     if (Platform.OS === "android") {
@@ -53,7 +53,7 @@ export async function registerForPushNotificationsAsync() {
     return token;
   }
 
-export const scheduleReminders = async (reminderTimes, message) => {
+const scheduleReminders = async (reminderTimes, message, medicationId) => {
     const reminders = [];
     for (const time of reminderTimes) {
         const triggerDate = new Date();
@@ -64,6 +64,7 @@ export const scheduleReminders = async (reminderTimes, message) => {
             content: {
                 title: "Medication Reminder",
                 body: message,
+                data: {medicationId}
             },
             trigger: {
                 hour: triggerDate.getHours(),
@@ -75,3 +76,16 @@ export const scheduleReminders = async (reminderTimes, message) => {
     }
     return reminders;
 };
+const cancelReminders = async (reminders) => {
+  try {
+    const notificationIds = reminders.map((reminder) => reminder.id);
+    for (const id of notificationIds) {
+      await Notifications.cancelScheduledNotificationAsync(id);
+    }
+    console.log('Cancelled notifications:', notificationIds);
+  } catch (error) {
+    throw new Error('Error cancelling notifications:', error);
+  }
+};
+
+export { registerForPushNotificationsAsync, cancelReminders, scheduleReminders, Notifications };
