@@ -9,6 +9,7 @@ import { useFirebaseContext } from "../contexts/FirebaseContext";
 
 
 export default function App() {
+
   const context = useFirebaseContext();
   if(!context.loading && context.isLoggedIn) return <Redirect href="/home" />
   return (

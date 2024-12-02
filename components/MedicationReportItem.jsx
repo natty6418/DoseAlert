@@ -1,15 +1,14 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 
-const MedicationReportItem = ({ medication }) => {
+const MedicationReportItem = ({ medication, taken, missed }) => {
   // 1. Implement logic to calculate takenCount and missedCount
   //    (This will depend on how you store tracking information)
   //const takenCount = calculateTakenCount(medication); // Replace with your logic
   //const missedCount = calculateMissedCount(medication); // Replace with your logic
 
   ///* dummy values
-  const takenCount = 7; 
-  const missedCount = 2;
+
   //*/
 
   return (
@@ -18,8 +17,8 @@ const MedicationReportItem = ({ medication }) => {
         {medication.medicationSpecification.name}
       </Text>
       <View className="flex-row justify-between mt-2">
-        <Text className="text-green-500">Taken: {takenCount}</Text>
-        <Text className="text-red-500">Missed: {missedCount}</Text>
+        <Text className="text-green-500">Taken: {taken}</Text>
+        <Text className="text-red-500">Missed: {missed}</Text>
       </View>
     </View>
   );
