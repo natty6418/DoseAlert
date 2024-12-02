@@ -13,11 +13,13 @@ import eye from "../assets/icons/eye.png";
 import play from "../assets/icons/play.png";
 import capture from "../assets/icons/capture.png";
 import pill from "../assets/icons/pill.png";
+import phone from "../assets/icons/phone.png";
+import documents from "../assets/icons/documents.png";
 
 
 import medication from "../assets/icons/medication.png";
 import { UserCircle, Newspaper, Cog } from "@nandorojo/heroicons/24/solid";
-import { Bars3, MagnifyingGlass, PlusCircle, XMark, Camera, XCircle, Clock, Calendar, ClipboardDocument, Bell, ShieldExclamation, ExclamationTriangle, CheckCircle, Pencil, ChevronUp } from '@nandorojo/heroicons/24/outline'
+import { Bars3, MagnifyingGlass, PlusCircle, XMark, Camera, XCircle, Clock, Calendar, ClipboardDocument, Bell, ShieldExclamation, ExclamationTriangle, CheckCircle, Pencil, ChevronUp, ChevronDoubleUp, ChevronDoubleDown } from '@nandorojo/heroicons/24/outline'
 
 // const MagnifyingGlass = ({ size, color }) => {
 //   return <MagnifyingGlassIcon size={size} color={color} />;
@@ -60,12 +62,10 @@ export default {
   eye,
   capture,
   Cog,
-<<<<<<< HEAD
   medication,
-  ChevronUp
-
-=======
+  ChevronUp,
+  phone,
   ChevronDoubleUp,
-  ChevronDoubleDown
->>>>>>> d4272c7 (Privacy Policy)
+  ChevronDoubleDown,
+  documents
 };

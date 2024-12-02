@@ -13,7 +13,7 @@ const Report = () => {
   useEffect(() => {
     const fetchMedications = async () => {
       try {
-        const meds = await getMedications(context.user.uid);
+        const meds = await getMedications(context.user.id);
         setMedications(meds);
       } catch (error) {
         console.error('Error fetching medications:', error);

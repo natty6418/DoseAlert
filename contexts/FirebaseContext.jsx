@@ -1,6 +1,7 @@
 import {createContext, useContext, useEffect, useState} from "react";
 import { auth } from "../services/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
+import { getUser } from "../services/firebaseDatabase";
 
 const FirebaseContext = createContext();
 
@@ -13,8 +14,12 @@ const FirebaseProvider = ({children}) => {
 
     const onAuthStateChangedHandler = (user) => {
         if(user){
+            getUser(user.uid).then((userData)=>{
+                setUser({...userData, id: user.uid});
+            }
+            );
             setIsLoggedIn(true);
-            setUser(user);
+            
         } else {
             setIsLoggedIn(false);
             setUser(null);

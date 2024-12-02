@@ -15,7 +15,6 @@ import { editMedication } from '../../services/firebaseDatabase';
 
 const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState(null);
   const [medications, setMedications] = useState([]);
   const [expandedIndex, setExpandedIndex] = useState(null);
   const context = useFirebaseContext();
@@ -25,22 +24,12 @@ const Home = () => {
     return null;
   }
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const user = await getUser(context.user.uid);
-        setUser(user);
-      } catch (error) {
-        console.log(error);
-      }
-    };
-    fetchUser();
-  }, []);
 
   useEffect(() => {
     const fetchMedications = async () => {
       try {
-        const meds = await getMedications(context.user.uid);
+        if (!context.user) return;
+        const meds = await getMedications(context.user.id);
         setMedications(meds);
         setIsLoading(false);
       } catch (error) {
@@ -48,7 +37,7 @@ const Home = () => {
       }
     };
     fetchMedications();
-  }, []);
+  }, [context.user]);
 
   useEffect(() => {
     const upcomingReminders = medications.filter(med => med.reminder.enabled);
@@ -83,7 +72,7 @@ const Home = () => {
     setUpcomingMedicationReminders(updatedMedications);
    
     editMedication(updatedMedications[index].id, {
-      userId: context.user.uid,
+      userId: context.user.id,
       dosage: updatedMedications[index].dosage,
       endDate: updatedMedications[index].endDate,
       startDate: updatedMedications[index].startDate,
@@ -107,7 +96,7 @@ const Home = () => {
 
   
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading || !context.user) return <LoadingSpinner />;
 
   return (
     <SafeAreaView className="bg-black-100 h-full py-4">
@@ -126,7 +115,7 @@ const Home = () => {
           </TouchableOpacity>
         </View>
         <ScrollView>
-          <Greeting name={user?.firstName} />
+          <Greeting name={context.user?.firstName} />
 
           <View className="px-4 mt-2">
             <Text className="text-gray-400 text-lg mb-2">Upcoming Reminders</Text>

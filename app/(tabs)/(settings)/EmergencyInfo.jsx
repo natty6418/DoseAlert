@@ -1,159 +1,137 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
 import { useFirebaseContext } from '../../../contexts/FirebaseContext';
-import { db } from '../../../services/firebaseConfig'; // Firebase setup
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
-
+import { setEmergencyContact } from '../../../services/firebaseDatabase';
 
 const EmergencyInfo = () => {
-    const { user } = useFirebaseContext();
-    const [emergencyInfo, setEmergencyInfo] = useState({
-      firstName: '',
-      lastName: '',
-      email: '',
-    });
-    const [currentPassword, setCurrentPassword] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-    const [loading, setLoading] = useState(true);
-  
-    // Validate Email
-    const validateEmail = (email) => {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return emailRegex.test(email);
-    };
-  
-    // Fetch Emergency Contact Info
-    useEffect(() => {
-      const fetchEmergencyInfo = async () => {
-        try {
-          const userDoc = doc(db, 'users', user.uid); // Assuming "users" collection includes emergency contact info
-          const snapshot = await getDoc(userDoc);
-          if (snapshot.exists()) {
-            const data = snapshot.data();
-            setEmergencyInfo({
-              firstName: data.emergencyFirstName || '',
-              lastName: data.emergencyLastName || '',
-              email: data.emergencyEmail || '',
-            });
-          } else {
-            Alert.alert('Error', 'No emergency contact data found.');
-          }
-        } catch (error) {
-          console.error('Error fetching emergency info:', error);
-          Alert.alert('Error', 'Failed to load emergency contact information.');
-        } finally {
-          setLoading(false);
-        }
-      };
-  
-      fetchEmergencyInfo();
-    }, []);
-  
-    // Handle Save Changes
-    const handleSaveChanges = async () => {
-      if (!currentPassword) {
-        Alert.alert('Error', 'Please enter your current password to save changes.');
-        return;
-      }
-  
-      if (!validateEmail(emergencyInfo.email)) {
-        Alert.alert('Error', 'Please enter a valid email address.');
-        return;
-      }
-  
-      try {
-        setIsSaving(true);
-  
-        // Re-authenticate user
-        const credential = EmailAuthProvider.credential(user.email, currentPassword);
-        await reauthenticateWithCredential(user, credential);
-  
-        // Update Firestore
-        const userDoc = doc(db, 'users', user.uid);
-        await updateDoc(userDoc, {
-          emergencyFirstName: emergencyInfo.firstName,
-          emergencyLastName: emergencyInfo.lastName,
-          emergencyEmail: emergencyInfo.email,
-        });
-  
-        Alert.alert('Success', 'Emergency contact information updated.');
-        setCurrentPassword(''); // Clear the password field
-      } catch (error) {
-        console.error('Error saving changes:', error);
-        if (error.code === 'auth/wrong-password') {
-          Alert.alert('Error', 'The current password you entered is incorrect.');
-        } else {
-          Alert.alert('Error', 'Failed to save changes. Please try again.');
-        }
-      } finally {
-        setIsSaving(false);
-      }
-    };
-  
-    if (loading) {
-      return (
-        <View className="items-center justify-center flex-1 bg-black-100">
-          <Text className="text-lg text-primary">Loading...</Text>
-        </View>
-      );
+  const { user, setUser } = useFirebaseContext();
+  const [emergencyInfo, setEmergencyInfo] = useState(user.emergencyContact || null); // Directly use the emergency contact from user
+  const [isModalVisible, setIsModalVisible] = useState(false); // Modal visibility
+  const [isSaving, setIsSaving] = useState(false);
+  const [form, setForm] = useState({
+    name: emergencyInfo?.name || '',
+    email: emergencyInfo?.email || '',
+    relationship: emergencyInfo?.relationship || '',
+  });
+
+  // Handle Save Changes
+  const handleSaveChanges = async () => {
+    if (!form.name || !form.email || !form.relationship) {
+      Alert.alert('Error', 'Please fill out all fields.');
+      return;
     }
-  
-    return (
-      <View className="flex-1 px-4 py-6 bg-black-100">
-        <Text className="mb-6 text-3xl text-primary font-pbold">Emergency Contact</Text>
-  
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      Alert.alert('Error', 'Please enter a valid email address.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await setEmergencyContact(user.id, form);
+      setEmergencyInfo(form);
+      setUser((prev) => ({ ...prev, emergencyContact: form }));
+      setIsModalVisible(false);
+      Alert.alert('Success', 'Emergency contact updated successfully.');
+    } catch (error) {
+      console.error('Error saving emergency contact:', error);
+      Alert.alert('Error', 'Failed to update emergency contact.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <View className="flex-1 px-4 py-6 bg-black-100">
+      <Text className="mb-6 text-3xl text-primary font-pbold">Emergency Contact</Text>
+
+      {/* Emergency Contact Display */}
+      {emergencyInfo ? (
         <View className="p-4 rounded-lg bg-black-200">
-          {/* First Name */}
-          <Text className="mb-2 text-lg text-primary font-psemibold">First Name</Text>
-          <TextInput
-            value={emergencyInfo.firstName}
-            onChangeText={(text) => setEmergencyInfo({ ...emergencyInfo, firstName: text })}
-            className="p-3 mb-4 rounded-lg bg-black-100 text-primary"
-          />
-  
-          {/* Last Name */}
-          <Text className="mb-2 text-lg text-primary font-psemibold">Last Name</Text>
-          <TextInput
-            value={emergencyInfo.lastName}
-            onChangeText={(text) => setEmergencyInfo({ ...emergencyInfo, lastName: text })}
-            className="p-3 mb-4 rounded-lg bg-black-100 text-primary"
-          />
-  
-          {/* Email */}
+          <Text className="mb-2 text-lg text-primary font-psemibold">Name</Text>
+          <Text className="p-3 mb-4 rounded-lg bg-black-100 text-primary">{emergencyInfo.name}</Text>
+
           <Text className="mb-2 text-lg text-primary font-psemibold">Email</Text>
-          <TextInput
-            value={emergencyInfo.email}
-            onChangeText={(text) => setEmergencyInfo({ ...emergencyInfo, email: text })}
-            className="p-3 mb-4 rounded-lg bg-black-100 text-primary"
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-  
-          {/* Current Password */}
-          <Text className="mb-2 text-lg text-primary font-psemibold">Current Password</Text>
-          <TextInput
-            value={currentPassword}
-            onChangeText={setCurrentPassword}
-            className="p-3 mb-4 rounded-lg bg-black-100 text-primary"
-            secureTextEntry={true}
-          />
-  
-          {/* Save Button */}
+          <Text className="p-3 mb-4 rounded-lg bg-black-100 text-primary">{emergencyInfo.email}</Text>
+
+          <Text className="mb-2 text-lg text-primary font-psemibold">Relationship</Text>
+          <Text className="p-3 mb-4 rounded-lg bg-black-100 text-primary">{emergencyInfo.relationship}</Text>
+
           <TouchableOpacity
-            onPress={handleSaveChanges}
-            disabled={isSaving}
-            className={`p-4 rounded-lg mt-4 items-center ${
-              isSaving ? 'bg-gray-500' : 'bg-secondary'
-            }`}
+            onPress={() => {
+              setForm(emergencyInfo);
+              setIsModalVisible(true);
+            }}
+            className="p-4 bg-secondary rounded-lg items-center mt-4"
           >
-            <Text className="text-black-100 font-psemibold">
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </Text>
+            <Text className="text-black-100 font-psemibold">Edit Contact</Text>
           </TouchableOpacity>
         </View>
-      </View>
-    );
-  };
-  
-  export default EmergencyInfo;
+      ) : (
+        <View className="p-4 rounded-lg bg-black-200">
+          <Text className="text-primary mb-4">No emergency contact found.</Text>
+          <TouchableOpacity
+            onPress={() => setIsModalVisible(true)}
+            className="p-4 bg-secondary rounded-lg items-center"
+          >
+            <Text className="text-black-100 font-psemibold">Add Emergency Contact</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Modal for Editing/Adding Emergency Contact */}
+      <Modal visible={isModalVisible} animationType="slide" transparent={true}>
+        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
+          <View className="p-6 rounded-lg bg-black-200 w-4/5">
+            <Text className="text-lg text-primary font-psemibold mb-4">
+              {emergencyInfo ? 'Edit Emergency Contact' : 'Add Emergency Contact'}
+            </Text>
+
+            <Text className="mb-2 text-primary font-psemibold">Name</Text>
+            <TextInput
+              value={form.name}
+              onChangeText={(text) => setForm({ ...form, name: text })}
+              className="p-3 mb-4 rounded-lg bg-black-100 text-primary"
+            />
+
+            <Text className="mb-2 text-primary font-psemibold">Email</Text>
+            <TextInput
+              value={form.email}
+              onChangeText={(text) => setForm({ ...form, email: text })}
+              className="p-3 mb-4 rounded-lg bg-black-100 text-primary"
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+
+            <Text className="mb-2 text-primary font-psemibold">Relationship</Text>
+            <TextInput
+              value={form.relationship}
+              onChangeText={(text) => setForm({ ...form, relationship: text })}
+              className="p-3 mb-4 rounded-lg bg-black-100 text-primary"
+            />
+
+            <View className="flex-row justify-between mt-4">
+              <TouchableOpacity
+                onPress={() => setIsModalVisible(false)}
+                className="bg-gray-500 p-3 rounded-lg w-1/3 items-center"
+              >
+                <Text className="text-white font-psemibold">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleSaveChanges}
+                disabled={isSaving}
+                className={`p-3 rounded-lg w-1/3 items-center ${
+                  isSaving ? 'bg-gray-500' : 'bg-secondary'
+                }`}
+              >
+                <Text className="text-black-100 font-psemibold">{isSaving ? 'Saving...' : 'Save'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+};
+
+export default EmergencyInfo;
