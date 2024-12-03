@@ -25,3 +25,23 @@ export const recordAdherence = async (medicationId, adherence) =>{
         throw new Error("Error recording adherence: " + e.message);
     }
 }
+
+export const getAdherenceData = async (medIds) => {
+    try{
+        const adherenceData = {};
+        for(const id of medIds){
+            const adherenceDocRef = doc(db, 'adherenceData', id);
+            const adherenceDoc = await getDoc(adherenceDocRef);
+            if(!adherenceDoc.exists()){
+                adherenceData[id] = {taken: 0, missed: 0, prevMiss: false, consecutiveMisses: 0};
+            } else{
+                const data = adherenceDoc.data();
+                adherenceData[id] = {taken: data.taken, missed: data.missed, prevMiss: data.prevMiss, consecutiveMisses: data.consecutiveMisses};
+            }
+        }
+        return adherenceData;
+        
+    }catch (e) {
+        throw new Error("Error fetching adherence data: " + e.message);
+    }
+};

@@ -9,7 +9,8 @@ import { images } from "../../constants";
 import CustomButton from "../../components/CustomButton";
 import FormField from "../../components/FormField";
 import ErrorModal from '../../components/ErrorModal';
-import { logIn } from '../../services/firebaseDatabase';
+import { logIn } from '../../services/UserHandler';
+
 const SignIn = () => {
 
     const [form, setForm] = useState({

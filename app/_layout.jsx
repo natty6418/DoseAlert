@@ -1,6 +1,6 @@
 import { useFonts } from 'expo-font';
 import { Stack, SplashScreen } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import Providers from '../contexts';
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 

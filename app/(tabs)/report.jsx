@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Dimensions } from 'react-native';
 import { useFirebaseContext } from '../../contexts/FirebaseContext';
-import { getAdherenceData, getMedications } from '../../services/firebaseDatabase';
+import { getAdherenceData } from '../../services/AdherenceTracker';
 import LoadingSpinner from '../../components/Loading';
 import MedicationReportItem from '../../components/MedicationReportItem';
 import ResponseModal from '../../components/ResponseModal';

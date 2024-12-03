@@ -5,11 +5,8 @@ import { View, Text, ScrollView, Dimensions, Image } from "react-native";
 import { images } from "../../constants";
 import CustomButton from "../../components/CustomButton";
 import FormField from "../../components/FormField";
-// import { createUserWithEmailAndPassword } from "firebase/auth";
-// import { auth } from "../../services/firebaseConfig";
-// import { createNewUser } from "../../services/firebaseDatabase";
 import ErrorModal from "../../components/ErrorModal";
-import { createNewAccount } from "../../services/firebaseDatabase";
+import { createNewAccount } from "../../services/UserHandler";
 
 const SignUp = () => {
     const [form, setForm] = useState({
