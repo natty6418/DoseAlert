@@ -1,4 +1,4 @@
-import { db } from "../services/firebaseConfig";
+import { db, auth } from "../services/firebaseConfig";
 
 import {
     collection,
@@ -15,15 +15,17 @@ import {
 } from 'firebase/firestore';
 
 import { scheduleReminders } from "../services/registerNotification";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateEmail, updatePassword } from "firebase/auth";
 
 import {
-    createNewUser, getUser, addNewMedication, getMedications, editMedication, deleteMedication, createNewAccount, logIn
+    createNewUser, getUser, addNewMedication, getMedications,recordAdherence,getAdherenceData, setEmergencyContact , editMedication, deleteMedication, createNewAccount, logIn, updateUserProfile
 
 } from "../services/firebaseDatabase";
 jest.mock('../services/firebaseConfig', () => ({
     db: jest.fn(),
-    auth: jest.fn().mockReturnValue({}),
+    auth:  {
+        currentUser: { uid: "mockUserId" },
+    },
 }));
 jest.mock("firebase/firestore", () => ({
     collection: jest.fn(),
@@ -48,6 +50,8 @@ jest.mock("../services/registerNotification", () => ({
 jest.mock('firebase/auth', () => ({
     createUserWithEmailAndPassword: jest.fn(),
     signInWithEmailAndPassword: jest.fn(),
+    updateEmail: jest.fn(),
+    updatePassword: jest.fn(),
 }));
 
 
@@ -249,7 +253,31 @@ describe("editMedication", () => {
             },
             purpose: '',
         });
-        expect(result).toBe("med1");
+        expect(result).toStrictEqual({
+            data: {
+                userId: `users/123`,
+                id: 'med1',
+                dosage: { amount: 10, unit: 'mg' },
+                startDate: expect.any(Date),
+                endDate: expect.any(Date),
+                frequency: 'daily',
+                medicationSpecification: {
+                    name: 'Med1',
+                    directions: '',
+                    sideEffects: [],
+                    warning: '',
+                },
+                reminder: {
+                    enabled: true,
+                    reminderTimes: [{
+                        "id": "reminder1",
+                        "time": expect.any(Date),
+                    }],
+                },
+                purpose: '',
+            },
+            error: null
+        });
     });
 
     it("should return error if validation fails", async () => {
@@ -282,27 +310,19 @@ describe("createNewAccount", () => {
     });
 
     test("should create a new account and add user to Firestore", async () => {
-        // Mock a successful response from createUserWithEmailAndPassword
         createUserWithEmailAndPassword.mockResolvedValueOnce({
             user: { uid: "123", email: "john.doe@example.com" },
         });
         doc.mockReturnValueOnce("users/123");
-        // Mock a successful response from setDoc
         setDoc.mockResolvedValueOnce();
 
         const result = await createNewAccount("john.doe@example.com", "password123", "John", "Doe");
-
-        // Check if the Firebase auth method was called correctly
-        expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(expect.any(Function), "john.doe@example.com", "password123");
-
-        // Check if setDoc was called to add user data to Firestore
+        expect(createUserWithEmailAndPassword).toHaveBeenCalledWith({"currentUser": {"uid": "mockUserId"}}, "john.doe@example.com", "password123");
         expect(setDoc).toHaveBeenCalledWith("users/123", {
             firstName: "John",
             lastName: "Doe",
             email: "john.doe@example.com",
         });
-
-        // Check the result
         expect(result).toBe("123");
     });
 
@@ -342,7 +362,7 @@ describe("logIn", () => {
         const result = await logIn("john.doe@example.com", "password123");
 
         // Check if the Firebase auth method was called correctly
-        expect(signInWithEmailAndPassword).toHaveBeenCalledWith(expect.any(Function), "john.doe@example.com", "password123");
+        expect(signInWithEmailAndPassword).toHaveBeenCalledWith({"currentUser": {"uid": "mockUserId"}}, "john.doe@example.com", "password123");
 
         // Check the result
         expect(result).toBe("123");
@@ -363,4 +383,286 @@ describe("logIn", () => {
         await expect(logIn("john.doe@example.com", "password123"))
             .rejects.toThrow("Invalid email or password");
     });
+    it("should throw an error if doc fails to generate a reference", async () => {
+        doc.mockImplementationOnce(() => {
+            throw new Error("Failed to generate document reference");
+        });
+        await expect(createNewUser({ uid: "123", firstName: "John", lastName: "Doe", email: "john@example.com" }))
+            .rejects.toThrow("Failed to generate document reference");
+    });
+    it("should throw an error if getDoc fails", async () => {
+        getDoc.mockRejectedValueOnce(new Error("Network error"));
+        await expect(getUser("123")).rejects.toThrow("Error fetching user: Network error");
+    });
+    it("should throw an error if scheduleReminders fails", async () => {
+        scheduleReminders.mockRejectedValueOnce(new Error("Failed to schedule reminders"));
+        const validMedication = {
+            userId: "123",
+            dosage: { amount: 10, unit: "mg" },
+            startDate: "2024-01-01",
+            endDate: "2024-02-01",
+            frequency: "daily",
+            name: "Med1",
+            reminderEnabled: true,
+            reminderTimes: ["08:00"],
+        };
+        doc.mockReturnValueOnce({ id: "med1" });
+        await expect(addNewMedication(validMedication)).rejects.toThrow("Failed to schedule reminders");
+    });
+
+    it("should return detailed error messages for invalid medication input", async () => {
+        const invalidMedication = {
+            userId: "123",
+            dosage: { amount: 10, unit: "mg" },
+            startDate: "2024-01-01",
+            endDate: "2023-12-31", // Invalid: endDate before startDate
+            frequency: "daily",
+            name: "Med",
+            reminderEnabled: true,
+            reminderTimes: [],
+        };
+        const result = await addNewMedication(invalidMedication);
+        expect(result.error).toBe("End date must be after start date.");
+    });
+    it("should return an empty array if no medications exist", async () => {
+        const mockQuerySnapshot = {
+            forEach: jest.fn(), // No documents to iterate over
+        };
+        getDocs.mockResolvedValueOnce(mockQuerySnapshot);
+        const result = await getMedications("123");
+        expect(result).toEqual([]);
+    });
+    it("should throw an error if Firestore query fails", async () => {
+        getDocs.mockRejectedValueOnce(new Error("Query failed"));
+        await expect(getMedications("123")).rejects.toThrow("Error fetching medications: Query failed");
+    });
+    it("should update medication without reminders if reminderEnabled is false", async () => {
+        const validMedication = {
+            userId: "123",
+            dosage: { amount: 10, unit: "mg" },
+            startDate: "2024-01-01",
+            endDate: "2024-02-01",
+            frequency: "daily",
+            name: "Med1",
+            reminderEnabled: false,
+            reminderTimes: [],
+        };
+        doc.mockReturnValueOnce("medications/med1");
+        getDoc.mockResolvedValueOnce({ exists: () => true });
+    
+        const result = await editMedication("med1", validMedication);
+        expect(updateDoc).toHaveBeenCalledWith("medications/med1", {
+            userId: `users/123`,
+            dosage: { amount: 10, unit: "mg" },
+            startDate: expect.any(Date),
+            endDate: expect.any(Date),
+            frequency: "daily",
+            medicationSpecification: {
+                name: "Med1",
+                directions: undefined,
+                sideEffects: undefined,
+                warning: undefined,
+            },
+            reminder: { enabled: false, reminderTimes: [] },
+            purpose: undefined,
+        });
+        expect(result.error).toBeNull();
+    });
+    it("should throw an error if deleteDoc fails", async () => {
+        getDoc.mockResolvedValueOnce({ exists: () => true }); // Simulate medication exists
+        deleteDoc.mockRejectedValueOnce(new Error("Network error during deletion"));
+        await expect(deleteMedication("med1")).rejects.toThrow("Error deleting medication: Network error during deletion");
+    });
+    it("should throw an error if uid is not provided", async () => {
+        await expect(updateUserProfile({ newEmail: "test@example.com" }))
+            .rejects.toThrow("User ID is required to update the profile.");
+    });
+    
+    it("should update Firestore fields when first name or last name is provided", async () => {
+        const mockUid = "mockUserId";
+        const mockDocRef = "mockDocRef";
+    
+        doc.mockReturnValueOnce(mockDocRef);
+        updateDoc.mockResolvedValueOnce();
+    
+        await updateUserProfile({ uid: mockUid, newFirstName: "John", newLastName: "Doe" });
+    
+        expect(doc).toHaveBeenCalledWith(expect.any(Function), "users", mockUid);
+        expect(updateDoc).toHaveBeenCalledWith(mockDocRef, { firstName: "John", lastName: "Doe" });
+    });
+    
+    it("should update the user email in Firebase Auth when newEmail is provided", async () => {
+        const mockNewEmail = "newemail@example.com";
+    
+        updateEmail.mockResolvedValueOnce();
+        
+    
+        await updateUserProfile({ uid: "mockUserId", newEmail: mockNewEmail });
+    
+        expect(updateEmail).toHaveBeenCalledWith(expect.any(Object), mockNewEmail);
+    });
+    it("should update the user password in Firebase Auth when newPassword is provided", async () => {
+        const mockNewPassword = "newpassword123";
+    
+        updatePassword.mockResolvedValueOnce();
+    
+        await updateUserProfile({ uid: "mockUserId", newPassword: mockNewPassword });
+    
+        expect(updatePassword).toHaveBeenCalledWith(expect.any(Object), mockNewPassword);
+    });
+    it("should throw an error if no authenticated user is found for updating email", async () => {
+        const mockAuth = require('../services/firebaseConfig').auth;
+        mockAuth.currentUser = null;
+    
+        await expect(updateUserProfile({ uid: "mockUserId", newEmail: "newemail@example.com" }))
+            .rejects.toThrow("No authenticated user found to update email.");
+    });
+    
+    it("should throw an error if no authenticated user is found for updating password", async () => {
+        const mockAuth = require('../services/firebaseConfig').auth;
+        mockAuth.currentUser = null;
+    
+        await expect(updateUserProfile({ uid: "mockUserId", newPassword: "newpassword123" }))
+            .rejects.toThrow("No authenticated user found to update password.");
+    });
+
+    it("should propagate errors from updateDoc", async () => {
+        updateDoc.mockRejectedValueOnce(new Error("Firestore error"));
+    
+        await expect(updateUserProfile({
+            uid: "mockUserId",
+            newFirstName: "John",
+        })).rejects.toThrow("Firestore error");
+    });
+
+    it("should throw an error if required fields are missing", async () => {
+        await expect(setEmergencyContact(null, null))
+          .rejects.toThrow("All emergency contact fields (name, email, relationship) are required.");
+      
+        await expect(
+          setEmergencyContact("uid", { name: "John", email: "john@example.com" }) // Missing `relationship`
+        ).rejects.toThrow("All emergency contact fields (name, email, relationship) are required.");
+      });
+      it("should update Firestore with emergency contact information successfully", async () => {
+        const mockUid = "mockUserId";
+        const mockContact = { name: "John Doe", email: "john@example.com", relationship: "Friend" };
+        const mockDocRef = "mockDocRef";
+      
+        doc.mockReturnValueOnce(mockDocRef);
+        updateDoc.mockResolvedValueOnce();
+      
+        const result = await setEmergencyContact(mockUid, mockContact);
+      
+        expect(doc).toHaveBeenCalledWith(expect.any(Function), "users", mockUid);
+        expect(updateDoc).toHaveBeenCalledWith(mockDocRef, { emergencyContact: mockContact });
+        expect(result).toEqual({ success: true, message: "Emergency contact updated successfully." });
+      });
+      it("should throw an error if Firestore update fails", async () => {
+        const mockUid = "mockUserId";
+        const mockContact = { name: "John Doe", email: "john@example.com", relationship: "Friend" };
+      
+        doc.mockReturnValueOnce("mockDocRef");
+        updateDoc.mockRejectedValueOnce(new Error("Firestore error"));
+      
+        await expect(setEmergencyContact(mockUid, mockContact))
+          .rejects.toThrow("Failed to update emergency contact.");
+      });
+      it("should create a new adherence record if none exists", async () => {
+        const mockDocRef = "mockDocRef";
+        doc.mockReturnValueOnce(mockDocRef);
+        getDoc.mockResolvedValueOnce({ exists: () => false });
+      
+        await recordAdherence("medicationId", true);
+      
+        expect(setDoc).toHaveBeenCalledWith(mockDocRef, {
+          taken: 1,
+          missed: 0,
+          prevMiss: false,
+          consecutiveMisses: 0,
+        });
+      });
+      it("should update adherence record when medication is taken", async () => {
+        const mockDocRef = "mockDocRef";
+        const mockData = { taken: 5, missed: 3, prevMiss: true, consecutiveMisses: 2 };
+        doc.mockReturnValueOnce(mockDocRef);
+        getDoc.mockResolvedValueOnce({ exists: () => true, data: () => mockData });
+      
+        await recordAdherence("medicationId", true);
+      
+        expect(updateDoc).toHaveBeenCalledWith(mockDocRef, {
+          taken: 6, // Incremented
+          prevMiss: false,
+          consecutiveMisses: 0,
+        });
+      });
+      it("should update adherence record when medication is missed", async () => {
+        const mockDocRef = "mockDocRef";
+        const mockData = { taken: 5, missed: 3, prevMiss: true, consecutiveMisses: 2 };
+        doc.mockReturnValueOnce(mockDocRef);
+        getDoc.mockResolvedValueOnce({ exists: () => true, data: () => mockData });
+      
+        await recordAdherence("medicationId", false);
+      
+        expect(updateDoc).toHaveBeenCalledWith(mockDocRef, {
+          missed: 4, // Incremented
+          prevMiss: true,
+          consecutiveMisses: 3, // Incremented because prevMiss was true
+        });
+      });
+      it("should throw an error if Firestore operation fails", async () => {
+        getDoc.mockRejectedValueOnce(new Error("Firestore error"));
+      
+        await expect(recordAdherence("medicationId", true))
+          .rejects.toThrow("Error recording adherence: Firestore error");
+      });
+      it("should fetch adherence data for all provided medication IDs", async () => {
+        const mockDocRef = "mockDocRef";
+        const mockAdherence = { taken: 5, missed: 2, prevMiss: false, consecutiveMisses: 0 };
+      
+        doc.mockReturnValue(mockDocRef);
+        getDoc.mockResolvedValue({ exists: () => true, data: () => mockAdherence });
+      
+        const result = await getAdherenceData(["med1", "med2"]);
+      
+        expect(result).toEqual({
+          med1: mockAdherence,
+          med2: mockAdherence,
+        });
+        expect(getDoc).toHaveBeenCalledTimes(2);
+      });
+      it("should return default adherence data for medications without adherence records", async () => {
+        const mockDocRef = "mockDocRef";
+        const mockAdherence = { taken: 5, missed: 2, prevMiss: false, consecutiveMisses: 0 };
+      
+        doc.mockReturnValue(mockDocRef);
+        getDoc
+          .mockResolvedValueOnce({ exists: () => true, data: () => mockAdherence })
+          .mockResolvedValueOnce({ exists: () => false });
+      
+        const result = await getAdherenceData(["med1", "med2"]);
+      
+        expect(result).toEqual({
+          med1: mockAdherence,
+          med2: { taken: 0, missed: 0, prevMiss: false, consecutiveMisses: 0 },
+        });
+      });
+      it("should return default adherence data for medications without adherence records", async () => {
+        const mockDocRef = "mockDocRef";
+        const mockAdherence = { taken: 5, missed: 2, prevMiss: false, consecutiveMisses: 0 };
+      
+        doc.mockReturnValue(mockDocRef);
+        getDoc
+          .mockResolvedValueOnce({ exists: () => true, data: () => mockAdherence })
+          .mockResolvedValueOnce({ exists: () => false });
+      
+        const result = await getAdherenceData(["med1", "med2"]);
+      
+        expect(result).toEqual({
+          med1: mockAdherence,
+          med2: { taken: 0, missed: 0, prevMiss: false, consecutiveMisses: 0 },
+        });
+      });
+         
+    
+    
 });

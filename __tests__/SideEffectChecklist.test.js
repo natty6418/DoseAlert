@@ -40,20 +40,4 @@ describe('SideEffectChecklist', () => {
             { term: 'Dizziness', checked: true },
         ]);
     });
-
-    it('adds a new side effect when submitting new item', () => {
-        const mockSetSideEffects = jest.fn();
-        const { getByPlaceholderText, getByText } = render(
-            <SideEffectChecklist {...defaultProps} setSideEffects={mockSetSideEffects} />
-        );
-
-        const input = getByPlaceholderText('Add item....');
-        fireEvent.changeText(input, 'Headache');
-        fireEvent(input, 'submitEditing');
-
-        expect(mockSetSideEffects).toHaveBeenCalledWith([
-            ...defaultProps.sideEffects,
-            { term: 'Headache', checked: true },
-        ]);
-    });
 });

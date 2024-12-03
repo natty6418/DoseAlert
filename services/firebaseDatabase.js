@@ -115,6 +115,7 @@ export const updateUserProfile = async ({ uid, newEmail, newPassword, newFirstNa
         // Update Email if provided
         if (newEmail) {
             const currentUser = auth.currentUser;
+            console.log("Current user:", currentUser);
             if (!currentUser) {
                 throw new Error("No authenticated user found to update email.");
             }
@@ -253,7 +254,7 @@ export const addNewMedication = async ({
 
     // Use setDoc to add the medication data to Firestore at the generated document reference
     await setDoc(medicationDocRef, data);
-
+    console.log('Medication added successfully:', medicationId);
     return {
       data: {
         ...data,
