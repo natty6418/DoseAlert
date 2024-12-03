@@ -14,9 +14,11 @@ import MedicationItemExpanded from '../../components/MedicationItemExpanded';
 import { editMedication } from '../../services/firebaseDatabase';
 import { cancelReminders, Notifications } from '../../services/registerNotification';
 import { registerForPushNotificationsAsync } from '../../services/registerNotification';
+import { useFocusEffect } from 'expo-router';
 
 const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState(null);
   const [medications, setMedications] = useState([]);
   const [expandedIndex, setExpandedIndex] = useState(null);
   const context = useFirebaseContext();
@@ -27,6 +29,10 @@ const Home = () => {
     return null;
   }
 
+  useFocusEffect(()=>{
+    setUser(context.user);
+    setMedications(context.medications);
+  })
 
   useEffect(() => {
     let subscription;
@@ -66,14 +72,16 @@ const Home = () => {
       try {
         if (!context.user) return;
         const meds = await getMedications(context.user.id);
+        setUser(context.user);
         setMedications(meds);
+        context.setMedications(meds);
         setIsLoading(false);
       } catch (error) {
         console.log(error);
       }
     };
     fetchMedications();
-  }, [context.user]);
+  }, [context.user?.id]);
 
   useEffect(() => {
     const upcomingReminders = medications.filter(med => med.reminder.enabled);
@@ -113,7 +121,7 @@ const Home = () => {
     setUpcomingMedicationReminders(updatedMedications);
 
     editMedication(updatedMedications[index].id, {
-      userId: context.user.id,
+      userId: user.id,
       dosage: updatedMedications[index].dosage,
       endDate: updatedMedications[index].endDate,
       startDate: updatedMedications[index].startDate,
@@ -134,26 +142,28 @@ const Home = () => {
       });
   };
 
-  if (isLoading || !context.user) return <LoadingSpinner />;
+  if (isLoading ) return <LoadingSpinner />;
 
   return (
     <SafeAreaView className="bg-black-100 h-full py-4">
       <View className="flex-1 h-full">
         <View className="flex-row items-center justify-between px-4 py-2 rounded-b-2xl">
-          <TouchableOpacity>
-            <icons.Bars3 color="#FFFFFF" size={36} />
-          </TouchableOpacity>
+          
 
           <View className="items-center">
             <Image source={images.logo} resizeMode="contain" className="w-[115px] h-[34px]" />
           </View>
 
-          <TouchableOpacity>
+          <TouchableOpacity
+            onPress={()=>{
+              router.push('/settings/AccountInfo')
+            }}
+          >
             <icons.UserCircle color="#A3E635" size={36} />
           </TouchableOpacity>
         </View>
         <ScrollView>
-          <Greeting name={context.user?.firstName} />
+          <Greeting name={user?.firstName} />
 
           <View className="px-4 mt-2">
             <Text className="text-gray-400 text-lg mb-2">Upcoming Reminders</Text>

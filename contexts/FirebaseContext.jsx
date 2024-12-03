@@ -12,6 +12,7 @@ const FirebaseProvider = ({children}) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [adherenceResponseId, setAdherenceResponseId] = useState(null);
+    const [medications, setMedications] = useState([]);
 
     const onAuthStateChangedHandler = (user) => {
         if(user){
@@ -34,7 +35,7 @@ const FirebaseProvider = ({children}) => {
     },[]);
 
     return (
-        <FirebaseContext.Provider value={{isLoggedIn, user, loading, setIsLoggedIn, setUser, adherenceResponseId, setAdherenceResponseId}}>
+        <FirebaseContext.Provider value={{isLoggedIn, user, loading, setIsLoggedIn, setUser, adherenceResponseId, setAdherenceResponseId, medications, setMedications}}>
             {children}
         </FirebaseContext.Provider>
     );
