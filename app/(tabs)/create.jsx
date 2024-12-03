@@ -35,7 +35,7 @@ const CreateScreen = () => {
   useEffect(() => {
     try {
       const fetchMedicationPlans = async () => {
-        const plans = await getMedications(context.user.uid);
+        const plans = await getMedications(context.user.id);
         setMedicationPlans(plans);
       };
       fetchMedicationPlans();

@@ -1,18 +1,17 @@
-import React, {useEffect} from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
-// import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from 'expo-router';
+// import { SafeAreaView } from "react-native-safe-area-context";
 
 import { icons, images } from '../../../constants';
 
 
-const SettingsScreen = () => {
-
+const SettingsScreen = ({ navigation }) => {
 
     const settingsOptions = [
     { name: 'Account Info', description: 'Edit your personal and delivery info', icon: icons.profile, route: 'settings/AccountInfo' },
-    { name: 'Emergency Info', description: 'Manage your emergency contact', icon: icons.phone, route: '/EmergencyInfo' },
-    { name: 'Privacy Policy', description: 'See our terms and conditions', icon: icons.ClipboardDocument, route: '/PrivacyPolicy' },
+    { name: 'Emergency Info', description: 'Manage your emergency contact', icon: icons.phone, route: 'settings/EmergencyInfo' },
+    { name: 'Privacy Policy', description: 'See our terms and conditions', icon: icons.documents, route: 'settings/PrivacyPolicy' },
     { name: 'Logout', description: 'Logout of DoseAlert on this device', icon: icons.logout, route: '/(auth)/signout' },
     ];
 
