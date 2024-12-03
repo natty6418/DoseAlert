@@ -67,7 +67,8 @@ describe('CreateScreen', () => {
                 sideEffects: [
                   { term: 'Nausea', checked: true },
                   { term: 'Headache', checked: false }
-                ]
+                ],
+                directions: 'Take 1 tablet every 4-6 hours',
               },
               dosage: { amount: 10, unit: 'mg' },
               startDate: new Date('2023-01-01'),
@@ -95,9 +96,9 @@ describe('CreateScreen', () => {
       it('renders correctly with medication plans', async () => {
         const { getByText } = render(<CreateScreen />);
     
-        await act(async () => {
-          await waitFor(() => expect(getByText('Aspirin')).toBeTruthy());
-        });
+        
+        await waitFor(() => expect(getByText('Aspirin')).toBeTruthy());
+        
       });
     
     
@@ -209,7 +210,16 @@ describe('CreateScreen', () => {
     it('adds a new medication plan when handleSavePlan is called', async () => {
         const { getByText, queryByText, getByPlaceholderText, getByTestId, findByTestId } = render(<CreateScreen />);
         
-        addNewMedication.mockResolvedValueOnce({ data: 'med2' });
+        addNewMedication.mockResolvedValueOnce({ data: {
+            id: 'med2',
+            medicationSpecification: { name: 'Mock Drug', sideEffects: [], directions: '' },
+            dosage: { amount: 10, unit: 'mg' },
+            startDate: new Date('2024-01-01'),
+            endDate: new Date('2024-12-12'),
+            frequency: 'Daily',
+            reminder: { enabled: false, reminderTimes: [] },
+          }, error: null });
+       
 
         // Wait for the initial medication to load
         await waitFor(() => expect(queryByText('Aspirin')).toBeTruthy());

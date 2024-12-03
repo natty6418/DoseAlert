@@ -129,7 +129,7 @@ jest.mock('expo-notifications', () => ({
           expect.objectContaining({ name: 'Test Medication' })
         );
         expect(mockOnSave).toHaveBeenCalledWith(
-          expect.objectContaining({ id: 'mockMedicationId' })
+          'mockMedicationId'
         );
         expect(mockOnClose).toHaveBeenCalledTimes(1);
       });

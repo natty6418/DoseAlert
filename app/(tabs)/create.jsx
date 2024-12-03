@@ -47,6 +47,7 @@ const CreateScreen = () => {
   }, []);
 
   const handleSavePlan = (newPlan) => {
+    console.log("newPlan", newPlan);
     setMedicationPlans([...medicationPlans, newPlan]);
     setAddMedicationModalVisible(false);
   };

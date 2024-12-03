@@ -95,24 +95,27 @@ describe('scheduleReminders', () => {
     Notifications.scheduleNotificationAsync.mockResolvedValueOnce('reminder-1');
     Notifications.scheduleNotificationAsync.mockResolvedValueOnce('reminder-2');
 
-    const reminders = await scheduleReminders(reminderTimes, 'Time to take your medication!');
+    const reminders = await scheduleReminders(reminderTimes, 'Time to take your medication!', 'medication-1');
 
     expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledTimes(2);
     expect(Notifications.scheduleNotificationAsync).toHaveBeenNthCalledWith(1, {
       content: {
         title: 'Medication Reminder',
         body: 'Time to take your medication!',
+        data: { medicationId: 'medication-1' },
       },
       trigger: {
         hour: 9,
         minute: 0,
         repeats: true,
       },
+
     });
     expect(Notifications.scheduleNotificationAsync).toHaveBeenNthCalledWith(2, {
       content: {
         title: 'Medication Reminder',
         body: 'Time to take your medication!',
+        data: { medicationId: 'medication-1' },
       },
       trigger: {
         hour: 18,
