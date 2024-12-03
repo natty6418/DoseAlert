@@ -113,10 +113,11 @@ describe("addNewMedication", () => {
 
         const mockReminders = [{ time: new Date("2024-01-01T08:00:00"), id: "reminder1" }];
         scheduleReminders.mockResolvedValueOnce(mockReminders);
-        addDoc.mockResolvedValueOnce({ id: "med1" });
+        setDoc.mockResolvedValueOnce({ id: "med1" });
+        doc.mockReturnValueOnce({ id: "med1" });
 
         const result = await addNewMedication(mockMedication);
-        expect(addDoc).toHaveBeenCalledWith({ id: 'medicationsCollection' },{
+        expect(setDoc).toHaveBeenCalledWith({ id: 'med1' },{
             userId: `users/123`,
             dosage: { amount: 10, unit: 'mg' },
             startDate: Timestamp.fromDate(new Date('2024-01-01')),
@@ -133,10 +134,33 @@ describe("addNewMedication", () => {
                 reminderTimes: [
                     { id: 'reminder1', time: new Date('2024-01-01T04:00:00.000Z') }
                 ],
+                notificationIds: ['reminder1']
             },
             purpose: undefined,
         });
-        expect(result).toEqual({ data: "med1", error: null });
+        expect(result).toEqual({ data: {
+            userId: `users/123`,
+            id: 'med1',
+            dosage: { amount: 10, unit: 'mg' },
+            startDate: "2024-01-01",
+            endDate: "2024-02-01",
+            frequency: 'daily',
+            medicationSpecification: {
+                name: 'Med1',
+                directions: undefined,
+                sideEffects: undefined,
+                warning: undefined,
+            },
+            reminder: {
+                enabled: true,
+                reminderTimes: [{
+                    "id": "reminder1",
+                    "time": new Date("2024-01-01T04:00:00.000Z"),
+                }],
+                notificationIds: ['reminder1']
+            },
+            purpose: undefined,
+        }, error: null });
     });
 
     it("should return error if validation fails", async () => {

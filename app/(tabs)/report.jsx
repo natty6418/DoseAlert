@@ -6,62 +6,91 @@ import LoadingSpinner from '../../components/Loading';
 import MedicationReportItem from '../../components/MedicationReportItem';
 import ResponseModal from '../../components/ResponseModal';
 import { ProgressChart } from 'react-native-chart-kit';
+import { useFocusEffect } from 'expo-router';
 
 const Report = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [medications, setMedications] = useState([]);
-  const [adherenceData, setAdherenceData] = useState({});
-  const [responseModalVisible, setResponseModalVisible] = useState(false);
-  const context = useFirebaseContext();
+const [medications, setMedications] = useState([]);
+const [adherenceData, setAdherenceData] = useState({});
+const [responseModalVisible, setResponseModalVisible] = useState(false);
+const context = useFirebaseContext();
 
-  const chartConfig = {
-    backgroundGradientFrom: '#1f2937',
-    backgroundGradientTo: '#1f2937',
-    color: (opacity = 1) => `rgba(50, 205, 50, ${opacity})`,
-    strokeWidth: 2,
-    barPercentage: 0.5,
-    useShadowColorFromDataset: false,
-  };
+const chartConfig = {
+  backgroundGradientFrom: '#1f2937',
+  backgroundGradientTo: '#1f2937',
+  color: (opacity = 1) => `rgba(50, 205, 50, ${opacity})`,
+  strokeWidth: 2,
+  barPercentage: 0.5,
+  useShadowColorFromDataset: false,
+};
 
-  useEffect(() => {
-    const fetchMedications = async () => {
-      try {
-        const meds = await getMedications(context?.user?.id);
-        const adherenceData = await getAdherenceData(
-          meds.map((med) => med.id)
-        );
-        setMedications(meds);
-        setAdherenceData(adherenceData);
-      } catch (error) {
-        console.error('Error fetching medications:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchMedications();
-  }, []);
-
-  useEffect(() => {
-    if (context.adherenceResponseId) {
-      setResponseModalVisible(true);
-    }
-  }, [context.adherenceResponseId]);
-
-  const selectedMedication = medications.find((med) => med.id === context.adherenceResponseId);
-
-  const calculateAdherencePercentage = (taken, missed) => {
-    const total = taken + missed;
-    return total > 0 ? Math.round((taken / total) * 100) : 0;
-  };
-
-  const totalTaken = Object.values(adherenceData).reduce((sum, data) => sum + (data.taken || 0), 0);
-  const totalMissed = Object.values(adherenceData).reduce((sum, data) => sum + (data.missed || 0), 0);
-  const overallAdherencePercentage = calculateAdherencePercentage(totalTaken, totalMissed) / 100;
-
-  if (isLoading) {
-    return <LoadingSpinner />;
+// Function to fetch and filter medications
+const filterAndSetMedications = () => {
+  if (context.medications) {
+    const filteredMedications = context.medications.filter(
+      (med) => new Date(med.endDate) > new Date()
+    );
+    setMedications(filteredMedications);
   }
+};
+
+useEffect(() => {
+  filterAndSetMedications();
+}, [context.medications]);
+
+useEffect(() => {
+  const fetchMedicationsAdherence = async () => {
+    try {
+      const filteredMedications = context.medications.filter(
+        (med) => new Date(med.endDate) >= new Date()
+      );
+      const adherenceData = await getAdherenceData(
+        filteredMedications.map((med) => med.id)
+      );
+      setAdherenceData(adherenceData);
+      setMedications(filteredMedications); // Ensure consistent state
+    } catch (error) {
+      console.error('Error fetching medications:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (context.medications) {
+    fetchMedicationsAdherence();
+  }
+}, [context.medications]);
+
+useEffect(() => {
+  if (context.adherenceResponseId) {
+    setResponseModalVisible(true);
+  }
+}, [context.adherenceResponseId]);
+
+const selectedMedication = medications.find(
+  (med) => med.id === context.adherenceResponseId
+);
+
+const calculateAdherencePercentage = (taken, missed) => {
+  const total = taken + missed;
+  return total > 0 ? Math.round((taken / total) * 100) : 0;
+};
+
+const totalTaken = Object.values(adherenceData).reduce(
+  (sum, data) => sum + (data.taken || 0),
+  0
+);
+const totalMissed = Object.values(adherenceData).reduce(
+  (sum, data) => sum + (data.missed || 0),
+  0
+);
+const overallAdherencePercentage =
+  calculateAdherencePercentage(totalTaken, totalMissed) / 100;
+
+if (isLoading) {
+  return <LoadingSpinner />;
+}
+
 
   return (
     <SafeAreaView className="bg-black h-full pt-12">
@@ -121,7 +150,7 @@ const Report = () => {
                 );
               })
             ) : (
-              <Text className="text-gray-500 text-center mt-4">No medications found.</Text>
+              <Text className="text-gray-500 text-center mt-4">No active medications found.</Text>
             )}
           </View>
         </ScrollView>

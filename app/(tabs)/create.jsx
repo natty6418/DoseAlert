@@ -13,6 +13,7 @@ import MedicationItem from '../../components/MedicationItem';
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../services/externalDrugAPI';
 import EditMedicationPlanModal from '../../components/EditMedicationModal';
 import ErrorModal from '../../components/ErrorModal';
+import { useFocusEffect } from 'expo-router';
 
 
 
@@ -31,27 +32,27 @@ const CreateScreen = () => {
   const [scannedMedication, setScannedMedication] = useState(null);
   const [error, setError] = useState(null);
 
+  useFocusEffect(() => {
+    if (!context.medications) return;
+    setMedicationPlans(context.medications);
+    setIsLoading(false);
+  });
   
   useEffect(() => {
-    try {
-      const fetchMedicationPlans = async () => {
-        const plans = await getMedications(context.user.id);
-        setMedicationPlans(plans);
-      };
-      fetchMedicationPlans();
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+    if (!context.medications) return;
+    setMedicationPlans(context.medications);
+    setIsLoading(false);
+  }, [context.medications]);
 
   const handleSavePlan = (newPlan) => {
-    setMedicationPlans([...medicationPlans, newPlan]);
+    console.log("newPlan", newPlan);
+    // setMedicationPlans([...medicationPlans, newPlan]);
+    context.setMedications([...medicationPlans, newPlan]);
     setAddMedicationModalVisible(false);
   };
   const handleEditPlan = (editedPlan) => {
-    setMedicationPlans(medicationPlans.map(plan => plan.id === editedPlan.id ? editedPlan : plan));
+    // setMedicationPlans(medicationPlans.map(plan => plan.id === editedPlan.id ? editedPlan : plan));
+    context.setMedications(medicationPlans.map(plan => plan.id === editedPlan.id ? editedPlan : plan));
     setEditMedicationModalVisible(false);
   };
   const extractSideEffectTerms = (sideEffectsData) => {
@@ -113,7 +114,8 @@ const CreateScreen = () => {
     }
   };
   const handleDeletePlan = (medicationId) => {
-    setMedicationPlans(medicationPlans.filter(plan => plan.id !== medicationId));
+    // setMedicationPlans(medicationPlans.filter(plan => plan.id !== medicationId));
+    context.setMedications(medicationPlans.filter(plan => plan.id !== medicationId));
     setEditMedicationModalVisible(false);
   }
 
