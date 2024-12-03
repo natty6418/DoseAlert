@@ -118,7 +118,8 @@ const TabsLayout = () => {
     
   </Tabs>
   <StatusBar
-        backgroundColor='#161622'
+  hidden={false}
+        backgroundColor='#1a1a1a'
         style='light'
     />
 

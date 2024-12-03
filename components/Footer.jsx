@@ -10,7 +10,7 @@ export default function Footer() {
       </TouchableOpacity>
       <TouchableOpacity
         onPress={() => {
-          router.push('/settings/PrivacyPolicy');
+          router.replace('/settings/PrivacyPolicy');
         }}
       >
         <Text className="text-gray-400 underline">Privacy Policy</Text>

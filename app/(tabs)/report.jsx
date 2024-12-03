@@ -6,7 +6,8 @@ import LoadingSpinner from '../../components/Loading';
 import MedicationReportItem from '../../components/MedicationReportItem';
 import ResponseModal from '../../components/ResponseModal';
 import { ProgressChart } from 'react-native-chart-kit';
-import { useFocusEffect } from 'expo-router';
+
+
 
 const Report = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +25,7 @@ const chartConfig = {
   useShadowColorFromDataset: false,
 };
 
+
 // Function to fetch and filter medications
 const filterAndSetMedications = () => {
   if (context.medications) {
@@ -37,6 +39,8 @@ const filterAndSetMedications = () => {
 useEffect(() => {
   filterAndSetMedications();
 }, [context.medications]);
+
+
 
 useEffect(() => {
   const fetchMedicationsAdherence = async () => {
@@ -93,13 +97,11 @@ if (isLoading) {
 
 
   return (
-    <SafeAreaView className="bg-black h-full pt-12">
+    <SafeAreaView className="bg-black-100 h-full pt-12">
       <View className="flex-1">
         <ScrollView>
           <View className="px-4 mt-4">
-            <Text className="text-lime-500 text-3xl font-semibold mb-6 text-center">
-              Medication Adherence Report
-            </Text>
+           
             <View className="bg-gray-800 p-4 mb-6 rounded-lg border border-lime-500 shadow-lg">
               <Text className="text-lime-400 text-xl font-semibold mb-4 text-center">
                 Overall Adherence
@@ -165,6 +167,7 @@ if (isLoading) {
             context.setAdherenceResponseId(null);
           }}
           setAdherenceData={setAdherenceData}
+          adherenceData={adherenceData}
         />
       )}
     </SafeAreaView>

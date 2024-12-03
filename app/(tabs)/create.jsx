@@ -45,14 +45,15 @@ const CreateScreen = () => {
   }, [context.medications]);
 
   const handleSavePlan = (newPlan) => {
-    console.log("newPlan", newPlan);
     // setMedicationPlans([...medicationPlans, newPlan]);
-    context.setMedications([...medicationPlans, newPlan]);
+    context.setMedications([...medicationPlans, {...newPlan,
+      isActive: true,
+    }]);
     setAddMedicationModalVisible(false);
   };
   const handleEditPlan = (editedPlan) => {
     // setMedicationPlans(medicationPlans.map(plan => plan.id === editedPlan.id ? editedPlan : plan));
-    context.setMedications(medicationPlans.map(plan => plan.id === editedPlan.id ? editedPlan : plan));
+    context.setMedications(medicationPlans.map(plan => plan.id === editedPlan.id ? {...editedPlan, isActive: true} : plan));
     setEditMedicationModalVisible(false);
   };
   const extractSideEffectTerms = (sideEffectsData) => {
@@ -127,7 +128,7 @@ const CreateScreen = () => {
     return <LoadingSpinner />;
   }
   return (
-    <SafeAreaView className="bg-black-100 h-full pt-2">
+    <SafeAreaView className="bg-black-100 h-full">
       <View className="flex-1 px-4">
         <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         <FlatList
@@ -179,6 +180,7 @@ const CreateScreen = () => {
               medicationSpecification={selectedMedication.medicationSpecification}
               reminder={selectedMedication.reminder}
               medicationId={selectedMedication.id}
+              isActive={selectedMedication.isActive}
               onEdit={() =>{
                   setMedicationCardModalVisible(false)
                   setEditMedicationModalVisible(true)

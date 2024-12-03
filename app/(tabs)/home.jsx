@@ -71,7 +71,18 @@ const Home = () => {
     const fetchMedications = async () => {
       try {
         if (!context.user) return;
-        const meds = await getMedications(context.user.id);
+        const meds = (await getMedications(context.user.id)).map((med) =>{
+          return {
+            ...med,
+            isActive: new Date(med.endDate) >= new Date(),
+            reminder:{
+              ...med.reminder,
+              enabled: new Date(med.endDate) >= new Date()?med.reminder.enabled:false,
+
+            }
+          }
+        });
+        
         setUser(context.user);
         setMedications(meds);
         context.setMedications(meds);
@@ -119,6 +130,7 @@ const Home = () => {
       },
     };
     setUpcomingMedicationReminders(updatedMedications);
+    context.setMedications(updatedMedications);
 
     editMedication(updatedMedications[index].id, {
       userId: user.id,

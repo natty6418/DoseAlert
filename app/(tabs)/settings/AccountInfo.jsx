@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Modal, BackHandler } from 'react-native';
 import { useFirebaseContext } from '../../../contexts/FirebaseContext';
-import { auth, db } from '../../../services/firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
 import { updateUserProfile } from '../../../services/firebaseDatabase';
 import FormField from '../../../components/FormField';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+
 
 const AccountInfo = () => {
   const { user, setUser } = useFirebaseContext(); // Assume this gets the logged-in user's info
@@ -17,6 +17,21 @@ const AccountInfo = () => {
 
   // Fetch user information on component mount
     // Handle Save Changes
+    useEffect(() => {
+      const handleBackPress = () => {
+          // Navigate back to the previous screen (Settings in this case)
+          router.push('/settings');
+          return true; // Return true to prevent default back behavior
+      };
+  
+      // Add the event listener
+      BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+  
+      // Cleanup the event listener on component unmount
+      return () => {
+          BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
+      };
+  }, []);
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {

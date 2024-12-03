@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, BackHandler } from 'react-native';
 import { icons } from '../../../constants';
+import { router } from 'expo-router';
 
 const PrivacyPolicy = () => {
   const [openSections, setOpenSections] = useState({});
+
+  useEffect(() => {
+    const handleBackPress = () => {
+        // Navigate back to the previous screen (Settings in this case)
+        router.push('/settings');
+        return true; // Return true to prevent default back behavior
+    };
+
+    // Add the event listener
+    BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+    // Cleanup the event listener on component unmount
+    return () => {
+        BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
+    };
+}, []);
 
   const toggleSection = (section) => {
     setOpenSections((prev) => ({
