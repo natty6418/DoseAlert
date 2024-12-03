@@ -109,7 +109,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
         setIsLoading(true);
         try {            
             const response = await editMedication(medicationData.id, {
-                userId: context.user.uid,
+                userId: context.user.id,
                 dosage,
                 startDate,
                 endDate,

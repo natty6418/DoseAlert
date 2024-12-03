@@ -41,7 +41,7 @@ const PrivacyPolicy = () => {
   ];
 
   return (
-    <ScrollView className="flex-1 px-4 py-6 bg-black-100">
+    <ScrollView className="flex-1 px-4 py-6 bg-black-100 mt-12">
       <Text className="mb-6 text-4xl text-primary font-pextrabold">Privacy Policy</Text>
       <Text className="mb-6 text-base leading-6 text-primary font-plight">
         At DoseAlert, your privacy is important to us. Here, we explain how we handle your data,

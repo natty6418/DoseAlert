@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 
 export default function Footer() {
   return (
@@ -7,7 +8,11 @@ export default function Footer() {
       <TouchableOpacity>
         <Text className="text-gray-400 underline">Send feedback</Text>
       </TouchableOpacity>
-      <TouchableOpacity>
+      <TouchableOpacity
+        onPress={() => {
+          router.push('/settings/PrivacyPolicy');
+        }}
+      >
         <Text className="text-gray-400 underline">Privacy Policy</Text>
       </TouchableOpacity>
     </View>
