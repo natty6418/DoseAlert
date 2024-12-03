@@ -9,9 +9,9 @@ import { icons, images } from '../../../constants';
 const SettingsScreen = ({ navigation }) => {
 
     const settingsOptions = [
-    { name: 'Account Info', description: 'Edit your personal and delivery info', icon: icons.profile, route: '/AccountInfo' },
-    { name: 'Emergency Info', description: 'Manage your emergency contact', icon: icons.phone, route: '/EmergencyInfo' },
-    { name: 'Privacy Policy', description: 'See our terms and conditions', icon: icons.documents, route: '/PrivacyPolicy' },
+    { name: 'Account Info', description: 'Edit your personal and delivery info', icon: icons.profile, route: 'settings/AccountInfo' },
+    { name: 'Emergency Info', description: 'Manage your emergency contact', icon: icons.phone, route: 'settings/EmergencyInfo' },
+    { name: 'Privacy Policy', description: 'See our terms and conditions', icon: icons.documents, route: 'settings/PrivacyPolicy' },
     { name: 'Logout', description: 'Logout of DoseAlert on this device', icon: icons.logout, route: '/(auth)/signout' },
     ];
 

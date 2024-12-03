@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import Providers from '../../../contexts'
 import { Stack } from 'expo-router';
 
