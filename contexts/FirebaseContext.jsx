@@ -1,12 +1,13 @@
 import {createContext, useContext, useEffect, useState} from "react";
 import { auth } from "../services/firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
+import { getUser } from "../services/firebaseDatabase";
 
 const FirebaseContext = createContext();
 
 export const useFirebaseContext = () => useContext(FirebaseContext);
 
-const FibaseProvider = ({children}) => {
+const FirebaseProvider = ({children}) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -14,8 +15,12 @@ const FibaseProvider = ({children}) => {
 
     const onAuthStateChangedHandler = (user) => {
         if(user){
+            getUser(user.uid).then((userData)=>{
+                setUser({...userData, id: user.uid});
+            }
+            );
             setIsLoggedIn(true);
-            setUser(user);
+            
         } else {
             setIsLoggedIn(false);
             setUser(null);
@@ -35,4 +40,4 @@ const FibaseProvider = ({children}) => {
     );
 };
 
-export default FibaseProvider;
+export default FirebaseProvider;

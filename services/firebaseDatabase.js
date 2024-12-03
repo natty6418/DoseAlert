@@ -1,7 +1,7 @@
 import { db, auth } from "./firebaseConfig";
 import {collection, addDoc, Timestamp, doc, getDoc, getDocs, setDoc, query, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { scheduleReminders } from "./registerNotification";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateEmail, updatePassword } from "firebase/auth";
 
 const checkForErrors = ({name, dosage, startDate, endDate, frequency, reminderEnabled, reminderTimes}) => {
     if (!name || !dosage.amount || !dosage.unit || !startDate || !endDate || !frequency) {
@@ -94,6 +94,51 @@ export const createNewUser = async ({uid, firstName, lastName, email}) => {
         throw new Error(e.message);
     }
 };
+
+export const updateUserProfile = async ({ uid, newEmail, newPassword, newFirstName, newLastName }) => {
+    if (!uid) {
+        throw new Error("User ID is required to update the profile.");
+    }
+
+    try {
+        // Update Firestore fields if provided
+        if (newFirstName || newLastName) {
+            const userDocRef = doc(db, "users", uid);
+            const updatedData = {};
+            if (newFirstName) updatedData.firstName = newFirstName;
+            if (newLastName) updatedData.lastName = newLastName;
+            
+            await updateDoc(userDocRef, updatedData);
+            console.log("User profile updated in Firestore.");
+        }
+
+        // Update Email if provided
+        if (newEmail) {
+            const currentUser = auth.currentUser;
+            if (!currentUser) {
+                throw new Error("No authenticated user found to update email.");
+            }
+            await updateEmail(currentUser, newEmail);
+            console.log("User email updated in Firebase Authentication.");
+        }
+
+        // Update Password if provided
+        if (newPassword) {
+            const currentUser = auth.currentUser;
+            if (!currentUser) {
+                throw new Error("No authenticated user found to update password.");
+            }
+            await updatePassword(currentUser, newPassword);
+            console.log("User password updated in Firebase Authentication.");
+        }
+
+        return { success: true, message: "User profile updated successfully." };
+
+    } catch (e) {
+        throw new Error(e.message);
+    }
+};
+
 export const getUser = async (uid) => {
     try {
         // Create a reference to the specific user document using uid
@@ -119,6 +164,21 @@ export const getUser = async (uid) => {
         throw new Error('Error fetching user: ' + e.message);
     }
 };
+export const setEmergencyContact = async (uid, emergencyContact) => {
+    if (!uid || !emergencyContact || !emergencyContact.name || !emergencyContact.email || !emergencyContact.relationship) {
+      throw new Error("All emergency contact fields (name, email, relationship) are required.");
+    }
+  
+    try {
+      const userDocRef = doc(db, "users", uid); // Reference to the user's document
+      await updateDoc(userDocRef, { emergencyContact });
+      console.log("Emergency contact updated successfully for user:", uid);
+      return { success: true, message: "Emergency contact updated successfully." };
+    } catch (error) {
+      console.error("Error setting emergency contact:", error);
+      throw new Error("Failed to update emergency contact.");
+    }
+  };
 
 export const addNewMedication = async ({
   userId,

@@ -26,7 +26,7 @@ const Report = () => {
   useEffect(() => {
     const fetchMedications = async () => {
       try {
-        const meds = await getMedications(context?.user?.uid);
+        const meds = await getMedications(context?.user?.id);
         const adherenceData = await getAdherenceData(
           meds.map((med) => med.id)
         );
