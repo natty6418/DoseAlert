@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for components/SideEffectChecklist.jsx</title>
+    <title>Code coverage report for components/LongTextComponent.jsx</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../prettify.css" />
     <link rel="stylesheet" href="../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../index.html">All files</a> / <a href="index.html">components</a> SideEffectChecklist.jsx</h1>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">components</a> LongTextComponent.jsx</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">83.33% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>9/9</span>
+                <span class='fraction'>5/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85.71% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>6/7</span>
+                <span class='fraction'>4/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>5/5</span>
+                <span class='fraction'>1/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">83.33% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>9/9</span>
+                <span class='fraction'>5/6</span>
             </div>
         
             
@@ -98,32 +98,28 @@
 <a name='L33'></a><a href='#L33'>33</a>
 <a name='L34'></a><a href='#L34'>34</a>
 <a name='L35'></a><a href='#L35'>35</a>
-<a name='L36'></a><a href='#L36'>36</a>
-<a name='L37'></a><a href='#L37'>37</a>
-<a name='L38'></a><a href='#L38'>38</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L36'></a><a href='#L36'>36</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">53x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">53x</span>
+<span class="cline-any cline-yes">12x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">17x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -138,42 +134,40 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React, { useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity } from 'react-native';
-import { icons } from '../constants';
+import { View, Text, TouchableOpacity } from 'react-native';
 &nbsp;
-const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) =&gt; {
-  // Initialize each side effect with unchecked status
+const LongTextComponent = ({Icon, title, content }) =&gt; {
+    const [isExpanded, setIsExpanded] = useState(false);
+    const maxLength = 100; // Character limit for truncation
 &nbsp;
-  // Toggle the checked status of a side effect
-  const toggleChecked = (index) =&gt; {
-    const updatedItems = [...sideEffects];
-    updatedItems[index].checked = !updatedItems[index].checked;
-    setSideEffects(updatedItems);
-  };
-&nbsp;
-  return (
-    &lt;View className={`${darker ? "bg-black-100" : <span class="branch-1 cbranch-no" title="branch not covered" >"bg-black-200"}</span> rounded-lg mt-7`}&gt;
-      &lt;Text className="text-base text-gray-100 font-pmedium mb-2"&gt;Side Effects Checklist&lt;/Text&gt;
-      {sideEffects.length &gt; 0 &amp;&amp; &lt;FlatList
-        data={sideEffects}
-        scrollEnabled={false}
-        keyExtractor={(item, index) =&gt; index.toString()}
-        renderItem={({ item, index }) =&gt; (
-          &lt;TouchableOpacity
-            onPress={() =&gt; toggleChecked(index)}
-            className="flex-row items-center"
-          &gt;
-            {item.checked ? &lt;View testID='checked'&gt;&lt;icons.CheckCircle color="#A3E635" size={24} /&gt;&lt;/View&gt; : &lt;View testID='not-checked'&gt;&lt;icons.PlusCircle color="#9CA3AF" size={24} /&gt;&lt;/View&gt; }
-            &lt;Text className="ml-2 text-white font-pregular"&gt;{item.term}&lt;/Text&gt;
-          &lt;/TouchableOpacity&gt;
-        )}
-      /&gt;}
-      
-    &lt;/View&gt;
-  );
+    const toggleExpanded = <span class="fstat-no" title="function not covered" >()</span> =&gt; {
+<span class="cstat-no" title="statement not covered" >        setIsExpanded(!isExpanded);</span>
+    };
+    return (
+        &lt;View className="mb-2"&gt;
+            &lt;View className="flex flex-row items-center gap-1"&gt;
+                &lt;Icon size={20} color="#65a30d" /&gt;
+                &lt;Text className="text-white font-medium flex-row items-center"&gt;
+                   {title}:
+                &lt;/Text&gt;
+            &lt;/View&gt;
+            &lt;Text className="text-white ml-4 mt-1"&gt;
+                {isExpanded || content.length &lt;= maxLength
+                    ? content
+                    : <span class="branch-1 cbranch-no" title="branch not covered" >`${content.substring(0, maxLength)}...`}</span>
+            &lt;/Text&gt;
+            {content.length &gt; maxLength &amp;&amp; (
+<span class="branch-1 cbranch-no" title="branch not covered" >                &lt;TouchableOpacity onPress={toggleExpanded}&gt;</span>
+                    &lt;Text className="text-green-400 ml-6 "&gt;
+                        {isExpanded ? 'See less' : 'See more'}
+                    &lt;/Text&gt;
+                &lt;/TouchableOpacity&gt;
+            )}
+        &lt;/View&gt;
+    );
 };
 &nbsp;
-export default SideEffectChecklist;
+export default LongTextComponent;
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->

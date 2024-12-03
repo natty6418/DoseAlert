@@ -148,4 +148,64 @@ jest.mock('expo-notifications', () => ({
         expect(getByText('Error')).toBeTruthy();
       });
     });
+    it('blocks submission if required fields are missing', async () => {
+      const { getByText, getByPlaceholderText } = render(
+        <AddMedicationPlanModal visible={true} onClose={jest.fn()} onSave={jest.fn()} />
+      );
+      addNewMedication.mockResolvedValueOnce({ data: null, error: 'Name is required' });
+    
+      fireEvent.press(getByText('Save Plan'));
+    
+      await waitFor(() => {
+        expect(getByText('Name is required')).toBeTruthy();
+      });
+    });
+    
+  
+    it('prevents duplicate reminder times from being added', async () => {
+      const { getByTestId, getByText } = render(
+        <AddMedicationPlanModal visible={true} onClose={jest.fn()} onSave={jest.fn()} />
+      );
+    
+      // Enable reminders and add a time
+      fireEvent(getByTestId('enable-reminders-switch'), 'valueChange', true);
+      fireEvent.press(getByTestId('add-reminder-button'));
+    
+      fireEvent(getByTestId('date-time-picker'), 'onChange', {
+        nativeEvent: { timestamp: new Date('2024-01-01T09:00:00') },
+      });
+    
+      // Try adding the same time again
+      fireEvent.press(getByTestId('add-reminder-button'));
+      fireEvent(getByTestId('date-time-picker'), 'onChange', {
+        nativeEvent: { timestamp: new Date('2024-01-01T09:00:00') },
+      });
+    
+      await waitFor(() => {
+        const reminders = screen.getAllByText('09:00 AM');
+        expect(reminders.length).toBe(1); // Only one instance of the time
+      });
+    });
+    
+    it('allows adding side effects dynamically', async () => {
+      const { getByPlaceholderText, getByText, queryByText } = render(
+        <AddMedicationPlanModal visible={true} onClose={jest.fn()} onSave={jest.fn()} />
+      );
+    
+      // Add a side effect
+      const sideEffectInput = getByPlaceholderText('Add item....');
+      fireEvent.changeText(sideEffectInput, 'Dizziness');
+      fireEvent(sideEffectInput, 'submitEditing');
+    
+      await waitFor(() => {
+        expect(getByText('Dizziness')).toBeTruthy();
+      });
+    
+      
+    });
+    
   });
+
+  
+
+  

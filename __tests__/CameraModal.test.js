@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react-native';
+import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import CameraModal from '../components/CameraModal'; // Adjust the import to your file structure
 import { useCameraPermissions } from 'expo-camera';
 
@@ -74,6 +74,51 @@ describe('CameraModal', () => {
 
     expect(onCloseMock).toHaveBeenCalled();
   });
+  it('renders correctly when permission is denied and user reopens the camera', async () => {
+    const requestPermissionMock = jest.fn().mockResolvedValue({ granted: false });
+    useCameraPermissions.mockReturnValue([{ granted: false }, requestPermissionMock]);
+  
+    const { getByText, rerender } = render(
+      <CameraModal isVisible={true} onClose={jest.fn()} onScan={jest.fn()} />
+    );
+  
+    expect(getByText('We need your permission to show the camera')).toBeTruthy();
+  
+    rerender(<CameraModal isVisible={true} onClose={jest.fn()} onScan={jest.fn()} />);
+    expect(requestPermissionMock).toHaveBeenCalled();
+  });
+  it('calls onScan each time a barcode is scanned', () => {
+    useCameraPermissions.mockReturnValue([{ granted: true }, jest.fn()]);
+    const onScanMock = jest.fn();
+  
+    const { getByTestId } = render(
+      <CameraModal isVisible={true} onClose={jest.fn()} onScan={onScanMock} />
+    );
+  
+    const cameraView = getByTestId('camera-view');
+  
+    fireEvent(cameraView, 'onBarcodeScanned', { data: '1234567890' });
+    fireEvent(cameraView, 'onBarcodeScanned', { data: '0987654321' });
+  
+    expect(onScanMock).toHaveBeenCalledTimes(2);
+    expect(onScanMock).toHaveBeenCalledWith({ data: '1234567890' });
+    expect(onScanMock).toHaveBeenCalledWith({ data: '0987654321' });
+  });
+  it('closes the modal when onClose is triggered', () => {
+    useCameraPermissions.mockReturnValue([{ granted: true }, jest.fn()]);
+    const onCloseMock = jest.fn();
+  
+    const { getByTestId } = render(
+      <CameraModal isVisible={true} onClose={onCloseMock} onScan={jest.fn()} />
+    );
+  
+    fireEvent.press(getByTestId('close-button'));
+    expect(onCloseMock).toHaveBeenCalledTimes(1);
+  });
+  
+  
+  
+  
 
 //   it('calls onScan when a barcode is scanned', () => {
 //     useCameraPermissions.mockReturnValue([{ granted: true }, jest.fn()]);

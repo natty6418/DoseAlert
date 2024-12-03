@@ -83,7 +83,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const addReminderTime = (event, selectedDate) => {
         if (event.type === 'set') {
             const newTime = selectedDate || new Date();
-            setReminderTimes([...reminderTimes, newTime]);
+            !reminderTimes.some(time => time.getHours() === newTime.getHours() && time.getMinutes() === newTime.getMinutes())&& setReminderTimes([...reminderTimes, newTime]);
         }
         setShowTimePicker(false);
     };

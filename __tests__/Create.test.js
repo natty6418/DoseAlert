@@ -8,7 +8,7 @@ import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../services/externalDr
 import CreateScreen from '../app/(tabs)/create';
 import { registerForPushNotificationsAsync } from "../services/registerNotification";
 import { useCameraPermissions, CameraView } from 'expo-camera';
-
+import { useFocusEffect } from 'expo-router';
 // Mock the dependencies
 jest.mock('../contexts/FirebaseContext', () => ({
   useFirebaseContext: jest.fn(),
@@ -43,39 +43,44 @@ jest.mock('expo-notifications', () => ({
     },
   }));
 
-  jest.mock('../services/registerNotification', () => ({
-    registerForPushNotificationsAsync: jest.fn(),
-  }));
-  
+jest.mock('../services/registerNotification', () => ({
+  registerForPushNotificationsAsync: jest.fn(),
+}));
+
+jest.mock('expo-router', () => ({
+  useFocusEffect: jest.fn(),
+}));
+
 describe('CreateScreen', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         Notifications.requestPermissionsAsync.mockResolvedValue({ status: 'granted' });
         useFirebaseContext.mockReturnValue({
           user: { uid: 'test-uid' },
-        });
+          medications: [
+              {
+                  id: 'med1',
+                  medicationSpecification: { 
+                      name: 'Aspirin',
+                      sideEffects: [
+                          { term: 'Nausea', checked: true },
+                          { term: 'Headache', checked: false }
+                      ],
+                      directions: 'Take 1 tablet every 4-6 hours',
+                  },
+                  dosage: { amount: 10, unit: 'mg' },
+                  startDate: new Date('2023-01-01'),
+                  endDate: new Date('2024-12-31'),
+                  frequency: 'Daily',
+                  reminder: { enabled: true, reminderTimes: [] },
+                  isActive: true,
+              },
+          ],
+          setMedications: jest.fn(), // Mock setMedications to track updates
+      });
         useCameraPermissions.mockReturnValue([
             { granted: true },
             jest.fn(), // Mock requestPermission function
-          ]);
-    
-        getMedications.mockResolvedValue([
-            {
-              id: 'med1',
-              medicationSpecification: { 
-                name: 'Aspirin',
-                sideEffects: [
-                  { term: 'Nausea', checked: true },
-                  { term: 'Headache', checked: false }
-                ],
-                directions: 'Take 1 tablet every 4-6 hours',
-              },
-              dosage: { amount: 10, unit: 'mg' },
-              startDate: new Date('2023-01-01'),
-              endDate: new Date('2023-12-31'),
-              frequency: 'Daily',
-              reminder: { enabled: true, reminderTimes: [] },
-            },
           ]);
 
                 
@@ -132,7 +137,7 @@ describe('CreateScreen', () => {
         const { getByText, queryByText, getByTestId } = render(<CreateScreen />);
     
         await waitFor(() => expect(getByText('Aspirin')).toBeTruthy());
-    
+        
         const aspirinItem = getByText('Aspirin');
         fireEvent.press(aspirinItem);
 
@@ -141,7 +146,11 @@ describe('CreateScreen', () => {
 
         const deleteButton = getByText('Delete');
         fireEvent.press(deleteButton);
-    
+        useFirebaseContext.mockReturnValue({
+            user: { uid: 'test-uid'},
+            medications: [],
+            setMedications: jest.fn(),
+          });
         await waitFor(() => {
             const deletedItem = queryByText('Aspirin');
             expect(deletedItem).toBeNull();
@@ -262,7 +271,43 @@ describe('CreateScreen', () => {
         // Press the "Save Plan" button to add the medication
         const saveButton = getByText('Save Plan');
         fireEvent.press(saveButton);
-      
+      useFirebaseContext.mockReturnValue({
+        user: { uid: 'test-uid'},
+        medications: [
+            {
+                id: 'med1',
+                medicationSpecification: { 
+                    name: 'Aspirin',
+                    sideEffects: [
+                        { term: 'Nausea', checked: true },
+                        { term: 'Headache', checked: false }
+                    ],
+                    directions: 'Take 1 tablet every 4-6 hours',
+                },
+                dosage: { amount: 10, unit: 'mg' },
+                startDate: new Date('2023-01-01'),
+                endDate: new Date('2024-12-31'),
+                frequency: 'Daily',
+                reminder: { enabled: true, reminderTimes: [] },
+                isActive: true,
+            },
+            {
+                id: 'med2',
+                medicationSpecification: { 
+                    name: 'Mock Drug',
+                    sideEffects: [],
+                    directions: '',
+                },
+                dosage: { amount: 10, unit: 'mg' },
+                startDate: new Date('2024-01-01'),
+                endDate: new Date('2024-12-12'),
+                frequency: 'Daily',
+                reminder: { enabled: false, reminderTimes: [] },
+                isActive: true,
+            },
+        ],
+        setMedications: jest.fn(),
+      });
         // Ensure the new medication has been added to the list
         await waitFor(() => expect(queryByText('Mock Drug')).toBeTruthy());
       });

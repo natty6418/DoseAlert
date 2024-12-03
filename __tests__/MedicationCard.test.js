@@ -15,7 +15,7 @@ describe('MedicationCardModal', () => {
         medicationSpecification: {
             name: 'Aspirin',
             directions: 'Take with food',
-            warnings: 'May cause drowsiness',
+            warning: 'May cause drowsiness',
             sideEffects: [{ term: 'Nausea', checked: true }],
         },
         reminder: {
@@ -23,6 +23,7 @@ describe('MedicationCardModal', () => {
             reminderTimes: [{ time: new Date('2024-01-01T09:00:00') }],
         },
         onEdit: jest.fn(),
+        isActive: true,
     };
 
     it('renders the modal with medication details when visible is true', () => {
