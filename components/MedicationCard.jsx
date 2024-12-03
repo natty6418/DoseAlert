@@ -13,6 +13,7 @@ const MedicationCardModal = ({
     medicationSpecification,
     reminder,
     onEdit,
+    isActive,
 }) => {
    
     // Filter unique reminder times
@@ -30,8 +31,8 @@ const MedicationCardModal = ({
                 <View className="bg-black-200 m-16 rounded-lg shadow-lg p-6 w-11/12 max-h-3/4">
                     <ScrollView>
                         {/* Header Section with Medication Name */}
-                        <View className='flex flex-row justify-between'>
-                            <View className="flex-row items-center mb-4">
+                        <View className='flex flex-row'>
+                            <View className="flex-row items-center mb-4 mr-auto">
                                 <Image
                                     source={icons.pill}
                                     resizeMode="contain"
@@ -42,13 +43,13 @@ const MedicationCardModal = ({
                                     {medicationSpecification.name}
                                 </Text>
                             </View>
-                            <TouchableOpacity
+                            {isActive && <TouchableOpacity
                                 className="flex-row items-center rounded-full bg-blue-800 p-2"
                                 onPress={onEdit}
                                 testID='edit-medication-button'
                             >
                                 <icons.Pencil size={25} color="#fff" />
-                            </TouchableOpacity>
+                            </TouchableOpacity>}
                         </View>
 
                         {/* Dosage and Frequency */}

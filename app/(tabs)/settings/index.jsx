@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { router } from 'expo-router';
-// import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 
-import { icons, images } from '../../../constants';
+import { icons } from '../../../constants';
 
 
-const SettingsScreen = ({ navigation }) => {
+const SettingsScreen = () => {
 
     const settingsOptions = [
     { name: 'Account Info', description: 'Edit your personal and delivery info', icon: icons.profile, route: 'settings/AccountInfo' },
@@ -16,8 +16,9 @@ const SettingsScreen = ({ navigation }) => {
     ];
 
     return (
-    <ScrollView className="flex-1 bg-[#161622] p-4">
-        <Text className="text-white text-2xl font-semibold mb-4">DoseAlert Settings</Text>
+     <SafeAreaView className="bg-black-100 h-full px-4">   
+    <ScrollView className="flex-1 mt-3">
+        <Text className="text-lime-400 text-2xl font-pbold">Settings</Text>
 
 
         {/* Grid layout for settings */}
@@ -38,6 +39,7 @@ const SettingsScreen = ({ navigation }) => {
             ))}
         </View>
     </ScrollView>
+    </SafeAreaView>
     );
 };
   

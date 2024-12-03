@@ -2,9 +2,28 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Alert, Modal } from 'react-native';
 import { recordAdherence } from '../services/firebaseDatabase';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useContext } from 'react';
+import { useFirebaseContext } from '../contexts/FirebaseContext';
+import emailEmergencyContact from '../services/emailEmergencyContact';
 
-const ResponseModal = ({id, name, visible, onClose, setAdherenceData}) => {
-
+const ResponseModal = ({id, name, visible, onClose, setAdherenceData, adherenceData}) => {
+    const { user } = useFirebaseContext();
+    const handleSendEmail = async () => {
+        const emergencyInfo = user.emergencyContact;
+        if (!emergencyInfo || !emergencyInfo.email) {
+          Alert.alert('Error', 'No emergency contact email found.');
+          return;
+        }
+            
+        try {
+          await emailEmergencyContact(emergencyInfo.email, emergencyInfo.name, name);
+          
+        } catch (error) {
+          console.error('Error sending email:', error);
+          Alert.alert('Error', 'Failed to send email.');
+        }
+      };
+      
     const handleConfirm = () => {
             setAdherenceData((prev) => ({
                 ...prev,
@@ -35,6 +54,9 @@ const ResponseModal = ({id, name, visible, onClose, setAdherenceData}) => {
                 consecutiveMisses: prev[id]?.prevMiss ? prev[id].consecutiveMisses + 1 : 1,
             },
         }));
+        if(adherenceData[id].consecutiveMisses >= 2){
+            handleSendEmail();
+        }
 
         recordAdherence(id, false).catch((error) => {
             console.error("Error recording adherence:", error);
@@ -61,7 +83,7 @@ const ResponseModal = ({id, name, visible, onClose, setAdherenceData}) => {
                 Did you take your medication: {name}?
             </Text>
     
-            <View className="flex-row space-x-4">
+            <View className="flex-row gap-4">
                 <TouchableOpacity
                 onPress={handleConfirm}
                 className="bg-green-500 px-6 py-3 rounded-lg"
