@@ -17,7 +17,7 @@ const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdate
         if (selectedReminderIndex !== null) {
           // Update the selected reminder time
           const updatedTimes = reminderTimes.map((reminder, index) =>
-            index === selectedReminderIndex ? { time: selectedDate } : reminder
+            index === selectedReminderIndex ? {...reminder, time: selectedDate } : reminder
           );
           setReminderTimes(updatedTimes);
           setSelectedReminderIndex(null); // Reset the selected index

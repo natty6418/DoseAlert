@@ -179,57 +179,99 @@ export const setEmergencyContact = async (uid, emergencyContact) => {
       throw new Error("Failed to update emergency contact.");
     }
   };
-export const addNewMedication = async ({ 
-    userId, 
-    dosage, 
-    startDate, 
-    endDate, 
-    frequency, 
-    name, 
-    directions, 
-    sideEffects, 
-    reminderEnabled, 
-    reminderTimes, 
-    purpose, 
-    warning }) => {
-    try {
-        const errors = checkForErrors({name, dosage, startDate, endDate, frequency, reminderEnabled, reminderTimes});
-        if (errors) {
-            return {
-                data: null,
-                error: errors.error,
-            }
-        }
-        let reminders = [];
-            if (reminderEnabled && reminderTimes.length > 0) {
-                reminders = await scheduleReminders(reminderTimes, `Time to take your ${name}!`);
-        }
-        const reminderTimeStamps = reminders.map(r=>({...r, time: Timestamp.fromDate(r.time)}));
-        console.log("reminderTimeStamps", reminderTimeStamps);
-        const data = {
-            userId: `users/${userId}`, // Reference to the user's path
-            dosage,
-            startDate: Timestamp.fromDate(new Date(startDate)), // Convert startDate to Firebase Timestamp
-            endDate: Timestamp.fromDate(new Date(endDate)), // Convert endDate to Firebase Timestamp
-            frequency,
-            medicationSpecification: {
-                name,
-                directions,
-                sideEffects, // Optional field with default empty string
-                warning, // Optional field with default empty string
-            },
-            reminder: {
-                enabled: reminderEnabled,
-                reminderTimes: reminderTimeStamps, // Array of generated reminder Timestamps
-            },
-            purpose,
-        };
-        const docRef = await addDoc(collection(db, 'medications'), data);
-        return {data: {...data, id: docRef.id, startDate, endDate, reminder: {...data.reminder, reminderTimes: reminders}}, error: null};
-    } catch (e) {
-        throw new Error(e.message);
+
+export const addNewMedication = async ({
+  userId,
+  dosage,
+  startDate,
+  endDate,
+  frequency,
+  name,
+  directions,
+  sideEffects,
+  reminderEnabled,
+  reminderTimes,
+  purpose,
+  warning,
+}) => {
+  try {
+    const errors = checkForErrors({
+      name,
+      dosage,
+      startDate,
+      endDate,
+      frequency,
+      reminderEnabled,
+      reminderTimes,
+    });
+    if (errors) {
+      return {
+        data: null,
+        error: errors.error,
+      };
     }
+
+    // Generate a new document reference with an auto-generated ID
+    const medicationDocRef = doc(collection(db, 'medications'));
+    const medicationId = medicationDocRef.id;
+
+    let reminders = [];
+    if (reminderEnabled && reminderTimes.length > 0) {
+      // Use the medicationId in scheduleReminders
+      reminders = await scheduleReminders(
+        reminderTimes,
+        `Time to take your ${name}!`,
+        medicationId
+      );
+    }
+
+    const reminderTimeStamps = reminders.map((r) => ({
+      ...r,
+      time: Timestamp.fromDate(r.time),
+    }));
+    console.log('reminderTimeStamps', reminderTimeStamps);
+
+    const data = {
+      userId: `users/${userId}`, // Reference to the user's path
+      dosage,
+      startDate: Timestamp.fromDate(new Date(startDate)), // Convert startDate to Firebase Timestamp
+      endDate: Timestamp.fromDate(new Date(endDate)), // Convert endDate to Firebase Timestamp
+      frequency,
+      medicationSpecification: {
+        name,
+        directions,
+        sideEffects, // Optional field with default empty string
+        warning, // Optional field with default empty string
+      },
+      reminder: {
+        enabled: reminderEnabled,
+        reminderTimes: reminderTimeStamps, // Array of generated reminder Timestamps
+        notificationIds: reminders.map((reminder) => reminder.id), // Store notification IDs
+      },
+      purpose,
+    };
+
+    // Use setDoc to add the medication data to Firestore at the generated document reference
+    await setDoc(medicationDocRef, data);
+
+    return {
+      data: {
+        ...data,
+        id: medicationId,
+        startDate,
+        endDate,
+        reminder: {
+          ...data.reminder,
+          reminderTimes: reminders,
+        },
+      },
+      error: null,
+    };
+  } catch (e) {
+    throw new Error(e.message);
+  }
 };
+
 
 export const getMedications = async (userId) => {
     try {
@@ -286,7 +328,7 @@ export const editMedication = async (medicationId, newData) => {
 
         let reminders = [];
         if (newData.reminderEnabled && (newData.reminderTimes.length > 0)) {
-            reminders = await scheduleReminders(newData.reminderTimes, `Time to take your ${newData.name}!`);
+            reminders = await scheduleReminders(newData.reminderTimes, `Time to take your ${newData.name}!`, medicationId);
         }
         const reminderTimeStamps = reminders.map(r=>({...r, time: Timestamp.fromDate(r.time)}));
         // Update the document with the new data
@@ -332,5 +374,49 @@ export const deleteMedication = async (medicationId) => {
         return medicationId;
     } catch (e) {
         throw new Error("Error deleting medication: " + e.message);
+    }
+};
+
+export const recordAdherence = async (medicationId, adherence) =>{
+    try{
+        const adherenceDocRef = doc(db, 'adherenceData', medicationId);
+        const adherenceDoc = await getDoc(adherenceDocRef);
+        if(!adherenceDoc.exists()){
+            await setDoc(adherenceDocRef, {
+                taken: adherence ? 1 : 0,
+                missed: adherence ? 0 : 1,
+                prevMiss: !adherence,
+                consecutiveMisses: adherence ? 0 : 1,
+            });
+            return;
+        } 
+        const data = adherenceDoc.data();
+        if(adherence){
+            await updateDoc(adherenceDocRef, {taken: data.taken + 1, prevMiss: false, consecutiveMisses: 0});
+        } else{
+            await updateDoc(adherenceDocRef, {missed: data.missed + 1, prevMiss: true, consecutiveMisses: data.prevMiss ? data.consecutiveMisses + 1 : 1});
+        }
+    } catch(e){
+        throw new Error("Error recording adherence: " + e.message);
+    }
+}
+
+export const getAdherenceData = async (medIds) => {
+    try{
+        const adherenceData = {};
+        for(const id of medIds){
+            const adherenceDocRef = doc(db, 'adherenceData', id);
+            const adherenceDoc = await getDoc(adherenceDocRef);
+            if(!adherenceDoc.exists()){
+                adherenceData[id] = {taken: 0, missed: 0, prevMiss: false, consecutiveMisses: 0};
+            } else{
+                const data = adherenceDoc.data();
+                adherenceData[id] = {taken: data.taken, missed: data.missed, prevMiss: data.prevMiss, consecutiveMisses: data.consecutiveMisses};
+            }
+        }
+        return adherenceData;
+        
+    }catch (e) {
+        throw new Error("Error fetching adherence data: " + e.message);
     }
 };

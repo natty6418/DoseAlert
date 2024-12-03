@@ -2,9 +2,10 @@ import { Image, View, Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import icons from '../../constants/icons';
 import { StatusBar } from 'expo-status-bar';
-import { Newspaper } from '@nandorojo/heroicons/24/solid';
+
 
 const TabIcon = ({ icon, color, name, focused }) => {
+
   return (
     <View className="flex items-center justify-center gap-2">
       <Image
@@ -27,6 +28,7 @@ const TabsLayout = () => {
   return (
     <>
       <Tabs
+        initialRouteName='home'
         screenOptions={{
           tabBarActiveTintColor: "#c0ee77",
           tabBarInactiveTintColor: "#CDCDE0",
@@ -58,8 +60,27 @@ const TabsLayout = () => {
         
 
         {/* Updated "Report" Tab */}
+        
+        
+        <Tabs.Screen
+        name="create"
+        options={{
+          title: "Repository",
+          headerShown: false,
+          tabBarIcon: ({ color, focused }) => (
+            <TabIcon
+            icon={icons.medication}
+            color={color}
+            name="Repository"
+            focused={focused}
+            />
+          ),
+        }}
+        />
+        
         <Tabs.Screen
           name="report" 
+          
           options={{
             title: "Report", 
             headerShown: false,
@@ -75,23 +96,6 @@ const TabsLayout = () => {
         </View>),
           }}
         />
-  
-
-    <Tabs.Screen
-      name="create"
-      options={{
-        title: "Repository",
-        headerShown: false,
-        tabBarIcon: ({ color, focused }) => (
-          <TabIcon
-            icon={icons.medication}
-            color={color}
-            name="Repository"
-            focused={focused}
-          />
-        ),
-      }}
-    />
 
     <Tabs.Screen
       name="settings"

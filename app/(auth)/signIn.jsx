@@ -11,6 +11,7 @@ import FormField from "../../components/FormField";
 import ErrorModal from '../../components/ErrorModal';
 import { logIn } from '../../services/firebaseDatabase';
 const SignIn = () => {
+
     const [form, setForm] = useState({
         email: "",
         password: "",

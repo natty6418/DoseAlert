@@ -1,9 +1,7 @@
 import { useFonts } from 'expo-font';
 import { Stack, SplashScreen } from 'expo-router';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Providers from '../contexts';
-
- 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 
 export default function RootLayout() {
@@ -17,20 +15,24 @@ export default function RootLayout() {
     "Poppins-Regular": require("../assets/fonts/Poppins-Regular.ttf"),
     "Poppins-SemiBold": require("../assets/fonts/Poppins-SemiBold.ttf"),
     "Poppins-Thin": require("../assets/fonts/Poppins-Thin.ttf"),
-  });
+  });  
+
+
   useEffect(() => {
     if (error) throw new Error(error);
     if (fontsLoaded) SplashScreen.hideAsync();
+  }, [fontsLoaded, error]);
 
-  }, [fontsLoaded, error])
+
 
   if (!fontsLoaded && !error) return null;
+
   return (
     <Providers>
-      <Stack >
-      <Stack.Screen name="index" options={{headerShown: false}} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack initialRouteName='index'>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       </Stack>
     </Providers>
   );
