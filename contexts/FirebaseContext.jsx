@@ -25,6 +25,8 @@ const FirebaseProvider = ({children}) => {
         } else {
             setIsLoggedIn(false);
             setUser(null);
+            setAdherenceResponseId(null);
+            setMedications([]);
         }
         setLoading(false);
     }

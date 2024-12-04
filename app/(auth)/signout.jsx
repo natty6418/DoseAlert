@@ -8,12 +8,9 @@ import { auth } from '../../services/firebaseConfig';
 
 const SignOutPage = () => {
     const { setIsLoggedIn, setUser } = useFirebaseContext();
-    const handleSignOut = () => {
+    const handleSignOut =async () => {
         console.log('signing out')
-        setUser(null);
-        signOut(auth);
-        setIsLoggedIn(false);
-        router.replace('/');
+        await signOut(auth);
     }
     return (
         <View className="flex justify-center items-center bg-black-100 h-full">

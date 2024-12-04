@@ -24,10 +24,13 @@ const Home = () => {
   const context = useFirebaseContext();
   const [upcomingMedicationReminders, setUpcomingMedicationReminders] = useState([]);
 
-  if (!context.isLoggedIn) {
-    router.replace('/signIn');
-    return null;
-  }
+  
+  useEffect(()=>{
+    if (!context.isLoggedIn) {
+     router.replace('/signIn');
+    }
+    
+  }, [context.isLoggedIn])
 
   useFocusEffect(()=>{
     setUser(context.user);
