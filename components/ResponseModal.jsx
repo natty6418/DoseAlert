@@ -16,7 +16,7 @@ const ResponseModal = ({id, name, visible, onClose, setAdherenceData, adherenceD
         }
             
         try {
-          await emailEmergencyContact(emergencyInfo.email, emergencyInfo.name, name);
+          await emailEmergencyContact(emergencyInfo.email, user.firstName, name);
           
         } catch (error) {
           console.error('Error sending email:', error);

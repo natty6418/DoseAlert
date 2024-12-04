@@ -42,23 +42,7 @@ const EmergencyInfo = () => {
     }
   };
 
-  // Handle Send Email
-  const handleSendEmail = async () => {
-    if (!emergencyInfo || !emergencyInfo.email) {
-      Alert.alert('Error', 'No emergency contact email found.');
-      return;
-    }
-
-    const message = `Hello ${emergencyInfo.name},\n\nThis is an emergency notification. Please respond promptly.`;
-
-    try {
-      await emailEmergencyContact(emergencyInfo.email, emergencyInfo.name, message);
-      Alert.alert('Success', 'Email sent successfully.');
-    } catch (error) {
-      console.error('Error sending email:', error);
-      Alert.alert('Error', 'Failed to send email.');
-    }
-  };
+  
 
   return (
     <View className="flex-1 px-4 py-6 bg-black-100">
@@ -86,12 +70,7 @@ const EmergencyInfo = () => {
             <Text className="text-black-100 font-psemibold">Edit Contact</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={handleSendEmail}
-            className="p-4 bg-blue-500 rounded-lg items-center mt-4"
-          >
-            <Text className="text-white font-psemibold">Send Email</Text>
-          </TouchableOpacity>
+          
         </View>
       ) : (
         <View className="p-4 rounded-lg bg-black-200">
