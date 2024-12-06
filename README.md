@@ -29,9 +29,14 @@ You'll see options to open the app in:
 - An [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
 - [Expo Go](https://expo.dev/go), a sandbox environment for testing your app
 
-### 3. Develop Your Features
+### 3. Run Unit Tests
 
-Start developing your app by editing the files inside the **app** directory. This project utilizes [file-based routing](https://docs.expo.dev/router/introduction) for navigation.
+Run the following command to run unit tests.
+
+```bash
+npm test
+```
+You can find the generated coverage report at `coverage/lcov-report/index.html`.
 
 ## Features
 
