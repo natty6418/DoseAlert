@@ -78,7 +78,7 @@ const scheduleReminders = async (reminderTimes, message, medicationId) => {
 };
 const cancelReminders = async (reminders) => {
   try {
-    const notificationIds = reminders.map((reminder) => reminder.id);
+    const notificationIds = reminders.filter(reminder=>reminder.id).map((reminder) => reminder.id);
     for (const id of notificationIds) {
       await Notifications.cancelScheduledNotificationAsync(id);
     }

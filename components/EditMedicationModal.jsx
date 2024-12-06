@@ -107,8 +107,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
     const handleEditPlan = async () => {
         setIsLoading(true);
         try {
-            await cancelReminders(medicationData.reminder.reminderTimes.filter(time=>time.id));            
-            const response = await editMedication(medicationData.id, {
+            const response = await editMedication(medicationData, {
                 userId: context.user.id,
                 dosage,
                 startDate,

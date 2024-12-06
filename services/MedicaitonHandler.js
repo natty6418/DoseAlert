@@ -1,6 +1,6 @@
 import { db } from "./firebaseConfig";
 import {collection, Timestamp, doc, getDoc, getDocs, setDoc, query, where, updateDoc, deleteDoc } from "firebase/firestore";
-import { scheduleReminders } from "./Scheduler";
+import { scheduleReminders, cancelReminders } from "./Scheduler";
 
 const validateMedication = ({name, dosage, startDate, endDate, frequency, reminderEnabled, reminderTimes}) => {
     if (!name || !dosage.amount || !dosage.unit || !startDate || !endDate || !frequency) {
@@ -153,10 +153,10 @@ export const getMedications = async (userId) => {
     }
 };
 
-export const editMedication = async (medicationId, newData) => {
+export const editMedication = async (med, newMed) => {
     try {
         // Validate the updatedFields input before proceeding
-        const errors = validateMedication({...newData});
+        const errors = validateMedication({...newMed});
         if (errors) {
             return {
                 data: null,
@@ -165,7 +165,7 @@ export const editMedication = async (medicationId, newData) => {
         }
 
         // Reference to the specific medication document
-        const medicationDocRef = doc(db, 'medications', medicationId);
+        const medicationDocRef = doc(db, 'medications', med.id);
         
         // Check if the medication document exists
         const medicationDoc = await getDoc(medicationDocRef);
@@ -173,34 +173,36 @@ export const editMedication = async (medicationId, newData) => {
             throw new Error("Medication not found");
         }
 
+        cancelReminders(med.reminder.reminderTimes);
+
         let reminders = [];
-        if (newData.reminderEnabled && (newData.reminderTimes.length > 0)) {
-            reminders = await scheduleReminders(newData.reminderTimes, `Time to take your ${newData.name}!`, medicationId);
+        if (newMed.reminderEnabled && (newMed.reminderTimes.length > 0)) {
+            reminders = await scheduleReminders(newMed.reminderTimes, `Time to take your ${newMed.name}!`, med.id);
         }
         const reminderTimeStamps = reminders.map(r=>({...r, time: Timestamp.fromDate(r.time)}));
         // Update the document with the new data
         const data =  {
-            userId: `users/${newData.userId}`, // Reference to the user's path
-            dosage: newData.dosage,
-            startDate: Timestamp.fromDate(new Date(newData.startDate)), // Convert startDate to Firebase Timestamp
-            endDate: Timestamp.fromDate(new Date(newData.endDate)), // Convert endDate to Firebase Timestamp
-            frequency: newData.frequency,
+            userId: `users/${newMed.userId}`, // Reference to the user's path
+            dosage: newMed.dosage,
+            startDate: Timestamp.fromDate(new Date(newMed.startDate)), // Convert startDate to Firebase Timestamp
+            endDate: Timestamp.fromDate(new Date(newMed.endDate)), // Convert endDate to Firebase Timestamp
+            frequency: newMed.frequency,
             medicationSpecification: {
-                name: newData.name,
-                directions: newData.directions,
-                sideEffects:newData.sideEffects, // Optional field with default empty string
-                warning: newData.warning, // Optional field with default empty string
+                name: newMed.name,
+                directions: newMed.directions,
+                sideEffects:newMed.sideEffects, // Optional field with default empty string
+                warning: newMed.warning, // Optional field with default empty string
             },
             reminder: {
-                enabled: newData.reminderEnabled,
+                enabled: newMed.reminderEnabled,
                 reminderTimes: reminderTimeStamps, // Array of generated reminder Timestamps
             },
-            purpose: newData.purpose,
+            purpose: newMed.purpose,
         };
         await updateDoc(medicationDocRef,data);
         
-        console.log("Medication updated successfully:", medicationId);
-        return {data: {...data, id: medicationId, startDate: new Date(newData.startDate), endDate: new Date(newData.endDate), reminder: {...data.reminder, reminderTimes: reminders}}, error: null};
+        console.log("Medication updated successfully:", med.id);
+        return {data: {...data, id: med.id, startDate: new Date(newMed.startDate), endDate: new Date(newMed.endDate), reminder: {...data.reminder, reminderTimes: reminders}}, error: null};
     } catch (e) {
         throw new Error("Error updating medication: " + e.message);
     }

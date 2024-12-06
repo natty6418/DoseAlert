@@ -1,6 +1,6 @@
 import { db, auth } from "./firebaseConfig";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateEmail, updatePassword } from "firebase/auth";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateEmail, updatePassword, signOut } from "firebase/auth";
 
 const validateLogin = (email, password)=>{
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

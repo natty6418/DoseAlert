@@ -116,7 +116,6 @@ const Home = () => {
   const handleUpdateReminder = (index, times, enable) => {
     const enabled = times.length > 0 ? enable : false;
     const updatedMedications = [...upcomingMedicationReminders];
-    cancelReminders(updatedMedications[index].reminder.reminderTimes.filter(time=>time.id));
     updatedMedications[index] = {
       ...updatedMedications[index],
       reminder: {
@@ -126,8 +125,8 @@ const Home = () => {
       },
     };
     setUpcomingMedicationReminders(updatedMedications);
-    context.setMedications(updatedMedications);
-    editMedication(updatedMedications[index].id, {
+    
+    editMedication(updatedMedications[index], {
       userId: user.id,
       dosage: updatedMedications[index].dosage,
       endDate: updatedMedications[index].endDate,
@@ -144,6 +143,14 @@ const Home = () => {
       .then((data) => {
         updatedMedications[index] = data.data;
         setUpcomingMedicationReminders(updatedMedications);
+        context.setMedications((prev)=>{
+          return prev.map((med)=>{
+            if(med.id === updatedMedications[index].id){
+              return updatedMedications[index];
+            }
+            return med;
+          })
+        });
       })
       .catch((error) => {
         console.log('Error updating medication', error);
