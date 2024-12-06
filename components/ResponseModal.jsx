@@ -23,7 +23,7 @@ const ResponseModal = ({id, name, visible, onClose, setAdherenceData, adherenceD
         }
       };
       
-    const handleConfirm = () => {
+    const handleConfirmAdherence = () => {
             setAdherenceData((prev) => ({
                 ...prev,
                 [id]: {
@@ -84,7 +84,7 @@ const ResponseModal = ({id, name, visible, onClose, setAdherenceData, adherenceD
     
             <View className="flex-row gap-4">
                 <TouchableOpacity
-                onPress={handleConfirm}
+                onPress={handleConfirmAdherence}
                 className="bg-green-500 px-6 py-3 rounded-lg"
                 >
                 <Text className="text-white font-bold text-lg">Yes</Text>
