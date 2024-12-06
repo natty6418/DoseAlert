@@ -4,12 +4,12 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import PickerComponent from './Picker';
 import FormField from './FormField';
 import CustomButton from './CustomButton';
-import { addNewMedication } from '../services/firebaseDatabase';
+import { addNewMedication } from '../services/MedicaitonHandler';
 import { useFirebaseContext } from '../contexts/FirebaseContext';
 import LoadingSpinner from './Loading';
 import { icons } from '../constants';
 import * as Notifications from 'expo-notifications';
-import { registerForPushNotificationsAsync } from '../services/registerNotification';
+import { registerForPushNotificationsAsync } from '../services/Scheduler';
 import SideEffectChecklist from './SideEffectChecklist';
 import ErrorModal from './ErrorModal';
 
@@ -82,7 +82,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const addReminderTime = (event, selectedDate) => {
         if (event.type === 'set') {
             const newTime = selectedDate || new Date();
-            setReminderTimes([...reminderTimes, newTime]);
+            !reminderTimes.some(time => time.getHours() === newTime.getHours() && time.getMinutes() === newTime.getMinutes())&& setReminderTimes([...reminderTimes, newTime]);
         }
         setShowTimePicker(false);
     };

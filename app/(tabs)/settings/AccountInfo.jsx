@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Alert, Modal, BackHandler } from 'react-native';
 import { useFirebaseContext } from '../../../contexts/FirebaseContext';
-import { updateUserProfile } from '../../../services/firebaseDatabase';
 import FormField from '../../../components/FormField';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import { updateUserProfile } from '../../../services/UserHandler';
 
 
 const AccountInfo = () => {

@@ -1,4 +1,4 @@
-import { registerForPushNotificationsAsync, scheduleReminders } from "../services/registerNotification";
+import { registerForPushNotificationsAsync, scheduleReminders, cancelReminders } from "../services/registerNotification";
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
@@ -11,6 +11,7 @@ jest.mock('expo-notifications', () => ({
   setNotificationChannelAsync: jest.fn(),
   scheduleNotificationAsync: jest.fn(),
   setNotificationHandler: jest.fn(),
+  cancelScheduledNotificationAsync: jest.fn(),
   AndroidImportance: {
     MAX: 'max',
   },
@@ -129,4 +130,38 @@ describe('scheduleReminders', () => {
       { id: 'reminder-2', time: new Date('2024-01-01T18:00:00') },
     ]);
   });
+  it("should cancel all notifications successfully", async () => {
+    const mockReminders = [
+      { id: "reminder1" },
+      { id: "reminder2" },
+    ];
+  
+    const cancelScheduledNotificationAsync = require('expo-notifications').cancelScheduledNotificationAsync;
+    cancelScheduledNotificationAsync.mockResolvedValueOnce(); // Mock successful cancellation
+  
+    await cancelReminders(mockReminders);
+  
+    expect(cancelScheduledNotificationAsync).toHaveBeenCalledTimes(2);
+    expect(cancelScheduledNotificationAsync).toHaveBeenCalledWith("reminder1");
+    expect(cancelScheduledNotificationAsync).toHaveBeenCalledWith("reminder2");
+  });
+  it("should handle empty reminders array without errors", async () => {
+    const cancelScheduledNotificationAsync = require('expo-notifications').cancelScheduledNotificationAsync;
+  
+    await cancelReminders([]); // Call with an empty array
+  
+    expect(cancelScheduledNotificationAsync).not.toHaveBeenCalled(); // No cancellation calls should be made
+  });
+  it("should throw an error if cancelling a notification fails", async () => {
+    const mockReminders = [
+      { id: "reminder1" },
+    ];
+  
+    const cancelScheduledNotificationAsync = require('expo-notifications').cancelScheduledNotificationAsync;
+    cancelScheduledNotificationAsync.mockRejectedValueOnce(new Error("Cancellation failed"));
+  
+    await expect(cancelReminders(mockReminders))
+      .rejects.toThrow("Error cancelling notifications:");
+  });
+  
 });

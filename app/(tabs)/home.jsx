@@ -1,19 +1,17 @@
 // Import necessary components and hooks
 import { View, ScrollView, Image, Text, TouchableOpacity, Button } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import Greeting from '../../components/Greeting';
 import MedicationItem from '../../components/MedicationItem';
 import Footer from '../../components/Footer';
 import { router } from 'expo-router';
 import { useFirebaseContext } from '../../contexts/FirebaseContext';
-import { getUser, getMedications } from '../../services/firebaseDatabase';
 import LoadingSpinner from '../../components/Loading';
 import { icons, images } from '../../constants';
 import MedicationItemExpanded from '../../components/MedicationItemExpanded';
-import { editMedication } from '../../services/firebaseDatabase';
-import { cancelReminders, Notifications } from '../../services/registerNotification';
-import { registerForPushNotificationsAsync } from '../../services/registerNotification';
+import { editMedication, getMedications } from '../../services/MedicaitonHandler';
+import { cancelReminders, Notifications, registerForPushNotificationsAsync } from '../../services/Scheduler';
 import { useFocusEffect } from 'expo-router';
 
 const Home = () => {
@@ -118,7 +116,6 @@ const Home = () => {
   const handleUpdateReminder = (index, times, enable) => {
     const enabled = times.length > 0 ? enable : false;
     const updatedMedications = [...upcomingMedicationReminders];
-    cancelReminders(updatedMedications[index].reminder.reminderTimes.filter(time=>time.id));
     updatedMedications[index] = {
       ...updatedMedications[index],
       reminder: {
@@ -128,8 +125,8 @@ const Home = () => {
       },
     };
     setUpcomingMedicationReminders(updatedMedications);
-    context.setMedications(updatedMedications);
-    editMedication(updatedMedications[index].id, {
+    
+    editMedication(updatedMedications[index], {
       userId: user.id,
       dosage: updatedMedications[index].dosage,
       endDate: updatedMedications[index].endDate,
@@ -146,6 +143,14 @@ const Home = () => {
       .then((data) => {
         updatedMedications[index] = data.data;
         setUpcomingMedicationReminders(updatedMedications);
+        context.setMedications((prev)=>{
+          return prev.map((med)=>{
+            if(med.id === updatedMedications[index].id){
+              return updatedMedications[index];
+            }
+            return med;
+          })
+        });
       })
       .catch((error) => {
         console.log('Error updating medication', error);

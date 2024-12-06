@@ -8,15 +8,12 @@ const PrivacyPolicy = () => {
 
   useEffect(() => {
     const handleBackPress = () => {
-        // Navigate back to the previous screen (Settings in this case)
         router.push('/settings');
-        return true; // Return true to prevent default back behavior
+        return true; 
     };
 
-    // Add the event listener
     BackHandler.addEventListener('hardwareBackPress', handleBackPress);
 
-    // Cleanup the event listener on component unmount
     return () => {
         BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
     };

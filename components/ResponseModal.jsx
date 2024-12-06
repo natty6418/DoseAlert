@@ -1,10 +1,9 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Alert, Modal } from 'react-native';
-import { recordAdherence } from '../services/firebaseDatabase';
+import { recordAdherence } from '../services/AdherenceTracker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useContext } from 'react';
 import { useFirebaseContext } from '../contexts/FirebaseContext';
-import emailEmergencyContact from '../services/emailEmergencyContact';
+import emailEmergencyContact from '../services/EmergencyServiceHandler';
 
 const ResponseModal = ({id, name, visible, onClose, setAdherenceData, adherenceData}) => {
     const { user } = useFirebaseContext();

@@ -2,15 +2,15 @@ import { View, Text } from 'react-native'
 import React from 'react'
 import CustomButton from '../../components/CustomButton'
 import { useFirebaseContext } from '../../contexts/FirebaseContext'
-import { Link, router } from "expo-router";
-import { signOut } from 'firebase/auth';
-import { auth } from '../../services/firebaseConfig';
+import { router } from "expo-router";
+import { logOut } from '../../services/UserHandler';
 
 const SignOutPage = () => {
     const { setIsLoggedIn, setUser } = useFirebaseContext();
     const handleSignOut =async () => {
         console.log('signing out')
-        await signOut(auth);
+        logOut();
+
     }
     return (
         <View className="flex justify-center items-center bg-black-100 h-full">

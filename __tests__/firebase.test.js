@@ -1,4 +1,4 @@
-import { db, auth } from "../services/firebaseConfig";
+import { db, auth, auth } from "../services/firebaseConfig";
 
 import {
     collection,
@@ -15,10 +15,10 @@ import {
 } from 'firebase/firestore';
 
 import { scheduleReminders } from "../services/registerNotification";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateEmail, updatePassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateEmail, updatePassword, updateEmail, updatePassword } from "firebase/auth";
 
 import {
-    createNewUser, getUser, addNewMedication, getMedications,recordAdherence,getAdherenceData, setEmergencyContact , editMedication, deleteMedication, createNewAccount, logIn, updateUserProfile
+    createNewUser, getUser, addNewMedication, getMedications,recordAdherence,getAdherenceData, setEmergencyContact ,recordAdherence,getAdherenceData, setEmergencyContact , editMedication, deleteMedication, createNewAccount, logIn, updateUserProfile, updateUserProfile
 
 } from "../services/firebaseDatabase";
 jest.mock('../services/firebaseConfig', () => ({
@@ -525,7 +525,21 @@ describe("logIn", () => {
         await expect(updateUserProfile({ uid: "mockUserId", newPassword: "newpassword123" }))
             .rejects.toThrow("No authenticated user found to update password.");
     });
-
+    it("should return success when all updates are processed", async () => {
+        updateDoc.mockResolvedValueOnce();
+        updateEmail.mockResolvedValueOnce();
+        updatePassword.mockResolvedValueOnce();
+    
+        const result = await updateUserProfile({
+            uid: "mockUserId",
+            newFirstName: "John",
+            newLastName: "Doe",
+            newEmail: "newemail@example.com",
+            newPassword: "newpassword123",
+        });
+    
+        expect(result).toEqual({ success: true, message: "User profile updated successfully." });
+    });
     it("should propagate errors from updateDoc", async () => {
         updateDoc.mockRejectedValueOnce(new Error("Firestore error"));
     
@@ -533,6 +547,24 @@ describe("logIn", () => {
             uid: "mockUserId",
             newFirstName: "John",
         })).rejects.toThrow("Firestore error");
+    });
+    
+    it("should propagate errors from updateEmail", async () => {
+        updateEmail.mockRejectedValueOnce(new Error("Email update error"));
+    
+        await expect(updateUserProfile({
+            uid: "mockUserId",
+            newEmail: "newemail@example.com",
+        })).rejects.toThrow("Email update error");
+    });
+    
+    it("should propagate errors from updatePassword", async () => {
+        updatePassword.mockRejectedValueOnce(new Error("Password update error"));
+    
+        await expect(updateUserProfile({
+            uid: "mockUserId",
+            newPassword: "newpassword123",
+        })).rejects.toThrow("Password update error");
     });
 
     it("should throw an error if required fields are missing", async () => {

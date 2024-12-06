@@ -4,16 +4,14 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import PickerComponent from './Picker';
 import FormField from './FormField';
 import CustomButton from './CustomButton';
-import { editMedication } from '../services/firebaseDatabase';
+import { editMedication, deleteMedication } from '../services/MedicaitonHandler';
 import { useFirebaseContext } from '../contexts/FirebaseContext';
 import LoadingSpinner from './Loading';
 import { icons } from '../constants';
 import * as Notifications from 'expo-notifications';
-import { registerForPushNotificationsAsync } from '../services/registerNotification';
+import { registerForPushNotificationsAsync } from '../services/Scheduler';
 import SideEffectChecklist from './SideEffectChecklist';
 import ErrorModal from './ErrorModal';
-import { deleteMedication } from '../services/firebaseDatabase';
-import { cancelReminders } from '../services/registerNotification';
 
 const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication, medicationData }) => {
     const [name, setName] = useState(medicationData?.medicationSpecification.name || '');
@@ -109,8 +107,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
     const handleEditPlan = async () => {
         setIsLoading(true);
         try {
-            await cancelReminders(medicationData.reminder.reminderTimes.filter(time=>time.id));            
-            const response = await editMedication(medicationData.id, {
+            const response = await editMedication(medicationData, {
                 userId: context.user.id,
                 dosage,
                 startDate,

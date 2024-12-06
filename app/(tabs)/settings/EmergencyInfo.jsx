@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
 import { useFirebaseContext } from '../../../contexts/FirebaseContext';
-import { setEmergencyContact } from '../../../services/firebaseDatabase';
-import emailEmergencyContact from '../../../services/emailEmergencyContact';
+import { setEmergencyContact } from '../../../services/UserHandler';
 
 const EmergencyInfo = () => {
   const { user, setUser } = useFirebaseContext();

@@ -3,7 +3,6 @@ import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useFirebaseContext } from '../../contexts/FirebaseContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LoadingSpinner from '../../components/Loading';
-import { getMedications } from '../../services/firebaseDatabase';
 import AddMedicationPlanModal from '../../components/AddMedicationModal';
 import SearchBar from '../../components/SearchBar';
 import { icons } from '../../constants';
@@ -89,7 +88,7 @@ const CreateScreen = () => {
   const handleUPCScan = async (data) => {
     setIsScanned(true);
     setCameraModalVisible(false);
-    setIsLoading(true);
+    // setIsLoading(true);
     try{
       const upc = data.data;
       // console.log("upc", upc);
@@ -210,6 +209,8 @@ const CreateScreen = () => {
           onClose={() => setCameraModalVisible(false)}
           onScan={(data) => {
             if (isScanned) return;
+            setIsScanned(true);
+            setIsLoading(true);
             handleUPCScan(data);
           }}
         />

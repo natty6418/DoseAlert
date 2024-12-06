@@ -127,6 +127,7 @@ const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdate
               mode="time"
               display="default"
               onChange={handleTimeChange}
+              testID='time-picker'
             />
           )}
         </View>
