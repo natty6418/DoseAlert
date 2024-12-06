@@ -100,7 +100,7 @@ export const addNewMedication = async ({
 
     // Use setDoc to add the medication data to Firestore at the generated document reference
     await setDoc(medicationDocRef, data);
-
+    console.log('Medication added successfully:', medicationId);
     return {
       data: {
         ...data,

@@ -41,8 +41,8 @@ const EmergencyInfo = () => {
     }
   };
 
-  // Handle Send Email
   
+
   return (
     <View className="flex-1 px-4 py-6 bg-black-100">
       <Text className="mb-6 text-3xl text-primary font-pbold">Emergency Contact</Text>
@@ -68,6 +68,8 @@ const EmergencyInfo = () => {
           >
             <Text className="text-black-100 font-psemibold">Edit Contact</Text>
           </TouchableOpacity>
+
+          
         </View>
       ) : (
         <View className="p-4 rounded-lg bg-black-200">

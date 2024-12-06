@@ -7,12 +7,10 @@ import { logOut } from '../../services/UserHandler';
 
 const SignOutPage = () => {
     const { setIsLoggedIn, setUser } = useFirebaseContext();
-    const handleSignOut = () => {
+    const handleSignOut =async () => {
         console.log('signing out')
         logOut();
-        setUser(null);
-        setIsLoggedIn(false);
-        router.replace('/');
+
     }
     return (
         <View className="flex justify-center items-center bg-black-100 h-full">

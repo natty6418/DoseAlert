@@ -11,9 +11,9 @@ const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdate
     const [selectedReminderIndex, setSelectedReminderIndex] = useState(null); // To track the index of the reminder being edited
     const [reminderTimes, setReminderTimes] = useState(item.reminder.reminderTimes || []);
   
-    const handleTimeChange = (event, selectedDate) => {
+    const handleTimeChange = (event, selectedDate, index=null) => {
       setShowTimePicker(false);
-      if (selectedDate) {
+      if (selectedDate && event.type === 'set') {
         if (selectedReminderIndex !== null) {
           // Update the selected reminder time
           const updatedTimes = reminderTimes.map((reminder, index) =>
@@ -29,6 +29,11 @@ const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdate
           onUpdateReminderTimes(updatedTimes); // Call the parent update function
         }
       } else{
+        if (index !== null){
+          const updatedTimes = reminderTimes.filter((_, i) => i !== index);
+          setReminderTimes(updatedTimes);
+          onUpdateReminderTimes(updatedTimes);
+        }
         console.log("No time selected");
       }
     };
@@ -79,7 +84,7 @@ const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdate
                 reminderTimes.map(({ time }, index) => (
                   <View
                     key={index}
-                    className="w-28 justify-center py-3 px-4 rounded-lg flex-row items-center border-2 border-lime-600"
+                    className="w-32 justify-between py-3 px-4 rounded-lg flex-row items-center border-2 border-lime-600"
                   >
                     <TouchableOpacity
                       onPress={() => {
@@ -91,7 +96,14 @@ const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdate
                       <Text className="text-lime-500 font-pmedium">
                         {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </Text>
-                    </TouchableOpacity>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                                                onPress={() => {
+                                                    handleTimeChange({ type: 'set' }, null, index); // Call the update function
+                                                }}
+                                            >
+                                                <icons.XMark color="#ef4444" height={18} width={18} />
+                                            </TouchableOpacity>
                   </View>
                 ))
               )}

@@ -14,7 +14,6 @@ import SideEffectChecklist from './SideEffectChecklist';
 import ErrorModal from './ErrorModal';
 
 const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) => {
-    // console.log(medicationData)
     const [name, setName] = useState(medicationData?.name || '');
     const [dosage, setDosage] = useState({ amount: '', unit: '' });
     const [startDate, setStartDate] = useState(null);
@@ -94,7 +93,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
         setIsLoading(true);
         try {
             const response = await addNewMedication({
-                userId: context.user.uid,
+                userId: context.user.id,
                 dosage,
                 startDate,
                 endDate,

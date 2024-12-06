@@ -1,4 +1,4 @@
-import { db, auth } from "../services/firebaseConfig";
+import { db, auth, auth } from "../services/firebaseConfig";
 
 import {
     collection,
@@ -15,10 +15,10 @@ import {
 } from 'firebase/firestore';
 
 import { scheduleReminders } from "../services/registerNotification";
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateEmail, updatePassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateEmail, updatePassword, updateEmail, updatePassword } from "firebase/auth";
 
 import {
-    createNewUser, getUser, addNewMedication, getMedications,recordAdherence,getAdherenceData, setEmergencyContact , editMedication, deleteMedication, createNewAccount, logIn, updateUserProfile
+    createNewUser, getUser, addNewMedication, getMedications,recordAdherence,getAdherenceData, setEmergencyContact ,recordAdherence,getAdherenceData, setEmergencyContact , editMedication, deleteMedication, createNewAccount, logIn, updateUserProfile, updateUserProfile
 
 } from "../services/firebaseDatabase";
 jest.mock('../services/firebaseConfig', () => ({
@@ -310,27 +310,19 @@ describe("createNewAccount", () => {
     });
 
     test("should create a new account and add user to Firestore", async () => {
-        // Mock a successful response from createUserWithEmailAndPassword
         createUserWithEmailAndPassword.mockResolvedValueOnce({
             user: { uid: "123", email: "john.doe@example.com" },
         });
         doc.mockReturnValueOnce("users/123");
-        // Mock a successful response from setDoc
         setDoc.mockResolvedValueOnce();
 
         const result = await createNewAccount("john.doe@example.com", "password123", "John", "Doe");
-
-        // Check if the Firebase auth method was called correctly
-        expect(createUserWithEmailAndPassword).toHaveBeenCalledWith(expect.any(Function), "john.doe@example.com", "password123");
-
-        // Check if setDoc was called to add user data to Firestore
+        expect(createUserWithEmailAndPassword).toHaveBeenCalledWith({"currentUser": {"uid": "mockUserId"}}, "john.doe@example.com", "password123");
         expect(setDoc).toHaveBeenCalledWith("users/123", {
             firstName: "John",
             lastName: "Doe",
             email: "john.doe@example.com",
         });
-
-        // Check the result
         expect(result).toBe("123");
     });
 
@@ -370,7 +362,7 @@ describe("logIn", () => {
         const result = await logIn("john.doe@example.com", "password123");
 
         // Check if the Firebase auth method was called correctly
-        expect(signInWithEmailAndPassword).toHaveBeenCalledWith(expect.any(Function), "john.doe@example.com", "password123");
+        expect(signInWithEmailAndPassword).toHaveBeenCalledWith({"currentUser": {"uid": "mockUserId"}}, "john.doe@example.com", "password123");
 
         // Check the result
         expect(result).toBe("123");

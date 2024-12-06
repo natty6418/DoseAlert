@@ -31,10 +31,10 @@ const CreateScreen = () => {
   const [scannedMedication, setScannedMedication] = useState(null);
   const [error, setError] = useState(null);
 
+
   useFocusEffect(() => {
     if (!context.medications) return;
     setMedicationPlans(context.medications);
-    setIsLoading(false);
   });
   
   useEffect(() => {
@@ -91,12 +91,14 @@ const CreateScreen = () => {
     // setIsLoading(true);
     try{
       const upc = data.data;
+      // console.log("upc", upc);
       const label = await fetchDrugLabelInfo(upc);
       if (!label) {
         setError('No drug label information found for the provided UPC.');
         return;
       }
       const sideEffects = await fetchDrugSideEffects(label.openfda.package_ndc[0]);
+      // console.log("label", label);
       // if (!sideEffects) {
       // //  setError('No side effects information found for the provided NDC.');
       //   return;
