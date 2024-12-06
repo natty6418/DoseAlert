@@ -16,6 +16,7 @@ const [adherenceData, setAdherenceData] = useState({});
 const [responseModalVisible, setResponseModalVisible] = useState(false);
 const context = useFirebaseContext();
 
+console.log(context.medications);
 const chartConfig = {
   backgroundGradientFrom: '#1f2937',
   backgroundGradientTo: '#1f2937',

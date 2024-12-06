@@ -113,7 +113,62 @@ describe('MedicationItemExpanded', () => {
           expect.arrayContaining([expect.objectContaining({ time: updatedTime })])
         );
       });
-      
+
+      it('adds a new reminder time', async () => {
+        const mockOnUpdateReminderTimes = jest.fn();
+        const item = {
+            medicationSpecification: { name: "Test Medication" },
+            startDate: new Date(),
+            endDate: new Date(),
+            reminder: { enabled: true, reminderTimes: [] },
+        };
+    
+        const { getByTestId } = render(
+            <MedicationItemExpanded
+                item={item}
+                toggleExpand={jest.fn()}
+                onToggleReminder={jest.fn()}
+                onUpdateReminderTimes={mockOnUpdateReminderTimes}
+            />
+        );
+    
+        fireEvent.press(getByTestId("add-reminder-button"));
+        await waitFor(() => expect(getByTestId("time-picker")).toBeTruthy());
+    
+        fireEvent(getByTestId("time-picker"), "onChange", {
+            type: "set",
+            nativeEvent: { timestamp: new Date("2024-01-01T09:00:00").getTime() },
+        });
+    
+        expect(mockOnUpdateReminderTimes).toHaveBeenCalledWith(
+            expect.arrayContaining([{ time: new Date("2024-01-01T09:00:00") }])
+        );
+    });
+    
+    it('deletes an existing reminder time', () => {
+      const mockOnUpdateReminderTimes = jest.fn();
+      const initialTime = new Date("2024-01-01T09:00:00");
+      const item = {
+          medicationSpecification: { name: "Test Medication" },
+          startDate: new Date(),
+          endDate: new Date(),
+          reminder: { enabled: true, reminderTimes: [{ time: initialTime }] },
+      };
+  
+      const { getByText, queryAllByTestId } = render(
+          <MedicationItemExpanded
+              item={item}
+              toggleExpand={jest.fn()}
+              onToggleReminder={jest.fn()}
+              onUpdateReminderTimes={mockOnUpdateReminderTimes}
+          />
+      );
+  
+      fireEvent.press(queryAllByTestId("delete-reminder-button")[0]);
+  
+      expect(mockOnUpdateReminderTimes).toHaveBeenCalledWith([]);
+  });
+  
       
       
 });

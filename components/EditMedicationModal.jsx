@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import PickerComponent from './Picker';
 import FormField from './FormField';
 import CustomButton from './CustomButton';
-import { editMedication, deleteMedication } from '../services/MedicaitonHandler';
+import { editMedication, deleteMedication } from '../services/MedicationHandler';
 import { useFirebaseContext } from '../contexts/FirebaseContext';
 import LoadingSpinner from './Loading';
 import { icons } from '../constants';
@@ -218,7 +218,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                             <Text className="text-base text-gray-100 font-pmedium">Start Date</Text>
                             <Text className="text-red-500 text-base font-pmedium">*</Text>
                         </View>
-                        <TouchableOpacity onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
+                        <TouchableOpacity testID='start-date' onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{startDate?.toDateString()}</Text>
                         </TouchableOpacity>
                         {showStartDatePicker && (
@@ -229,13 +229,14 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                                 onChange={handleStartDateChange}
                                 minimumDate={new Date()}
                                 maximumDate={new Date(new Date().setMonth(new Date().getMonth() + 1))}
+                                testID='startDatePicker'
                             />
                         )}
                         <View className={'flex flex-row mt-7'}>
                             <Text className="text-base text-gray-100 font-pmedium">End Date</Text>
                             <Text className="text-red-500 text-base font-pmedium">*</Text>
                         </View>
-                        <TouchableOpacity onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
+                        <TouchableOpacity testID='end-date' onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
                             <Text className="flex-1 text-white font-psemibold text-base">{endDate?.toDateString()}</Text>
                         </TouchableOpacity>
                         {showEndDatePicker && (
@@ -246,6 +247,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                                 onChange={handleEndDateChange}
                                 minimumDate={startDate || new Date()}
                                 maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
+                                testID='endDatePicker'
                             />
                         )}
                         {/* End Date Picker */}
@@ -270,6 +272,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                                 onValueChange={toggleReminder}
                                 trackColor={{ false: '#d1d5db', true: '#0099ff' }}
                                 thumbColor={reminderEnabled ? '#66c2ff' : '#f3f4f6'}
+                                testID='enable-reminders-switch'
                             />
                         </View>
 
@@ -305,6 +308,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                                     onPress={() => setShowTimePicker(true)}
                                     className="bg-blue-400 p-3 rounded-full flex-row items-center justify-center shadow-md"
                                     style={{ alignSelf: 'center' }}
+                                    testID='add-reminder-button'
                                 >
                                     <icons.PlusCircle color="#FFF" size={48} style={{ width: 48, height: 48 }} />
                                 </TouchableOpacity>
@@ -322,6 +326,7 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                                 onChange={addReminderTime}
                                 textColor="#00000"
                                 accentColor="#00000"
+                                testID='date-time-picker'
                             />
                         )}
                         <FormField

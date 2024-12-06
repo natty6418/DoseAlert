@@ -1,4 +1,4 @@
-import { logIn } from "../services/firebaseDatabase";
+import { logIn } from "../services/UserHandler";
 import { signInWithEmailAndPassword } from "firebase/auth";
 // Mock dependencies
 jest.mock('firebase/auth', () => ({

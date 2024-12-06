@@ -1,4 +1,4 @@
-import { logIn } from "../services/firebaseDatabase";
+import { logIn } from "../services/UserHandler";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
@@ -19,7 +19,7 @@ jest.mock('expo-router', () => ({
     replace: jest.fn(),
   },
 }));
-jest.mock('../services/firebaseDatabase', () => ({
+jest.mock('../services/UserHandler', () => ({
     logIn: jest.fn(),
     }));
 
