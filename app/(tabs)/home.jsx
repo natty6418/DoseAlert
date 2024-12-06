@@ -115,15 +115,10 @@ const Home = () => {
     );
   };
 
-  const handleUpdateReminder = (index, times, enabled) => {
-    if (!enabled){
-      cancelReminders(times).then(() => {
-        console.log('Cancelled reminders successfully');
-      }).catch((error) => {
-        console.error('Error cancelling reminders:', error);
-      });
-    }
+  const handleUpdateReminder = (index, times, enable) => {
+    const enabled = times.length > 0 ? enable : false;
     const updatedMedications = [...upcomingMedicationReminders];
+    cancelReminders(updatedMedications[index].reminder.reminderTimes.filter(time=>time.id));
     updatedMedications[index] = {
       ...updatedMedications[index],
       reminder: {
@@ -134,7 +129,6 @@ const Home = () => {
     };
     setUpcomingMedicationReminders(updatedMedications);
     context.setMedications(updatedMedications);
-
     editMedication(updatedMedications[index].id, {
       userId: user.id,
       dosage: updatedMedications[index].dosage,
@@ -149,8 +143,9 @@ const Home = () => {
       reminderEnabled: enabled,
       reminderTimes: times.map((time) => time.time),
     })
-      .then(() => {
-        console.log('Medication updated successfully');
+      .then((data) => {
+        updatedMedications[index] = data.data;
+        setUpcomingMedicationReminders(updatedMedications);
       })
       .catch((error) => {
         console.log('Error updating medication', error);
