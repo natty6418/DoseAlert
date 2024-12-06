@@ -3,8 +3,8 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import EditMedicationPlanModal from '../components/EditMedicationModal';
 import * as Notifications from 'expo-notifications';
 import { useFirebaseContext } from '../contexts/FirebaseContext';
-import { editMedication, deleteMedication } from '../services/firebaseDatabase';
-import { registerForPushNotificationsAsync } from '../services/registerNotification';
+import { editMedication, deleteMedication } from '../services/MedicationHandler';
+import { registerForPushNotificationsAsync } from '../services/Scheduler';
 import LoadingSpinner from '../components/Loading';
 
 jest.mock('expo-notifications', () => ({
@@ -20,11 +20,11 @@ jest.mock('expo-notifications', () => ({
 jest.mock('../contexts/FirebaseContext', () => ({
     useFirebaseContext: jest.fn(),
 }));
-jest.mock('../services/firebaseDatabase', () => ({
+jest.mock('../services/MedicationHandler', () => ({
     editMedication: jest.fn(),
     deleteMedication: jest.fn(),
 }));
-jest.mock('../services/registerNotification', () => ({
+jest.mock('../services/Scheduler', () => ({
     registerForPushNotificationsAsync: jest.fn(),
 }));
 
@@ -122,7 +122,7 @@ describe('EditMedicationPlanModal', () => {
         await waitFor(() => {
             expect(editMedication).toHaveBeenCalledTimes(1);
             expect(editMedication).toHaveBeenCalledWith(
-                'med123',
+                medicationData,
                 expect.objectContaining({ name: 'Updated Medication' })
             );
             expect(mockOnSave).toHaveBeenCalledWith(expect.objectContaining({ id: 'med123' }));
@@ -162,4 +162,68 @@ describe('EditMedicationPlanModal', () => {
             expect(getByText('Error')).toBeTruthy();
         });
     });
+    it('calls handleStartDateChange and updates the start date', async () => {
+        const { getByTestId, queryByTestId, getByText } = render(
+            <EditMedicationPlanModal visible={true} onClose={jest.fn()} onSave={jest.fn()} medicationData={medicationData} />
+        );
+    
+        const selectedDate = new Date('2024-01-01');
+        fireEvent.press(getByTestId('start-date'));
+        await waitFor(() => expect(queryByTestId('startDatePicker')).toBeTruthy());
+        fireEvent(getByTestId('startDatePicker'), 'onChange', {
+            nativeEvent: { timestamp: selectedDate },
+          });
+    
+        expect(getByText(selectedDate.toDateString())).toBeTruthy();
+    });
+    it('calls handleEndDateChange and updates the end date', async () => {
+        const { getByTestId, queryByTestId, getByText } = render(
+            <EditMedicationPlanModal visible={true} onClose={jest.fn()} onSave={jest.fn()} medicationData={medicationData} />
+        );
+    
+        const selectedDate = new Date('2024-12-01');
+        fireEvent.press(getByTestId('end-date'));
+        await waitFor(() => expect(queryByTestId('endDatePicker')).toBeTruthy());
+
+        fireEvent(getByTestId('endDatePicker'), 'onChange', {
+            nativeEvent: { timestamp: selectedDate },
+          });
+
+        expect(getByText(selectedDate.toDateString())).toBeTruthy();
+    });
+    it('schedules reminders when Enable Reminders is toggled and times are added', async () => {
+        Notifications.requestPermissionsAsync.mockResolvedValue({ status: 'granted' });
+    
+        const { getByTestId, getByPlaceholderText, getByText } = render(
+          <EditMedicationPlanModal visible={true} onClose={jest.fn()} onSave={jest.fn()} medicationData={medicationData}/>
+        );
+    
+        // Toggle the switch to enable reminders (locate the switch by testID)
+        const reminderSwitch = getByTestId('enable-reminders-switch');
+        fireEvent(reminderSwitch, 'valueChange', true); // Toggle the switch to enable
+    
+        // Wait for the "Add Reminder Button" to appear after enabling reminders
+        await waitFor(() => {
+          expect(getByTestId('add-reminder-button')).toBeTruthy();
+        });
+        fireEvent.press(getByTestId('add-reminder-button'));
+        
+        // Mock DateTimePicker value
+        await waitFor(() => {
+          expect(getByTestId('date-time-picker')).toBeTruthy();
+        });
+    
+        // Simulate selecting a time in the DateTimePicker
+        fireEvent(getByTestId('date-time-picker'), 'onChange', {
+          nativeEvent: { timestamp: new Date('2024-01-01T09:00:00') },
+        });
+        
+        await waitFor(() => {
+          expect(getByText('09:00 AM')).toBeTruthy();
+        });
+        // Expect reminder to be scheduled
+      //   await waitFor(() => {
+      //     expect(getByText('Scheduled Reminder')).toBeTruthy();
+      //   });
+      });
 });

@@ -10,7 +10,7 @@ import { useFirebaseContext } from '../../contexts/FirebaseContext';
 import LoadingSpinner from '../../components/Loading';
 import { icons, images } from '../../constants';
 import MedicationItemExpanded from '../../components/MedicationItemExpanded';
-import { editMedication, getMedications } from '../../services/MedicaitonHandler';
+import { editMedication, getMedications } from '../../services/MedicationHandler';
 import { cancelReminders, Notifications, registerForPushNotificationsAsync } from '../../services/Scheduler';
 import { useFocusEffect } from 'expo-router';
 
@@ -48,7 +48,6 @@ const Home = () => {
         await registerForPushNotificationsAsync();
 
         subscription = Notifications.addNotificationResponseReceivedListener(response => {
-            console.log("Notification response received:", response.notification.request.content.data);
             const { medicationId } = response.notification.request.content.data;
 
             if (medicationId) {

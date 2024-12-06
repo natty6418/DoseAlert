@@ -3,9 +3,8 @@ import { render, fireEvent, waitFor, screen } from '@testing-library/react-nativ
 import AddMedicationPlanModal from "../components/AddMedicationModal";
 import * as Notifications from 'expo-notifications';
 import { useFirebaseContext } from "../contexts/FirebaseContext";
-import { addNewMedication } from "../services/firebaseDatabase";
-import { registerForPushNotificationsAsync } from "../services/registerNotification";
-import LoadingSpinner from "../components/Loading";
+import { addNewMedication } from "../services/MedicationHandler";
+import { registerForPushNotificationsAsync } from "../services/Scheduler";
 
 jest.mock('expo-notifications', () => ({
     requestPermissionsAsync: jest.fn(),
@@ -20,10 +19,10 @@ jest.mock('expo-notifications', () => ({
   jest.mock('../contexts/FirebaseContext', () => ({
     useFirebaseContext: jest.fn(),
   }));
-  jest.mock('../services/firebaseDatabase', () => ({
+  jest.mock('../services/MedicationHandler', () => ({
     addNewMedication: jest.fn(),
   }));
-  jest.mock('../services/registerNotification', () => ({
+  jest.mock('../services/Scheduler', () => ({
     registerForPushNotificationsAsync: jest.fn(),
   }));
   

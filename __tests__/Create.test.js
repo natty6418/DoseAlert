@@ -3,10 +3,10 @@ import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
 
 import { useFirebaseContext } from '../contexts/FirebaseContext';
-import { getMedications, deleteMedication, addNewMedication } from '../services/firebaseDatabase';
+import { getMedications, deleteMedication, addNewMedication } from '../services/MedicationHandler';
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../services/externalDrugAPI';
 import CreateScreen from '../app/(tabs)/create';
-import { registerForPushNotificationsAsync } from "../services/registerNotification";
+import { registerForPushNotificationsAsync } from "../services/Scheduler";
 import { useCameraPermissions, CameraView } from 'expo-camera';
 import { useFocusEffect } from 'expo-router';
 // Mock the dependencies
@@ -21,7 +21,7 @@ jest.mock('expo-camera', () => ({
     }),
   }));
 
-jest.mock('../services/firebaseDatabase', () => ({
+jest.mock('../services/MedicationHandler', () => ({
   getMedications: jest.fn(),
   deleteMedication: jest.fn().mockResolvedValue({ data: 'med1', error: null }),
   addNewMedication: jest.fn()
@@ -43,7 +43,7 @@ jest.mock('expo-notifications', () => ({
     },
   }));
 
-jest.mock('../services/registerNotification', () => ({
+jest.mock('../services/Scheduler', () => ({
   registerForPushNotificationsAsync: jest.fn(),
 }));
 

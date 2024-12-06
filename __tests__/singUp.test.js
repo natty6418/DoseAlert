@@ -1,11 +1,11 @@
-import { createNewAccount } from "../services/firebaseDatabase";
+import { createNewAccount } from "../services/UserHandler";
 import {  createUserWithEmailAndPassword } from "firebase/auth";
 import React from "react";
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from "expo-router";
 import { useFirebaseContext } from "../contexts/FirebaseContext";
 import SignUp from "../app/(auth)/signUp";
-import { createNewUser } from "../services/firebaseDatabase";
+import { createNewUser } from "../services/UserHandler";
 
 
 jest.mock('firebase/auth', () => ({
@@ -25,7 +25,7 @@ jest.mock("expo-router", () => ({
     },
   }));
 
-jest.mock("../services/firebaseDatabase", () => ({
+jest.mock("../services/UserHandler", () => ({
 createNewAccount: jest.fn(),
 createNewUser: jest.fn(),
 }));

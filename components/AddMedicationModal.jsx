@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import PickerComponent from './Picker';
 import FormField from './FormField';
 import CustomButton from './CustomButton';
-import { addNewMedication } from '../services/MedicaitonHandler';
+import { addNewMedication } from '../services/MedicationHandler';
 import { useFirebaseContext } from '../contexts/FirebaseContext';
 import LoadingSpinner from './Loading';
 import { icons } from '../constants';

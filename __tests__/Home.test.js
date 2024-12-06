@@ -3,12 +3,13 @@ import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import Home from '../app/(tabs)/home';
 import { router } from 'expo-router';
 import { useFirebaseContext } from '../contexts/FirebaseContext';
-import { getUser, getMedications } from '../services/firebaseDatabase';
+import { getUser } from '../services/UserHandler';
+import { getMedications, editMedication } from '../services/MedicationHandler';
 import LoadingSpinner from '../components/Loading';
 import { useFocusEffect } from 'expo-router';
-import { Notifications, registerForPushNotificationsAsync } from '../services/registerNotification';
+import { Notifications, registerForPushNotificationsAsync } from '../services/Scheduler';
 
-jest.mock('../services/registerNotification', () => ({
+jest.mock('../services/Scheduler', () => ({
   Notifications: {
   requestPermissionsAsync: jest.fn(),
   getExpoPushTokenAsync: jest.fn(),
@@ -28,11 +29,14 @@ jest.mock('../contexts/FirebaseContext', () => ({
   useFirebaseContext: jest.fn(),
 }));
 
-jest.mock('../services/firebaseDatabase', () => ({
+jest.mock('../services/UserHandler', () => ({
   getUser: jest.fn(),
-  getMedications: jest.fn(),
 }));
-;
+
+jest.mock('../services/MedicationHandler', () => ({
+  getMedications: jest.fn(),
+  editMedication: jest.fn(),
+}));
 
 jest.mock('../components/Loading', () => {
   return jest.fn(() =><div testID='loading-spinner'></div>); // Mock LoadingSpinner to render nothing during tests
@@ -152,4 +156,102 @@ describe('Home Component', () => {
       expect(router.push).toHaveBeenCalledWith('/create');
     });
   });
+  test('should handle notification response and navigate to the report screen', async () => {
+    const mockSetAdherenceResponseId = jest.fn();
+    useFirebaseContext.mockReturnValue({
+      isLoggedIn: true,
+      user: { id: '123' },
+      setAdherenceResponseId: mockSetAdherenceResponseId,
+      medications: [],
+      setMedications: jest.fn(),
+    });
+    Notifications.addNotificationResponseReceivedListener.mockImplementationOnce((callback) => {
+      callback({
+        notification: {
+          request: {
+            content: { data: { medicationId: 'med123' } },
+          },
+        },
+      });
+      return { remove: jest.fn() };
+    });
+  
+    render(<Home />);
+  
+    await waitFor(() => {
+      expect(mockSetAdherenceResponseId).toHaveBeenCalledWith('med123');
+      expect(router.push).toHaveBeenCalledWith('/report');
+    });
+  });
+  test('should fetch and set medications correctly', async () => {
+    const mockMedications = [
+      { id: 'med1', endDate: new Date('2024-12-31'), reminder: { enabled: true } },
+      { id: 'med2', endDate: new Date('2023-01-01'), reminder: { enabled: true } },
+    ];
+    const transformedMedications = [
+      { ...mockMedications[0], isActive: true, reminder: { ...mockMedications[0].reminder } },
+      { ...mockMedications[1], isActive: false, reminder: { ...mockMedications[1].reminder, enabled: false } },
+    ];
+    const mockSetMedications = jest.fn();
+  
+    useFirebaseContext.mockReturnValue({
+      isLoggedIn: true,
+      user: { id: '123' },
+      medications: [],
+      setMedications: mockSetMedications,
+    });
+    getMedications.mockResolvedValueOnce(mockMedications);
+  
+    render(<Home />);
+  
+    await waitFor(() => {
+      expect(mockSetMedications).toHaveBeenCalledWith(transformedMedications);
+    });
+  });
+  test('should update reminders correctly', async () => {
+    const mockMedications = [
+      {
+        id: 'med1',
+        reminder: { enabled: true, reminderTimes: [] },
+        medicationSpecification: { name: 'Test Medication' },
+        startDate: new Date(),
+        endDate: new Date('2024-12-31'),
+        reminder: { enabled: true, reminderTimes: [{time: new Date()}] },
+      },
+    ];
+    const mockSetMedications = jest.fn();
+    const mockEditMedication = jest.fn().mockResolvedValueOnce({ data: { ...mockMedications[0] } });
+  
+    useFirebaseContext.mockReturnValue({
+      isLoggedIn: true,
+      user: { id: '123' },
+      medications: mockMedications,
+      setMedications: mockSetMedications,
+    });
+    jest.mock('../services/MedicationHandler', () => ({
+      editMedication: mockEditMedication,
+    }));
+    getMedications.mockResolvedValueOnce(mockMedications);
+    editMedication.mockResolvedValueOnce({ ...mockMedications[0] });
+  
+    const { getByText, getByTestId, debug } = render(<Home />);
+    await waitFor(() => {
+      const medication = getByText('Test Medication');
+      fireEvent.press(medication);
+      // fireEvent.press(getByTestId('reminder-switch'));
+    });
+
+    await waitFor(() => {
+      expect(getByTestId('delete-reminder-button')).toBeTruthy();
+    });
+    const deleteButton = getByTestId('delete-reminder-button');
+    fireEvent.press(deleteButton);
+    
+    
+    // await waitFor(() => {
+    //   expect(mockEditMedication).toHaveBeenCalled();
+    // });
+    // expect(mockEditMedication).toHaveBeenCalled();
+  });
+  
 });

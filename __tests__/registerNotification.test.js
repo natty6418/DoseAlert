@@ -1,4 +1,4 @@
-import { registerForPushNotificationsAsync, scheduleReminders, cancelReminders } from "../services/registerNotification";
+import { registerForPushNotificationsAsync, scheduleReminders, cancelReminders } from "../services/Scheduler";
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
