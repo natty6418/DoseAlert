@@ -1,5 +1,3 @@
-Here's a modified version of the README tailored specifically for your **DoseAlert** app:
-
 # DoseAlert – Your Medication Management App 💊
 
 **DoseAlert** is an intuitive medication management app designed to help users schedule, track, and receive reminders for their medications seamlessly.
