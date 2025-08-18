@@ -90,6 +90,18 @@ export async function getAdherenceStreaks(token) {
   return res.json();
 }
 
+// Get comprehensive adherence report with detailed analytics
+export async function getAdherenceReport(token, days = 30) {
+  const res = await fetch(`${BASE_URL}/adherence/report/?days=${days}`, {
+    headers: getAuthHeaders(token),
+  });
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(JSON.stringify(error));
+  }
+  return res.json();
+}
+
 // Create adherence record
 export async function createAdherenceRecord(token, recordData) {
   const res = await fetch(`${BASE_URL}/adherence/records/`, {

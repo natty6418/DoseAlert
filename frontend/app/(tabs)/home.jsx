@@ -2,6 +2,8 @@
 import { View, ScrollView, Image, Text, TouchableOpacity, Button } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useState } from 'react';
+  import PropTypes from 'prop-types';
+
 import Greeting from '../../components/Greeting';
 import MedicationItem from '../../components/MedicationItem';
 import Footer from '../../components/Footer';
@@ -13,6 +15,7 @@ import MedicationItemExpanded from '../../components/MedicationItemExpanded';
 import { editMedication, getMedications } from '../../services/MedicationHandler';
 import { cancelReminders, Notifications, registerForPushNotificationsAsync } from '../../services/Scheduler';
 import { useFocusEffect } from 'expo-router';
+
 
 const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -99,6 +102,7 @@ const Home = () => {
     setUpcomingMedicationReminders(upcomingReminders);
   }, [medications]);
 
+
   const ReminderItem = ({ item, isExpanded, toggleExpand, onToggleReminder, onUpdateReminderTimes }) => {
     return !isExpanded ? (
       <MedicationItem item={item} onPress={toggleExpand} />
@@ -110,6 +114,14 @@ const Home = () => {
         onUpdateReminderTimes={onUpdateReminderTimes}
       />
     );
+  };
+
+  ReminderItem.propTypes = {
+    item: PropTypes.object.isRequired,
+    isExpanded: PropTypes.bool.isRequired,
+    toggleExpand: PropTypes.func.isRequired,
+    onToggleReminder: PropTypes.func.isRequired,
+    onUpdateReminderTimes: PropTypes.func.isRequired,
   };
 
   const handleUpdateReminder = (index, times, enable) => {

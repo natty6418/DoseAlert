@@ -15,6 +15,17 @@ The API uses JWT (JSON Web Token) authentication. Include the access token in th
 Authorization: Bearer <access_token>
 ```
 
+### Token Lifetimes
+
+- **Access Token**: 30 minutes
+- **Refresh Token**: 1 day (24 hours)
+
+**Important Notes:**
+- Access tokens expire after 30 minutes and must be refreshed
+- Refresh tokens expire after 1 day, requiring re-login
+- Refresh tokens are rotated (new refresh token issued) for security
+- Old refresh tokens are blacklisted after rotation
+
 ### Authentication Endpoints
 
 #### POST `/api/auth/token/`
@@ -408,6 +419,105 @@ Get adherence summary statistics
     "adherence_rate": 85.0,
     "current_streak": 5,
     "longest_streak": 15
+}
+```
+
+### GET `/api/adherence/report/`
+Get comprehensive adherence report with detailed analytics
+
+**Permission:** Authenticated
+
+**Query Parameters:**
+- `days` (optional): Number of days to include in report (default: 30)
+
+**Example:** `/api/adherence/report/?days=7`
+
+**Response:**
+```json
+{
+    "report_period": {
+        "start_date": "2025-07-15",
+        "end_date": "2025-08-15",
+        "days_covered": 30
+    },
+    "overall_statistics": {
+        "total_scheduled_doses": 90,
+        "doses_taken": 78,
+        "doses_missed": 8,
+        "doses_skipped": 2,
+        "pending_responses": 2,
+        "overdue_responses": 1,
+        "overall_adherence_rate": 88.6,
+        "completion_rate": 97.8
+    },
+    "daily_adherence": [
+        {
+            "date": "2025-08-01",
+            "taken": 3,
+            "missed": 1,
+            "skipped": 0,
+            "pending": 0,
+            "total": 4,
+            "adherence_rate": 75.0
+        }
+    ],
+    "medication_breakdown": [
+        {
+            "medication_id": 1,
+            "medication_name": "Medication A",
+            "total_doses": 30,
+            "taken": 28,
+            "missed": 2,
+            "skipped": 0,
+            "pending": 0,
+            "adherence_rate": 93.3,
+            "current_taken_streak": 5,
+            "current_missed_streak": 0,
+            "longest_taken_streak": 12,
+            "longest_missed_streak": 3
+        }
+    ],
+    "time_of_day_analysis": [
+        {
+            "hour": 8,
+            "taken": 25,
+            "missed": 3,
+            "total": 28,
+            "adherence_rate": 89.3
+        }
+    ],
+    "weekly_trends": [
+        {
+            "week_number": 1,
+            "week_start": "2025-08-08",
+            "week_end": "2025-08-15",
+            "total_doses": 21,
+            "taken": 19,
+            "adherence_rate": 90.5
+        }
+    ],
+    "recent_missed_doses": [
+        {
+            "id": 1,
+            "medication_name": "Medication A",
+            "scheduled_time": "2025-08-14T08:00:00Z",
+            "status": "missed"
+        }
+    ],
+    "pending_responses": [
+        {
+            "id": 2,
+            "medication_name": "Medication B",
+            "scheduled_time": "2025-08-15T12:00:00Z",
+            "status": "pending"
+        }
+    ],
+    "insights": {
+        "best_adherence_medication": "Medication A",
+        "worst_adherence_medication": "Medication C", 
+        "best_time_of_day": 8,
+        "improvement_trend": "improving"
+    }
 }
 ```
 

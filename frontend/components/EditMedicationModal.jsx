@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, ScrollView, Text, TextInput, Switch, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import PropTypes from 'prop-types';
 import PickerComponent from './Picker';
 import FormField from './FormField';
 import CustomButton from './CustomButton';
-import { editMedication, deleteMedication } from '../services/MedicationHandler';
-import { useFirebaseContext } from '../contexts/FirebaseContext';
+import { updateMedication, deleteMedication } from '../services/MedicationHandler';
+import { useApp } from '../contexts/AppContext';
 import LoadingSpinner from './Loading';
 import { icons } from '../constants';
 import * as Notifications from 'expo-notifications';
@@ -14,26 +15,27 @@ import SideEffectChecklist from './SideEffectChecklist';
 import ErrorModal from './ErrorModal';
 
 const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication, medicationData }) => {
-    const [name, setName] = useState(medicationData?.medicationSpecification.name || '');
+    const [name, setName] = useState(medicationData?.medicationSpecification?.name || '');
     const [dosage, setDosage] = useState(medicationData?.dosage || { amount: '', unit: '' });
     const [startDate, setStartDate] = useState(medicationData?.startDate || null);
     const [endDate, setEndDate] = useState(medicationData?.endDate || null);
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-    const [frequency, setFrequency] = useState('Daily');
-    const [directions, setDirections] = useState(medicationData?.medicationSpecification.directions || '');
-    const [purpose, setPurpose] = useState(medicationData?.purpose || '');
+    const [frequency, setFrequency] = useState(medicationData?.frequency || 'Daily');
+    const [directions, setDirections] = useState(medicationData?.medicationSpecification?.directions || '');
+    const [purpose, setPurpose] = useState(medicationData?.medicationSpecification?.purpose || '');
     const [sideEffects, setSideEffects] = useState(
-        medicationData?.medicationSpecification.sideEffects || []);
-    const [warning, setWarning] = useState(medicationData?.medicationSpecification.warning || '');
-    const [reminderEnabled, setReminderEnabled] = useState(medicationData?.reminder.enabled || false);
-    const [reminderTimes, setReminderTimes] = useState([]);
+        medicationData?.medicationSpecification?.sideEffects || []);
+    const [warning, setWarning] = useState(medicationData?.medicationSpecification?.warnings || '');
+    const [reminderEnabled, setReminderEnabled] = useState(medicationData?.reminder?.enabled || false);
+    const [reminderTimes, setReminderTimes] = useState(medicationData?.reminder?.times || []);
     const [showTimePicker, setShowTimePicker] = useState(false);
+    const [newSideEffect, setNewSideEffect] = useState('');
+
+    // Use AppContext and AuthContext
+    const { user } = useApp();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [newSideEffect, setNewSideEffect] = useState('');
-    
-    const context = useFirebaseContext();
     useEffect(() => {
         (async () => {
           const { status } = await Notifications.requestPermissionsAsync();
@@ -107,8 +109,8 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
     const handleEditPlan = async () => {
         setIsLoading(true);
         try {
-            const response = await editMedication(medicationData, {
-                userId: context.user.id,
+            const response = await updateMedication(medicationData, {
+                userId: user?.id,
                 dosage,
                 startDate,
                 endDate,
@@ -306,11 +308,10 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
                         
                                 <TouchableOpacity
                                     onPress={() => setShowTimePicker(true)}
-                                    className="bg-blue-400 p-3 rounded-full flex-row items-center justify-center shadow-md"
-                                    style={{ alignSelf: 'center' }}
+                                    className="bg-blue-400 p-3 rounded-full flex-row items-center justify-center shadow-md self-center"
                                     testID='add-reminder-button'
                                 >
-                                    <icons.PlusCircle color="#FFF" size={48} style={{ width: 48, height: 48 }} />
+                                    <icons.PlusCircle color="#FFF" size={48} className="w-12 h-12" />
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -403,6 +404,42 @@ const EditMedicationPlanModal = ({ visible, onClose, onSave, onDeleteMedication,
             </View>
         </Modal>
     );
+};
+
+EditMedicationPlanModal.propTypes = {
+    visible: PropTypes.bool.isRequired,
+    onClose: PropTypes.func.isRequired,
+    onSave: PropTypes.func.isRequired,
+    onDeleteMedication: PropTypes.func.isRequired,
+    medicationData: PropTypes.shape({
+        id: PropTypes.string,
+        dosage: PropTypes.shape({
+            amount: PropTypes.string,
+            unit: PropTypes.string,
+        }),
+        startDate: PropTypes.instanceOf(Date),
+        endDate: PropTypes.instanceOf(Date),
+        frequency: PropTypes.string,
+        purpose: PropTypes.string,
+        medicationSpecification: PropTypes.shape({
+            name: PropTypes.string,
+            directions: PropTypes.string,
+            purpose: PropTypes.string,
+            sideEffects: PropTypes.arrayOf(PropTypes.shape({
+                term: PropTypes.string,
+                checked: PropTypes.bool,
+            })),
+            warnings: PropTypes.string,
+            warning: PropTypes.string,
+        }),
+        reminder: PropTypes.shape({
+            enabled: PropTypes.bool,
+            times: PropTypes.array,
+            reminderTimes: PropTypes.arrayOf(PropTypes.shape({
+                time: PropTypes.instanceOf(Date),
+            })),
+        }),
+    }),
 };
 
 export default EditMedicationPlanModal;

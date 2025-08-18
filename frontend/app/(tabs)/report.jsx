@@ -1,22 +1,24 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, SafeAreaView, ScrollView, Dimensions } from 'react-native';
-import { useFirebaseContext } from '../../contexts/FirebaseContext';
-import { getAdherenceData } from '../../services/AdherenceTracker';
+import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { getAdherenceReport, getAdherenceSummary } from '../../services/AdherenceTracker';
 import LoadingSpinner from '../../components/Loading';
 import MedicationReportItem from '../../components/MedicationReportItem';
-import ResponseModal from '../../components/ResponseModal';
 import { ProgressChart } from 'react-native-chart-kit';
 
 
 
 const Report = () => {
   const [isLoading, setIsLoading] = useState(true);
-const [medications, setMedications] = useState([]);
-const [adherenceData, setAdherenceData] = useState({});
-const [responseModalVisible, setResponseModalVisible] = useState(false);
-const context = useFirebaseContext();
+  const [medications, setMedications] = useState([]);
+  const [adherenceReport, setAdherenceReport] = useState(null);
+  const [adherenceSummary, setAdherenceSummary] = useState(null);
+  
+  // Use AppContext and AuthContext
+  const { medications: appMedications } = useApp();
+  const { makeAuthenticatedRequest } = useAuth();
 
-console.log(context.medications);
 const chartConfig = {
   backgroundGradientFrom: '#1f2937',
   backgroundGradientTo: '#1f2937',
@@ -29,9 +31,9 @@ const chartConfig = {
 
 // Function to fetch and filter medications
 const filterAndSetMedications = () => {
-  if (context.medications) {
-    const filteredMedications = context.medications.filter(
-      (med) => new Date(med.endDate) > new Date()
+  if (appMedications) {
+    const filteredMedications = appMedications.filter(
+      (med) => new Date(med.end_date || med.endDate) > new Date()
     );
     setMedications(filteredMedications);
   }
@@ -39,58 +41,55 @@ const filterAndSetMedications = () => {
 
 useEffect(() => {
   filterAndSetMedications();
-}, [context.medications]);
+}, [appMedications]);
 
 
 
 useEffect(() => {
-  const fetchMedicationsAdherence = async () => {
+  const fetchAdherenceData = async () => {
     try {
-      const filteredMedications = context.medications.filter(
-        (med) => new Date(med.endDate) >= new Date()
-      );
-      const adherenceData = await getAdherenceData(
-        filteredMedications.map((med) => med.id)
-      );
-      setAdherenceData(adherenceData);
-      setMedications(filteredMedications); // Ensure consistent state
+      setIsLoading(true);
+      
+      // Get adherence summary and report using the new API
+      const [summaryResponse, reportResponse] = await Promise.all([
+        makeAuthenticatedRequest(getAdherenceSummary),
+        makeAuthenticatedRequest(getAdherenceReport, 30) // Get last 30 days
+      ]);
+      
+      setAdherenceSummary(summaryResponse);
+      setAdherenceReport(reportResponse);
+      
     } catch (error) {
-      console.error('Error fetching medications:', error);
+      console.error('Error fetching adherence data:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (context.medications) {
-    fetchMedicationsAdherence();
+  if (appMedications && appMedications.length > 0) {
+    fetchAdherenceData();
+  } else {
+    setIsLoading(false);
   }
-}, [context.medications]);
+}, [appMedications, makeAuthenticatedRequest]);
 
+// For now, remove the adherence response modal functionality
+// since it's not clear how it integrates with the new API
 useEffect(() => {
-  if (context.adherenceResponseId) {
-    setResponseModalVisible(true);
-  }
-}, [context.adherenceResponseId]);
+  // This functionality needs to be reimplemented with the new API
+  // if (context.adherenceResponseId) {
+  //   setResponseModalVisible(true);
+  // }
+}, []);
 
-const selectedMedication = medications.find(
-  (med) => med.id === context.adherenceResponseId
-);
+// For now, remove the selectedMedication logic since it depends on the old context
+// const selectedMedication = medications.find(
+//   (med) => med.id === context.adherenceResponseId
+// );
 
-const calculateAdherencePercentage = (taken, missed) => {
-  const total = taken + missed;
-  return total > 0 ? Math.round((taken / total) * 100) : 0;
-};
-
-const totalTaken = Object.values(adherenceData).reduce(
-  (sum, data) => sum + (data.taken || 0),
-  0
-);
-const totalMissed = Object.values(adherenceData).reduce(
-  (sum, data) => sum + (data.missed || 0),
-  0
-);
-const overallAdherencePercentage =
-  calculateAdherencePercentage(totalTaken, totalMissed) / 100;
+// Calculate overall adherence from the new API data
+const overallAdherencePercentage = adherenceSummary ? 
+  (adherenceSummary.adherence_rate / 100) : 0;
 
 if (isLoading) {
   return <LoadingSpinner />;
@@ -126,27 +125,42 @@ if (isLoading) {
             </View>
             {medications.length > 0 ? (
               medications.map((med, index) => {
-                const adherence = adherenceData[med.id] || {};
-                const adherencePercentage = calculateAdherencePercentage(adherence.taken || 0, adherence.missed || 0);
+                // Find adherence data for this medication from the report
+                const medAdherence = adherenceReport?.medication_breakdown?.find(
+                  (breakdown) => breakdown.medication_id === med.id
+                ) || {};
+                
+                const adherencePercentage = Math.round(medAdherence.adherence_rate || 0);
 
                 return (
                   <View key={index} className="bg-gray-800 p-4 mb-4 rounded-lg border border-lime-500 shadow-lg">
                     <MedicationReportItem
-                      medication={med}
-                      taken={adherence.taken}
-                      missed={adherence.missed}
+                      medication={{
+                        ...med,
+                        // Ensure compatibility with MedicationReportItem component
+                        medicationSpecification: {
+                          name: med.name || med.medicationSpecification?.name
+                        }
+                      }}
+                      taken={medAdherence.taken || 0}
+                      missed={medAdherence.missed || 0}
                     />
                     <View className="mt-2">
                       <Text className="text-lime-400 text-lg">
-                        Consecutive Misses: <Text className="font-semibold">{adherence.consecutiveMisses || 0}</Text>
+                        Current Taken Streak: <Text className="font-semibold">{medAdherence.current_taken_streak || 0}</Text>
+                      </Text>
+                      <Text className="text-lime-400 text-lg">
+                        Longest Taken Streak: <Text className="font-semibold">{medAdherence.longest_taken_streak || 0}</Text>
                       </Text>
                       <Text className="text-lime-400 text-lg">
                         Adherence Percentage: <Text className="font-semibold">{adherencePercentage}%</Text>
                       </Text>
-                      {adherence.prevMiss ? (
-                        <Text className="text-red-400 text-lg font-semibold mt-1">Previous dose missed</Text>
+                      {medAdherence.current_missed_streak > 0 ? (
+                        <Text className="text-red-400 text-lg font-semibold mt-1">
+                          Current missed streak: {medAdherence.current_missed_streak}
+                        </Text>
                       ) : (
-                        <Text className="text-green-400 text-lg font-semibold mt-1">All doses taken as scheduled</Text>
+                        <Text className="text-green-400 text-lg font-semibold mt-1">On track with medication</Text>
                       )}
                     </View>
                   </View>
@@ -158,19 +172,7 @@ if (isLoading) {
           </View>
         </ScrollView>
       </View>
-      {selectedMedication && (
-        <ResponseModal
-          id={context.adherenceResponseId}
-          name={selectedMedication?.medicationSpecification?.name}
-          visible={responseModalVisible}
-          onClose={() => {
-            setResponseModalVisible(false);
-            context.setAdherenceResponseId(null);
-          }}
-          setAdherenceData={setAdherenceData}
-          adherenceData={adherenceData}
-        />
-      )}
+      {/* Removed ResponseModal since it needs to be reimplemented with new API */}
     </SafeAreaView>
   );
 };

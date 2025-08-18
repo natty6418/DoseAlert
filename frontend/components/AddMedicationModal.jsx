@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, View, ScrollView,TextInput, Text, Switch, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import PropTypes from 'prop-types';
 import PickerComponent from './Picker';
 import FormField from './FormField';
 import CustomButton from './CustomButton';
-import { addNewMedication } from '../services/MedicationHandler';
-import { useFirebaseContext } from '../contexts/FirebaseContext';
+import { addMedication, addSchedule } from '../services/MedicationHandler';
+// import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './Loading';
 import { icons } from '../constants';
 import * as Notifications from 'expo-notifications';
@@ -24,16 +26,18 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const [directions, setDirections] = useState(medicationData?.directions || '');
     const [purpose, setPurpose] = useState(medicationData?.purpose || '');
     const [sideEffects, setSideEffects] = useState(
-        medicationData?.sideEffects.map(effect => ({ term: effect, checked: false })) || []);
+        medicationData?.sideEffects?.map(effect => ({ term: effect, checked: false })) || []);
     const [warning, setWarning] = useState(medicationData?.warnings || '');
     const [reminderEnabled, setReminderEnabled] = useState(false);
     const [reminderTimes, setReminderTimes] = useState([]);
     const [showTimePicker, setShowTimePicker] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
     const [newSideEffect, setNewSideEffect] = useState('');
 
-    const context = useFirebaseContext();
+    // Use AppContext and AuthContext
+    // const { showError, showLoading, hideLoading } = useApp();
+    const { makeAuthenticatedRequest } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         (async () => {
@@ -92,32 +96,54 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const handleSavePlan = async () => {
         setIsLoading(true);
         try {
-            const response = await addNewMedication({
-                userId: context.user.id,
+            // Prepare medication data in app format
+            const medicationData = {
+                medicationSpecification: {
+                    name,
+                    directions,
+                    sideEffects: sideEffects.filter(effect => effect.checked).map(effect => effect.term),
+                    purpose,
+                    warnings: warning,
+                },
                 dosage,
                 startDate,
                 endDate,
                 frequency,
-                name,
-                directions,
-                sideEffects,
-                reminderEnabled,
-                reminderTimes,
-                purpose,
-                warning,
-            });
+                notes: '',
+            };
 
-            if (response.error) {
-                setError(response.error);
-                return;
-            } else {
-                onSave(response.data);
-                resetToDefault();
+            // Add medication via API
+            const createdMedication = await addMedication(makeAuthenticatedRequest, medicationData);
+
+            // If reminders are enabled, create schedules
+            if (reminderEnabled && reminderTimes.length > 0) {
+                const schedulePromises = reminderTimes.map(time => {
+                    const scheduleData = {
+                        time: time.toTimeString().slice(0, 8), // HH:MM:SS format
+                        days: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', // Daily by default
+                        active: true,
+                    };
+                    return addSchedule(makeAuthenticatedRequest, createdMedication.id, scheduleData);
+                });
+
+                await Promise.all(schedulePromises);
             }
+
+            // Update the medication object with reminder info for UI consistency
+            const finalMedication = {
+                ...createdMedication,
+                reminder: {
+                    enabled: reminderEnabled,
+                    times: reminderTimes,
+                },
+            };
+
+            onSave(finalMedication);
+            resetToDefault();
             onClose();
         } catch (error) {
             console.log('Error saving medication plan:', error);
-            setError(error.message);
+            setError(error.message || 'Failed to save medication plan');
         } finally {
             setIsLoading(false);
         }
@@ -271,10 +297,9 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                                 <TouchableOpacity
                                     onPress={() => setShowTimePicker(true)}
                                     className="bg-blue-400 p-3 rounded-full flex-row items-center justify-center shadow-md"
-                                    style={{ alignSelf: 'center' }}
                                     testID={"add-reminder-button"}
                                 >
-                                    <icons.PlusCircle color="#FFF" size={48} style={{ width: 48, height: 48 }} />
+                                    <icons.PlusCircle color="#FFF" size={48} />
                                 </TouchableOpacity>
                             </View>
                         )}
@@ -371,6 +396,19 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             </View>
         </Modal>
     );
+};
+
+AddMedicationPlanModal.propTypes = {
+    visible: PropTypes.bool.isRequired,
+    onClose: PropTypes.func.isRequired,
+    onSave: PropTypes.func.isRequired,
+    medicationData: PropTypes.shape({
+        name: PropTypes.string,
+        directions: PropTypes.string,
+        purpose: PropTypes.string,
+        warnings: PropTypes.string,
+        sideEffects: PropTypes.arrayOf(PropTypes.string),
+    }),
 };
 
 export default AddMedicationPlanModal;

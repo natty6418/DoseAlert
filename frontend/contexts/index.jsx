@@ -1,14 +1,14 @@
-import FirebaseProvider from './FirebaseContext';
 import AuthProvider from './AuthContext';
+import AppProvider from './AppContext';
 import PropTypes from 'prop-types';
 
 const Providers = ({children}) => {
     return (
-        <AuthProvider>
-            <FirebaseProvider>
+        <AppProvider>
+            <AuthProvider>
                 {children}
-            </FirebaseProvider>
-        </AuthProvider>
+            </AuthProvider>
+        </AppProvider>
     );
 };
 
