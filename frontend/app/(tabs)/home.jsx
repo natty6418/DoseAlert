@@ -1,41 +1,47 @@
 // Import necessary components and hooks
-import { View, ScrollView, Image, Text, TouchableOpacity, Button } from 'react-native';
+import { View, ScrollView, Image, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useEffect, useState } from 'react';
-  import PropTypes from 'prop-types';
+import PropTypes from 'prop-types';
 
 import Greeting from '../../components/Greeting';
 import MedicationItem from '../../components/MedicationItem';
 import Footer from '../../components/Footer';
 import { router } from 'expo-router';
-import { useFirebaseContext } from '../../contexts/FirebaseContext';
+import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/Loading';
 import { icons, images } from '../../constants';
 import MedicationItemExpanded from '../../components/MedicationItemExpanded';
-import { editMedication, getMedications } from '../../services/MedicationHandler';
-import { cancelReminders, Notifications, registerForPushNotificationsAsync } from '../../services/Scheduler';
+import { Notifications, registerForPushNotificationsAsync } from '../../services/Scheduler';
 import { useFocusEffect } from 'expo-router';
 
 
 const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [user, setUser] = useState(null);
-  const [medications, setMedications] = useState([]);
   const [expandedIndex, setExpandedIndex] = useState(null);
-  const context = useFirebaseContext();
   const [upcomingMedicationReminders, setUpcomingMedicationReminders] = useState([]);
+  
+  // Use new contexts
+  const { 
+    medications, 
+    user, 
+    loadMedications, 
+    updateMedication: updateMedicationContext
+  } = useApp();
+  const { isAuthenticated } = useAuth();
 
   
   useEffect(()=>{
-    if (!context.isLoggedIn) {
+    if (!isAuthenticated) {
      router.replace('/signIn');
     }
     
-  }, [context.isLoggedIn])
+  }, [isAuthenticated])
 
   useFocusEffect(()=>{
-    setUser(context.user);
-    setMedications(context.medications);
+    // Data is already available from AppContext
+    // No need to manually set state
   })
 
   useEffect(() => {
@@ -56,7 +62,8 @@ const Home = () => {
             if (medicationId) {
                 console.log('Navigating to:', `/response/${medicationId}`);
                 setTimeout(() => {
-                context.setAdherenceResponseId(medicationId);
+                // TODO: Implement adherence response handling with new API
+                // context.setAdherenceResponseId(medicationId);
                 router.push(`/report`);
                 }, 100);
             }
@@ -70,35 +77,31 @@ const Home = () => {
     };
 }, []);
 
+  // Load medications on component mount
   useEffect(() => {
-    const fetchMedications = async () => {
+    const initializeData = async () => {
       try {
-        if (!context.user) return;
-        const meds = (await getMedications(context.user.id)).map((med) =>{
-          return {
-            ...med,
-            isActive: new Date(med.endDate) >= new Date(),
-            reminder:{
-              ...med.reminder,
-              enabled: new Date(med.endDate) >= new Date()?med.reminder.enabled:false,
-
-            }
-          }
-        });
+        if (!user) return;
         
-        setUser(context.user);
-        setMedications(meds);
-        context.setMedications(meds);
+        setIsLoading(true);
+        // Load medications using AppContext
+        await loadMedications();
         setIsLoading(false);
       } catch (error) {
-        console.log(error);
+        console.log('Error loading medications:', error);
+        setIsLoading(false);
       }
     };
-    fetchMedications();
-  }, [context.user?.id]);
+    
+    initializeData();
+  }, [user?.id, loadMedications]);
 
   useEffect(() => {
-    const upcomingReminders = medications.filter(med => med.reminder.enabled);
+    // Filter medications to show only active ones with reminders enabled
+    const upcomingReminders = medications.filter(med => {
+      const isActive = new Date(med.end_date || med.endDate) >= new Date();
+      return isActive && med.reminder?.enabled;
+    });
     setUpcomingMedicationReminders(upcomingReminders);
   }, [medications]);
 
@@ -124,51 +127,35 @@ const Home = () => {
     onUpdateReminderTimes: PropTypes.func.isRequired,
   };
 
-  const handleUpdateReminder = (index, times, enable) => {
-    const enabled = times.length > 0 ? enable : false;
-    const updatedMedications = [...upcomingMedicationReminders];
-    updatedMedications[index] = {
-      ...updatedMedications[index],
-      reminder: {
-        ...updatedMedications[index].reminder,
-        reminderTimes: enabled ? times:[],
-        enabled,
-      },
-    };
-    setUpcomingMedicationReminders(updatedMedications);
-    
-    editMedication(updatedMedications[index], {
-      userId: user.id,
-      dosage: updatedMedications[index].dosage,
-      endDate: updatedMedications[index].endDate,
-      startDate: updatedMedications[index].startDate,
-      frequency: updatedMedications[index].frequency,
-      name: updatedMedications[index].medicationSpecification.name,
-      directions: updatedMedications[index].medicationSpecification.directions,
-      sideEffects: updatedMedications[index].medicationSpecification.sideEffects,
-      warning: updatedMedications[index].medicationSpecification.warning,
-      purpose: updatedMedications[index].purpose,
-      reminderEnabled: enabled,
-      reminderTimes: times.map((time) => time.time),
-    })
-      .then((data) => {
-        updatedMedications[index] = data.data;
-        setUpcomingMedicationReminders(updatedMedications);
-        context.setMedications((prev)=>{
-          return prev.map((med)=>{
-            if(med.id === updatedMedications[index].id){
-              return updatedMedications[index];
-            }
-            return med;
-          })
-        });
-      })
-      .catch((error) => {
-        console.log('Error updating medication', error);
-      });
+  const handleUpdateReminder = async (index, times, enable) => {
+    try {
+      const enabled = times.length > 0 ? enable : false;
+      const medicationToUpdate = upcomingMedicationReminders[index];
+      
+      // Prepare medication data for update
+      const updateData = {
+        ...medicationToUpdate,
+        reminder: {
+          ...medicationToUpdate.reminder,
+          reminderTimes: enabled ? times : [],
+          enabled,
+        },
+      };
+
+      // Update using AppContext
+      await updateMedicationContext(medicationToUpdate.id, updateData);
+      
+      // Update local state
+      const updatedMedications = [...upcomingMedicationReminders];
+      updatedMedications[index] = updateData;
+      setUpcomingMedicationReminders(updatedMedications);
+      
+    } catch (error) {
+      console.log('Error updating medication reminder:', error);
+    }
   };
 
-  if (isLoading ) return <LoadingSpinner />;
+  if (isLoading) return <LoadingSpinner />;
 
   return (
     <SafeAreaView className="bg-black-100 h-full py-4">
@@ -224,20 +211,3 @@ const Home = () => {
 };
 
 export default Home;
-
-// <Button title="Logout" onPress={() =>{ 
-//           context.setAdherenceResponseId('9DByO0Q9annwYW9ltvSo');
-//           router.replace('/report')}
-//           } />
-//         <Button title="send notification" onPress={async () => {
-//           await Notifications.scheduleNotificationAsync({
-//             content: {
-//               title: 'Medication Reminder',
-//               body: 'Take your medication now',
-//               data: {medicationId:'9DByO0Q9annwYW9ltvSo'} ,
-//             },
-//             trigger: {
-//               seconds: 5,
-//             },
-//           });
-//         }} />
