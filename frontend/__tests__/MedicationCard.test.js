@@ -1,3 +1,5 @@
+/* global jest, describe, it, expect */
+
 import React from "react";
 import { render, fireEvent } from '@testing-library/react-native';
 import MedicationCardModal from '../components/MedicationCard';

@@ -27,7 +27,8 @@ const Home = () => {
     medications, 
     user, 
     loadMedications, 
-    updateMedication: updateMedicationContext
+    updateMedication: updateMedicationContext,
+    setAdherenceResponseId
   } = useApp();
   const { isAuthenticated } = useAuth();
 
@@ -62,8 +63,10 @@ const Home = () => {
             if (medicationId) {
                 console.log('Navigating to:', `/response/${medicationId}`);
                 setTimeout(() => {
-                // TODO: Implement adherence response handling with new API
-                // context.setAdherenceResponseId(medicationId);
+                // Set adherence response ID using AppContext
+                if (setAdherenceResponseId) {
+                    setAdherenceResponseId(medicationId);
+                }
                 router.push(`/report`);
                 }, 100);
             }

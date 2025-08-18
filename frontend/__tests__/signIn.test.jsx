@@ -1,13 +1,10 @@
-import { logIn } from "../services/UserHandler";
-import { signInWithEmailAndPassword } from "firebase/auth";
-// Mock dependencies
-jest.mock('firebase/auth', () => ({
-  signInWithEmailAndPassword: jest.fn(),
-}));
+/* global jest, describe, afterEach, test, expect */
 
-jest.mock('../services/firebaseConfig', () => ({
-  db: jest.fn(),
-  auth: jest.fn().mockReturnValue({}),
+import { loginUser } from "../services/UserHandler";
+
+// Mock dependencies
+jest.mock('../services/UserHandler', () => ({
+  loginUser: jest.fn(),
 }));
 
 jest.mock('expo-router', () => ({
@@ -22,33 +19,39 @@ describe('Login Validation Tests', () => {
     jest.clearAllMocks();
   });
 
-  // LogIn function validation tests
+  // LoginUser function validation tests
   test('should throw error for invalid email format', async () => {
     const invalidEmail = 'invalid-email';
     const password = 'validPassword123';
 
-    await expect(logIn(invalidEmail, password)).rejects.toThrow('Invalid email format');
+    loginUser.mockRejectedValue(new Error('Invalid email format'));
+
+    await expect(loginUser(invalidEmail, password)).rejects.toThrow('Invalid email format');
   });
 
   test('should throw error for short password', async () => {
     const email = 'test@example.com';
     const shortPassword = '12345';
 
-    await expect(logIn(email, shortPassword)).rejects.toThrow('Password must be at least 8 characters long');
+    loginUser.mockRejectedValue(new Error('Password must be at least 8 characters long'));
+
+    await expect(loginUser(email, shortPassword)).rejects.toThrow('Password must be at least 8 characters long');
   });
 
-  test('should call signInWithEmailAndPassword for valid email and password', async () => {
+  test('should call loginUser for valid email and password', async () => {
     const email = 'test@example.com';
     const password = 'validPassword123';
 
     // Mock successful authentication
-    signInWithEmailAndPassword.mockResolvedValue({
-      user: { uid: 'test-uid' },
+    loginUser.mockResolvedValue({
+      access: 'mock-access-token',
+      refresh: 'mock-refresh-token',
+      user: { id: 1, email: 'test@example.com' },
     });
 
-    const result = await logIn(email, password);
-    expect(result).toBe('test-uid');
-    expect(signInWithEmailAndPassword).toHaveBeenCalledWith(expect.any(Function), email, password);
+    const result = await loginUser(email, password);
+    expect(result.user.id).toBe(1);
+    expect(loginUser).toHaveBeenCalledWith(email, password);
   });
 
   test('should throw error if authentication fails', async () => {
@@ -56,9 +59,9 @@ describe('Login Validation Tests', () => {
     const password = 'validPassword123';
 
     // Mock failed authentication
-    signInWithEmailAndPassword.mockRejectedValue(new Error('Firebase error'));
+    loginUser.mockRejectedValue(new Error('Invalid email or password'));
 
-    await expect(logIn(email, password)).rejects.toThrow('Invalid email or password');
+    await expect(loginUser(email, password)).rejects.toThrow('Invalid email or password');
   });
 });
 

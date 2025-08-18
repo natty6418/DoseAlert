@@ -1,7 +1,8 @@
+/* global jest, describe, it, expect, beforeAll, afterAll, beforeEach */
+
 import { registerForPushNotificationsAsync, scheduleReminders, cancelReminders } from "../services/Scheduler";
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
-import Constants from 'expo-constants';
+
 
 // Mock the external modules
 jest.mock('expo-notifications', () => ({

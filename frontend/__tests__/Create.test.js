@@ -1,30 +1,37 @@
+/* global jest, describe, it, expect, beforeEach */
 import React from 'react';
 import { render, fireEvent, waitFor, act } from '@testing-library/react-native';
 import * as Notifications from 'expo-notifications';
 
-import { useFirebaseContext } from '../contexts/FirebaseContext';
-import { getMedications, deleteMedication, addNewMedication } from '../services/MedicationHandler';
+import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
+import { addMedication } from '../services/MedicationHandler';
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../services/externalDrugAPI';
 import CreateScreen from '../app/(tabs)/create';
-import { registerForPushNotificationsAsync } from "../services/Scheduler";
-import { useCameraPermissions, CameraView } from 'expo-camera';
-import { useFocusEffect } from 'expo-router';
+
+// Import mocked functions
+const { useCameraPermissions } = require('expo-camera');
 // Mock the dependencies
-jest.mock('../contexts/FirebaseContext', () => ({
-  useFirebaseContext: jest.fn(),
+jest.mock('../contexts/AppContext', () => ({
+  useApp: jest.fn(),
+}));
+
+jest.mock('../contexts/AuthContext', () => ({
+  useAuth: jest.fn(),
 }));
 
 jest.mock('expo-camera', () => ({
     useCameraPermissions: jest.fn(),
     CameraView: jest.fn(() => {
-      return <div testID="camera-view">Mock Camera</div>;
+      const { Text } = require('react-native');
+      return <Text testID="camera-view">Mock Camera</Text>;
     }),
   }));
 
 jest.mock('../services/MedicationHandler', () => ({
   getMedications: jest.fn(),
   deleteMedication: jest.fn().mockResolvedValue({ data: 'med1', error: null }),
-  addNewMedication: jest.fn()
+  addMedication: jest.fn()
 }));
 
 jest.mock('../services/externalDrugAPI', () => ({
@@ -52,11 +59,15 @@ jest.mock('expo-router', () => ({
 }));
 
 describe('CreateScreen', () => {
+    let mockAppContext;
+    let mockAuthContext;
+    
     beforeEach(() => {
         jest.clearAllMocks();
         Notifications.requestPermissionsAsync.mockResolvedValue({ status: 'granted' });
-        useFirebaseContext.mockReturnValue({
-          user: { uid: 'test-uid' },
+        
+        mockAppContext = {
+          user: { id: 'test-uid' },
           medications: [
               {
                   id: 'med1',
@@ -76,8 +87,19 @@ describe('CreateScreen', () => {
                   isActive: true,
               },
           ],
-          setMedications: jest.fn(), // Mock setMedications to track updates
-      });
+          addMedication: jest.fn(),
+          updateMedication: jest.fn(),
+          removeMedication: jest.fn(),
+          showLoading: jest.fn(),
+          hideLoading: jest.fn(),
+        };
+        
+        mockAuthContext = {
+          makeAuthenticatedRequest: jest.fn(),
+        };
+        
+        useApp.mockReturnValue(mockAppContext);
+        useAuth.mockReturnValue(mockAuthContext);
         useCameraPermissions.mockReturnValue([
             { granted: true },
             jest.fn(), // Mock requestPermission function
@@ -108,7 +130,7 @@ describe('CreateScreen', () => {
     
     
       it('saves a new medication plan', async () => {
-        const { getByText, getByTestId, queryByText } = render(<CreateScreen />);
+        const { getByText, queryByText } = render(<CreateScreen />);
     
         const addButton = getByText('Add');
         fireEvent.press(addButton);
@@ -146,19 +168,15 @@ describe('CreateScreen', () => {
 
         const deleteButton = getByText('Delete');
         fireEvent.press(deleteButton);
-        useFirebaseContext.mockReturnValue({
-            user: { uid: 'test-uid'},
-            medications: [],
-            setMedications: jest.fn(),
-          });
+        
+        // Update mock to reflect empty medications after deletion
+        mockAppContext.medications = [];
+        
         await waitFor(() => {
             const deletedItem = queryByText('Aspirin');
             expect(deletedItem).toBeNull();
         });
-      });
-    
-
-  
+      }); 
       
       it('handles UPC scan and shows add medication modal with fetched data', async () => {
         const { getByText, getByTestId, getByDisplayValue } = render(<CreateScreen />);
@@ -168,10 +186,11 @@ describe('CreateScreen', () => {
     
         await waitFor(() => expect(getByText('Scan Barcode')).toBeTruthy());
     
-        await waitFor(() => {
-            fireEvent(getByTestId('camera-modal'), 'scan', { data: '123456789' });
-          });
-        expect(fetchDrugLabelInfo).toHaveBeenCalledWith('123456789');
+        await act(async () => {
+            // Simulate the scan event by firing the correct event handler
+            fireEvent(getByTestId('camera-modal'), 'onScan', { data: '123456789' });
+        });
+        await waitFor(() => expect(fetchDrugLabelInfo).toHaveBeenCalledWith('123456789'));
         await waitFor(() => expect(getByTestId('add-medication-modal')).toBeTruthy());
         await waitFor(()=>expect(getByDisplayValue('Mock Drug')).toBeTruthy());
         expect(getByText('Nausea')).toBeTruthy();
@@ -217,9 +236,9 @@ describe('CreateScreen', () => {
     });
   
     it('adds a new medication plan when handleSavePlan is called', async () => {
-        const { getByText, queryByText, getByPlaceholderText, getByTestId, findByTestId } = render(<CreateScreen />);
+        const { getByText, queryByText, getByPlaceholderText, getByTestId } = render(<CreateScreen />);
         
-        addNewMedication.mockResolvedValueOnce({ data: {
+        addMedication.mockResolvedValueOnce({ data: {
             id: 'med2',
             medicationSpecification: { name: 'Mock Drug', sideEffects: [], directions: '' },
             dosage: { amount: 10, unit: 'mg' },
@@ -271,9 +290,9 @@ describe('CreateScreen', () => {
         // Press the "Save Plan" button to add the medication
         const saveButton = getByText('Save Plan');
         fireEvent.press(saveButton);
-      useFirebaseContext.mockReturnValue({
-        user: { uid: 'test-uid'},
-        medications: [
+        
+        // Update mock to include the new medication
+        mockAppContext.medications = [
             {
                 id: 'med1',
                 medicationSpecification: { 
@@ -305,9 +324,7 @@ describe('CreateScreen', () => {
                 reminder: { enabled: false, reminderTimes: [] },
                 isActive: true,
             },
-        ],
-        setMedications: jest.fn(),
-      });
+        ];
         // Ensure the new medication has been added to the list
         await waitFor(() => expect(queryByText('Mock Drug')).toBeTruthy());
       });

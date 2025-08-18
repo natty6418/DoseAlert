@@ -1,31 +1,36 @@
-import { logIn } from "../services/UserHandler";
-import { signInWithEmailAndPassword } from "firebase/auth";
+/* global jest, describe, beforeEach, test, expect */
+
+import { loginUser } from "../services/UserHandler";
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from 'expo-router';
 import SignIn from "../app/(auth)/signIn";
+
 // Mock dependencies
-jest.mock('firebase/auth', () => ({
-  signInWithEmailAndPassword: jest.fn(),
-}));
-
-jest.mock('../services/firebaseConfig', () => ({
-  db: jest.fn(),
-  auth: jest.fn().mockReturnValue({}),
-}));
-
 jest.mock('expo-router', () => ({
     Link: ({ children }) => children,
   router: {
     replace: jest.fn(),
   },
 }));
+
 jest.mock('../services/UserHandler', () => ({
-    logIn: jest.fn(),
-    }));
+    loginUser: jest.fn(),
+}));
+
+jest.mock('../contexts/AuthContext', () => ({
+  useAuth: jest.fn(),
+}));
+
+const { useAuth } = require('../contexts/AuthContext');
 
 describe('SignIn Component Tests', () => {
     beforeEach(() => {
       jest.clearAllMocks();
+      
+      // Mock AuthContext
+      useAuth.mockReturnValue({
+        refreshAuthState: jest.fn(),
+      });
     });
   
     test('should render all input fields, sign-in button, and link', () => {
@@ -50,9 +55,13 @@ describe('SignIn Component Tests', () => {
       expect(getByTestId('password').props.value).toBe('password123');
     });
   
-    test('should call logIn and navigate to home on successful login', async () => {
-      
-          
+    test('should call loginUser and navigate to home on successful login', async () => {
+      loginUser.mockResolvedValue({
+        access: 'mock-access-token',
+        refresh: 'mock-refresh-token',
+        user: { id: 1, email: 'john.doe@example.com' },
+      });
+        
     const {getByTestId, getByText}=render(<SignIn />);
   
   
@@ -64,13 +73,13 @@ describe('SignIn Component Tests', () => {
   
       // Wait for the async function to resolve and navigate to home
       await waitFor(() => {
-        expect(logIn).toHaveBeenCalledWith('john.doe@example.com', 'password123');
+        expect(loginUser).toHaveBeenCalledWith('john.doe@example.com', 'password123');
         expect(router.replace).toHaveBeenCalledWith('/home');
       });
     });
   
     test('should display error modal when login fails', async () => {
-      logIn.mockRejectedValueOnce(new Error('Invalid email or password')); // Mock failed login
+      loginUser.mockRejectedValueOnce(new Error('Invalid email or password')); // Mock failed login
   
     const {getByTestId, getByText}=render(<SignIn />);
   
@@ -89,7 +98,7 @@ describe('SignIn Component Tests', () => {
     });
   
     test('should close error modal and reset form on close', async () => {
-      logIn.mockRejectedValueOnce(new Error('Invalid email or password')); // Mock failed login
+      loginUser.mockRejectedValueOnce(new Error('Invalid email or password')); // Mock failed login
   
       const {getByTestId, getByText}=render(<SignIn />);
   

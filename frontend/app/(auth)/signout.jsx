@@ -1,13 +1,11 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 import CustomButton from '../../components/CustomButton'
-import { useFirebaseContext } from '../../contexts/FirebaseContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { router } from "expo-router";
 import { logoutUser } from '../../services/UserHandler';
 
 const SignOutPage = () => {
-    const { setIsLoggedIn, setUser } = useFirebaseContext();
     const { refreshToken, clearTokens, makeAuthenticatedRequest } = useAuth();
     
     const handleSignOut = async () => {
@@ -22,18 +20,12 @@ const SignOutPage = () => {
             // Clear local tokens
             await clearTokens();
             
-            // Update Firebase context if needed
-            setIsLoggedIn(false);
-            setUser(null);
-            
             // Navigate to sign in
             router.replace('/signIn');
         } catch (error) {
             console.error('Error during logout:', error);
             // Even if the API call fails, clear local tokens
             await clearTokens();
-            setIsLoggedIn(false);
-            setUser(null);
             router.replace('/signIn');
         }
     }

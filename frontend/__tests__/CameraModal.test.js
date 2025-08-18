@@ -1,5 +1,6 @@
+/* global jest, describe, beforeEach, it, expect */
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import CameraModal from '../components/CameraModal'; // Adjust the import to your file structure
 import { useCameraPermissions } from 'expo-camera';
 
@@ -8,7 +9,12 @@ jest.mock('expo-camera', () => ({
   useCameraPermissions: jest.fn(),
   // Mock CameraView as a simple functional component
   CameraView: jest.fn(() => {
-    return <div testID="camera-view">Mock Camera</div>;
+    const { View, Text } = require('react-native');
+    return (
+      <View testID="camera-view">
+        <Text>Mock Camera</Text>
+      </View>
+    );
   })
 }));
 

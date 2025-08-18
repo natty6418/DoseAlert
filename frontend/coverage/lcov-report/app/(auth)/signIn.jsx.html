@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>17/17</span>
+                <span class='fraction'>19/19</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>17/17</span>
+                <span class='fraction'>19/19</span>
             </div>
         
             
@@ -168,7 +168,18 @@
 <a name='L103'></a><a href='#L103'>103</a>
 <a name='L104'></a><a href='#L104'>104</a>
 <a name='L105'></a><a href='#L105'>105</a>
-<a name='L106'></a><a href='#L106'>106</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -182,6 +193,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">22x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">22x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -195,6 +207,10 @@
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
@@ -236,6 +252,8 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -284,9 +302,12 @@ import { images } from "../../constants";
 import CustomButton from "../../components/CustomButton";
 import FormField from "../../components/FormField";
 import ErrorModal from '../../components/ErrorModal';
-import { logIn } from '../../services/UserHandler';
+// import { logIn } from '../../services/UserHandler';
+import { loginUser } from '../../services/UserHandler';
+import { useAuth } from '../../contexts/AuthContext';
 &nbsp;
 const SignIn = () =&gt; {
+    const { refreshAuthState } = useAuth();
 &nbsp;
     const [form, setForm] = useState({
         email: "",
@@ -298,8 +319,12 @@ const SignIn = () =&gt; {
     const handleLogin = async () =&gt; {
       setLoading(true);
       try {
-        // await signInWithEmailAndPassword(auth, form.email, form.password);
-        await logIn(form.email, form.password);
+        // Login and let the service handle token storage
+        await loginUser(form.email, form.password);
+        
+        // Refresh the auth context state from storage
+        await refreshAuthState();
+        
         router.replace("/home");
       } catch (error) {
         console.log(error);
@@ -354,13 +379,15 @@ const SignIn = () =&gt; {
 &nbsp;
           &lt;View className="flex justify-center pt-5 flex-row gap-2"&gt;
             &lt;Text className="text-lg text-gray-100 font-pregular"&gt;
-              Don't have an account?
+              Don&amp;apos;t have an account?
             &lt;/Text&gt;
             &lt;Link
               href="/signUp"
               className="text-lg font-psemibold text-secondary"
             &gt;
-              Signup
+            &lt;Text&gt;
+            Signup
+            &lt;/Text&gt;
             &lt;/Link&gt;
           &lt;/View&gt;
         &lt;/View&gt;
@@ -385,7 +412,7 @@ export default SignIn</pre></td></tr></table></pre>
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2024-12-06T19:00:44.807Z
+                at 2025-08-18T10:46:03.788Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

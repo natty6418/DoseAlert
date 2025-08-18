@@ -1,13 +1,31 @@
+/* global jest, describe, it, expect */
+
 import React from "react";
-import { render, fireEvent, screen } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import SideEffectChecklist from '../components/SideEffectChecklist';
 
-jest.mock('../constants', () => ({
+jest.mock('../constants', () => {
+
+    const {Text} = require('react-native');
+    
+    return {
     icons: {
-        CheckCircle: ({ color, size }) => <div style={{ color, fontSize: size }}>CheckCircle</div>,
-        PlusCircle: ({ color, size }) => <div style={{ color, fontSize: size }}>PlusCircle</div>,
+        CheckCircle: function CheckCircle({ color, size }) {
+            return (
+                <div style={{ color, fontSize: size }}>
+                    <Text>CheckCircle</Text>
+                </div>
+            );
+        },
+        PlusCircle: function PlusCircle({ color, size }) {
+            return (
+                <div style={{ color, fontSize: size }}>
+                    <Text>PlusCircle</Text>
+                </div>
+            );
+        },
     },
-}));
+}});
 
 describe('SideEffectChecklist', () => {
     const defaultProps = {

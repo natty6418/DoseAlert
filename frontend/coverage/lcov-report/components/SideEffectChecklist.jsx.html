@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">55.55% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>5/9</span>
+                <span class='fraction'>9/9</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">60% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>3/5</span>
+                <span class='fraction'>5/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">55.55% </span>
+                <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>5/9</span>
+                <span class='fraction'>9/9</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line medium'></div>
+    <div class='status-line high'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -104,26 +104,26 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">64x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">66x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">64x</span>
+<span class="cline-any cline-yes">66x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">17x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -145,10 +145,10 @@ const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) =&gt;
   // Initialize each side effect with unchecked status
 &nbsp;
   // Toggle the checked status of a side effect
-  const toggleChecked = <span class="fstat-no" title="function not covered" >(i</span>ndex) =&gt; {
-    const updatedItems = <span class="cstat-no" title="statement not covered" >[...sideEffects];</span>
-<span class="cstat-no" title="statement not covered" >    updatedItems[index].checked = !updatedItems[index].checked;</span>
-<span class="cstat-no" title="statement not covered" >    setSideEffects(updatedItems);</span>
+  const toggleChecked = (index) =&gt; {
+    const updatedItems = [...sideEffects];
+    updatedItems[index].checked = !updatedItems[index].checked;
+    setSideEffects(updatedItems);
   };
 &nbsp;
   return (
@@ -160,7 +160,7 @@ const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) =&gt;
         keyExtractor={(item, index) =&gt; index.toString()}
         renderItem={({ item, index }) =&gt; (
           &lt;TouchableOpacity
-            onPress={<span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >toggleChecked(index)}</span>
+            onPress={() =&gt; toggleChecked(index)}
             className="flex-row items-center"
           &gt;
             {item.checked ? &lt;View testID='checked'&gt;&lt;icons.CheckCircle color="#A3E635" size={24} /&gt;&lt;/View&gt; : &lt;View testID='not-checked'&gt;&lt;icons.PlusCircle color="#9CA3AF" size={24} /&gt;&lt;/View&gt; }
@@ -181,7 +181,7 @@ export default SideEffectChecklist;
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-08-14T19:55:09.132Z
+                at 2025-08-18T10:46:03.788Z
             </div>
         <script src="../prettify.js"></script>
         <script>

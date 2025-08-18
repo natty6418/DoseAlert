@@ -1,23 +1,13 @@
+/* global jest, describe, beforeEach, test, expect */
+
 import { createNewAccount } from "../services/UserHandler";
-import {  createUserWithEmailAndPassword } from "firebase/auth";
 import React from "react";
 import { render, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { router } from "expo-router";
-import { useFirebaseContext } from "../contexts/FirebaseContext";
 import SignUp from "../app/(auth)/signUp";
-import { createNewUser } from "../services/UserHandler";
 
 
-jest.mock('firebase/auth', () => ({
-    createUserWithEmailAndPassword: jest.fn().mockResolvedValue({user: {uid: 'test-uid'}}),
-  }));
-  jest.mock('../services/firebaseConfig', () => ({
-    db: jest.fn(),
-    auth: jest.fn().mockReturnValue({}),
-}));
-jest.mock('../contexts/FirebaseContext', ()=>({
-    useFirebaseContext: jest.fn()
-}))
+
 jest.mock("expo-router", () => ({
     Link: ({ children }) => children,
     router: {

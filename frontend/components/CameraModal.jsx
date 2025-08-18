@@ -1,14 +1,14 @@
-import React, {useEffect, useState, useRef} from 'react';
+import React, {useEffect} from 'react';
 import { Modal, View, TouchableOpacity, Text, Button } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { icons } from '../constants';
+import PropTypes from 'prop-types';
 
 
 const CameraModal = ({ isVisible, onClose, onScan }) => {
     const [permission, requestPermission] = useCameraPermissions();
-    const [facing, setFacing] = useState('back');
-  const camera = useRef(null);
+    const facing = 'back';
     useEffect(()=>{
         requestPermission();
 
@@ -70,5 +70,11 @@ const CameraModal = ({ isVisible, onClose, onScan }) => {
     </Modal>
   );
 };
+CameraModal.propTypes = {
+  isVisible: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  onScan: PropTypes.func.isRequired,
+};
 
 export default CameraModal;
+

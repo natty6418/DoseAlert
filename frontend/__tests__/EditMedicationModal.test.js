@@ -1,11 +1,11 @@
+/* global jest, describe, it, expect, beforeEach */
 import React from "react";
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import EditMedicationPlanModal from '../components/EditMedicationModal';
 import * as Notifications from 'expo-notifications';
-import { useFirebaseContext } from '../contexts/FirebaseContext';
-import { editMedication, deleteMedication } from '../services/MedicationHandler';
-import { registerForPushNotificationsAsync } from '../services/Scheduler';
-import LoadingSpinner from '../components/Loading';
+import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
+import { updateMedication, deleteMedication } from '../services/MedicationHandler';
 
 jest.mock('expo-notifications', () => ({
     requestPermissionsAsync: jest.fn(),
@@ -17,11 +17,14 @@ jest.mock('expo-notifications', () => ({
       MAX: 'max',
     },
 }));
-jest.mock('../contexts/FirebaseContext', () => ({
-    useFirebaseContext: jest.fn(),
+jest.mock('../contexts/AppContext', () => ({
+    useApp: jest.fn(),
+}));
+jest.mock('../contexts/AuthContext', () => ({
+    useAuth: jest.fn(),
 }));
 jest.mock('../services/MedicationHandler', () => ({
-    editMedication: jest.fn(),
+    updateMedication: jest.fn(),
     deleteMedication: jest.fn(),
 }));
 jest.mock('../services/Scheduler', () => ({
@@ -29,7 +32,8 @@ jest.mock('../services/Scheduler', () => ({
 }));
 
 describe('EditMedicationPlanModal', () => {
-    let mockContext;
+    let mockAppContext;
+    let mockAuthContext;
     const medicationData = {
         id: 'med123',
         medicationSpecification: { name: 'Aspirin', directions: 'Take daily' },
@@ -42,8 +46,18 @@ describe('EditMedicationPlanModal', () => {
     };
 
     beforeEach(() => {
-        mockContext = { user: { uid: 'mockUserId' } };
-        useFirebaseContext.mockReturnValue(mockContext);
+        mockAppContext = {
+            user: { id: 'mockUserId' },
+            updateMedication: jest.fn(),
+            deleteMedication: jest.fn(),
+        };
+        
+        mockAuthContext = {
+            makeAuthenticatedRequest: jest.fn(),
+        };
+        
+        useApp.mockReturnValue(mockAppContext);
+        useAuth.mockReturnValue(mockAuthContext);
         jest.clearAllMocks();
         Notifications.requestPermissionsAsync.mockResolvedValue({ status: 'granted' });
     });
@@ -88,8 +102,8 @@ describe('EditMedicationPlanModal', () => {
         expect(nameInput.props.value).toBe('Updated Medication');
     });
 
-    it('calls editMedication service and onSave on form submission', async () => {
-        editMedication.mockResolvedValueOnce({ data: {
+    it('calls updateMedication service and onSave on form submission', async () => {
+        updateMedication.mockResolvedValueOnce({ data: {
             id: 'med123',
             medicationSpecification: { name: 'Updated Medication', directions: 'Take daily' },
             dosage: { amount: '200', unit: 'mg' },
@@ -120,8 +134,8 @@ describe('EditMedicationPlanModal', () => {
         fireEvent.press(getByText('Save Plan'));
 
         await waitFor(() => {
-            expect(editMedication).toHaveBeenCalledTimes(1);
-            expect(editMedication).toHaveBeenCalledWith(
+            expect(updateMedication).toHaveBeenCalledTimes(1);
+            expect(updateMedication).toHaveBeenCalledWith(
                 medicationData,
                 expect.objectContaining({ name: 'Updated Medication' })
             );
@@ -150,7 +164,7 @@ describe('EditMedicationPlanModal', () => {
     });
 
     it('handles error correctly and shows ErrorModal', async () => {
-        editMedication.mockRejectedValueOnce(new Error('Something went wrong'));
+        updateMedication.mockRejectedValueOnce(new Error('Something went wrong'));
 
         const { getByText } = render(
             <EditMedicationPlanModal visible={true} onClose={jest.fn()} onSave={jest.fn()} medicationData={medicationData} />
@@ -194,7 +208,7 @@ describe('EditMedicationPlanModal', () => {
     it('schedules reminders when Enable Reminders is toggled and times are added', async () => {
         Notifications.requestPermissionsAsync.mockResolvedValue({ status: 'granted' });
     
-        const { getByTestId, getByPlaceholderText, getByText } = render(
+        const { getByTestId, getByText } = render(
           <EditMedicationPlanModal visible={true} onClose={jest.fn()} onSave={jest.fn()} medicationData={medicationData}/>
         );
     

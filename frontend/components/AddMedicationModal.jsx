@@ -50,6 +50,22 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
 
     }, []);
 
+    // Update form fields when medicationData changes
+    useEffect(() => {
+        if (medicationData) {
+            setName(medicationData.name || '');
+            setDirections(medicationData.directions || '');
+            setPurpose(medicationData.purpose || '');
+            setWarning(medicationData.warnings || '');
+            setSideEffects(
+                medicationData.sideEffects?.map(effect => ({ 
+                    term: typeof effect === 'string' ? effect : effect.term, 
+                    checked: false 
+                })) || []
+            );
+        }
+    }, [medicationData]);
+
     const resetToDefault = () => {
         setName('');
         setDosage({ amount: '', unit: '' });

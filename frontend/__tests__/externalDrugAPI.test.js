@@ -1,3 +1,5 @@
+/* global jest, describe, afterEach, it, expect */
+
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from "../services/externalDrugAPI";
 // const fetch = require('node-fetch');
 

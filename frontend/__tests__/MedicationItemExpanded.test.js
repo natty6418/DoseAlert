@@ -1,3 +1,4 @@
+/* global jest, describe, it, expect */
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import MedicationItemExpanded from '../components/MedicationItemExpanded';
@@ -49,7 +50,7 @@ describe('MedicationItemExpanded', () => {
           reminder: { enabled: true, reminderTimes: [] },
         };
       
-        const { getByTestId, getByText } = render(
+        const { getByTestId } = render(
           <MedicationItemExpanded
             item={item}
             toggleExpand={jest.fn()}
@@ -155,7 +156,7 @@ describe('MedicationItemExpanded', () => {
           reminder: { enabled: true, reminderTimes: [{ time: initialTime }] },
       };
   
-      const { getByText, queryAllByTestId } = render(
+      const { queryAllByTestId } = render(
           <MedicationItemExpanded
               item={item}
               toggleExpand={jest.fn()}

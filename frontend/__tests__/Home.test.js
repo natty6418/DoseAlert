@@ -1,13 +1,17 @@
+/* global jest, describe, expect, beforeEach, test */
+
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import Home from '../app/(tabs)/home';
 import { router } from 'expo-router';
-import { useAuthContext } from '../contexts/AuthContext';
-import { getUser } from '../services/UserHandler';
-import { getMedications, editMedication } from '../services/MedicationHandler';
-import LoadingSpinner from '../components/Loading';
-import { useFocusEffect } from 'expo-router';
-import { Notifications, registerForPushNotificationsAsync } from '../services/Scheduler';
+import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
+// import LoadingSpinner from '../components/Loading';
+// import { useFocusEffect } from 'expo-router';
+import { Notifications } from '../services/Scheduler';
+
+// Import mocked functions
+const { editMedication } = require('../services/MedicationHandler');
 
 jest.mock('../services/Scheduler', () => ({
   Notifications: {
@@ -25,21 +29,21 @@ registerForPushNotificationsAsync: jest.fn(),
 
 }));
 // Mock dependencies
-jest.mock('../contexts/AuthContext', () => ({
-  useAuthContext: jest.fn(),
+jest.mock('../contexts/AppContext', () => ({
+  useApp: jest.fn(),
 }));
 
-jest.mock('../services/UserHandler', () => ({
-  getUser: jest.fn(),
+jest.mock('../contexts/AuthContext', () => ({
+  useAuth: jest.fn(),
 }));
 
 jest.mock('../services/MedicationHandler', () => ({
-  getMedications: jest.fn(),
   editMedication: jest.fn(),
 }));
 
 jest.mock('../components/Loading', () => {
-  return jest.fn(() =><div testID='loading-spinner'></div>); // Mock LoadingSpinner to render nothing during tests
+  const { View } = require('react-native');
+  return jest.fn(() => <View testID="loading-spinner" />);
 });
 jest.mock('expo-router', () => ({
   router: {
@@ -51,13 +55,32 @@ jest.mock('expo-router', () => ({
 
 
 describe('Home Component', () => {
+  let mockAppContext;
+  let mockAuthContext;
+
   beforeEach(() => {
     jest.clearAllMocks();
     Notifications.requestPermissionsAsync.mockResolvedValueOnce({ status: 'granted' });
+    
+    // Set up default mock contexts
+    mockAppContext = {
+      medications: [],
+      user: { id: '123', name: 'John' },
+      loadMedications: jest.fn().mockResolvedValue([]),
+      updateMedication: jest.fn(),
+    };
+    
+    mockAuthContext = {
+      isAuthenticated: true,
+    };
+    
+    useApp.mockReturnValue(mockAppContext);
+    useAuth.mockReturnValue(mockAuthContext);
   });
 
   test('should redirect to /signIn if user is not logged in', () => {
-    useAuthContext.mockReturnValue({ isLoggedIn: false });
+    mockAuthContext.isAuthenticated = false;
+    useAuth.mockReturnValue(mockAuthContext);
 
     render(<Home />);
 
@@ -66,14 +89,6 @@ describe('Home Component', () => {
 
   test('should render loading spinner while loading', () => {
     Notifications.requestPermissionsAsync.mockResolvedValueOnce({ status: 'granted' });
-    useAuthContext.mockReturnValue({ 
-      isLoggedIn: true, 
-      user: { id: '123' },
-      medications: [],
-      setMedications: jest.fn(),
-     });
-    getUser.mockResolvedValueOnce({ firstName: 'John' });
-    getMedications.mockResolvedValueOnce([]);
     
     const { getByTestId } = render(<Home />);
     
@@ -82,9 +97,8 @@ describe('Home Component', () => {
 
   test('should render the greeting once user data is loaded', async () => {
     Notifications.requestPermissionsAsync.mockResolvedValueOnce({ status: 'granted' });
-    useAuthContext.mockReturnValue({ isLoggedIn: true, user: { id: '123', firstName: 'John' }, setMedications: jest.fn() });
-    
-    getMedications.mockResolvedValueOnce([]);
+    mockAppContext.user = { id: '123', firstName: 'John' };
+    useApp.mockReturnValue(mockAppContext);
 
     const { getByText } = render(<Home />);
 
@@ -94,8 +108,8 @@ describe('Home Component', () => {
   });
 
   test('should render "No medications found" if there are no upcoming medications', async () => {
-    useAuthContext.mockReturnValue({ isLoggedIn: true, user: { id: '123' }, medications: [], setMedications: jest.fn() } );
-    getMedications.mockResolvedValueOnce([]);
+    mockAppContext.medications = [];
+    useApp.mockReturnValue(mockAppContext);
 
     const { getByText } = render(<Home />);
 
@@ -105,48 +119,53 @@ describe('Home Component', () => {
   });
 
   test('should render medication items if medications are found', async () => {
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 1); // Set date to next year
+    
     const mockMedications = [
       {
         id: 'med1',
         reminder: { enabled: true },
         medicationSpecification: { name: 'Aspirin' },
-        endDate: new Date("2024-12-31"),
+        endDate: futureDate,
+        end_date: futureDate, // Home component checks both formats
       },
       {
         id: 'med2',
         reminder: { enabled: true },
         medicationSpecification: { name: 'Ibuprofen' },
-        endDate: new Date("2024-12-31"),
+        endDate: futureDate,
+        end_date: futureDate, // Home component checks both formats
       },
     ];
-    useAuthContext.mockReturnValue({ 
-      isLoggedIn: true, 
-      user: { 
-        id: '123',
-        firstName: 'John',
-       },
+    
+    // Mock loadMedications to resolve successfully and quickly
+    const mockLoadMedications = jest.fn().mockResolvedValue(mockMedications);
+    
+    // Update the context with medications and working loadMedications
+    const updatedContext = {
+      ...mockAppContext,
       medications: mockMedications,
-      setMedications: jest.fn(),
-      
-      });
-    getMedications.mockResolvedValueOnce(mockMedications);
+      loadMedications: mockLoadMedications,
+      user: { id: '123', firstName: 'John' }
+    };
+    useApp.mockReturnValue(updatedContext);
 
     const { getByText } = render(<Home />);
 
+    // Wait for loading to complete and medications to be displayed
     await waitFor(() => {
       expect(getByText('Aspirin')).toBeTruthy();
       expect(getByText('Ibuprofen')).toBeTruthy();
     });
+
+    // Verify loadMedications was called
+    expect(mockLoadMedications).toHaveBeenCalled();
   });
 
   test('should navigate to create medication screen when "Add More" button is pressed', async () => {
-    useAuthContext.mockReturnValue({ 
-      isLoggedIn: true, 
-      user: { id: '123' },
-      medications: [],
-      setMedications: jest.fn(),
-    });
-    getMedications.mockResolvedValueOnce([]);
+    mockAppContext.medications = [];
+    useApp.mockReturnValue(mockAppContext);
 
     const { getByText } = render(<Home />);
 
@@ -156,15 +175,13 @@ describe('Home Component', () => {
       expect(router.push).toHaveBeenCalledWith('/create');
     });
   });
+  
   test('should handle notification response and navigate to the report screen', async () => {
     const mockSetAdherenceResponseId = jest.fn();
-    useAuthContext.mockReturnValue({
-      isLoggedIn: true,
-      user: { id: '123' },
-      setAdherenceResponseId: mockSetAdherenceResponseId,
-      medications: [],
-      setMedications: jest.fn(),
-    });
+    mockAppContext.setAdherenceResponseId = mockSetAdherenceResponseId;
+    mockAppContext.medications = [];
+    useApp.mockReturnValue(mockAppContext);
+    
     Notifications.addNotificationResponseReceivedListener.mockImplementationOnce((callback) => {
       callback({
         notification: {
@@ -188,57 +205,46 @@ describe('Home Component', () => {
       { id: 'med1', endDate: new Date('2024-12-31'), reminder: { enabled: true } },
       { id: 'med2', endDate: new Date('2023-01-01'), reminder: { enabled: true } },
     ];
-    const transformedMedications = [
-      { ...mockMedications[0], isActive: true, reminder: { ...mockMedications[0].reminder } },
-      { ...mockMedications[1], isActive: false, reminder: { ...mockMedications[1].reminder, enabled: false } },
-    ];
-    const mockSetMedications = jest.fn();
+    const mockLoadMedications = jest.fn().mockResolvedValue(mockMedications);
   
-    useAuthContext.mockReturnValue({
-      isLoggedIn: true,
-      user: { id: '123' },
-      medications: [],
-      setMedications: mockSetMedications,
-    });
-    getMedications.mockResolvedValueOnce(mockMedications);
+    mockAppContext.medications = [];
+    mockAppContext.loadMedications = mockLoadMedications;
+    useApp.mockReturnValue(mockAppContext);
   
     render(<Home />);
   
     await waitFor(() => {
-      expect(mockSetMedications).toHaveBeenCalledWith(transformedMedications);
+      expect(mockLoadMedications).toHaveBeenCalled();
     });
   });
   test('should update reminders correctly', async () => {
+    const futureDate = new Date();
+    futureDate.setFullYear(futureDate.getFullYear() + 1); // Set to next year
+    
     const mockMedications = [
       {
         id: 'med1',
-        reminder: { enabled: true, reminderTimes: [] },
         medicationSpecification: { name: 'Test Medication' },
         startDate: new Date(),
-        endDate: new Date('2024-12-31'),
+        endDate: futureDate,
+        end_date: futureDate, // Home component checks both formats
         reminder: { enabled: true, reminderTimes: [{time: new Date()}] },
       },
     ];
-    const mockSetMedications = jest.fn();
+    const mockLoadMedications = jest.fn().mockResolvedValue(mockMedications);
     const mockEditMedication = jest.fn().mockResolvedValueOnce({ data: { ...mockMedications[0] } });
   
-    useAuthContext.mockReturnValue({
-      isLoggedIn: true,
-      user: { id: '123' },
-      medications: mockMedications,
-      setMedications: mockSetMedications,
-    });
-    jest.mock('../services/MedicationHandler', () => ({
-      editMedication: mockEditMedication,
-    }));
-    getMedications.mockResolvedValueOnce(mockMedications);
+    mockAppContext.medications = mockMedications;
+    mockAppContext.loadMedications = mockLoadMedications;
+    mockAppContext.updateMedication = mockEditMedication;
+    useApp.mockReturnValue(mockAppContext);
+    
     editMedication.mockResolvedValueOnce({ ...mockMedications[0] });
   
-    const { getByText, getByTestId, debug } = render(<Home />);
+    const { getByText, getByTestId } = render(<Home />);
     await waitFor(() => {
       const medication = getByText('Test Medication');
       fireEvent.press(medication);
-      // fireEvent.press(getByTestId('reminder-switch'));
     });
 
     await waitFor(() => {
@@ -246,12 +252,6 @@ describe('Home Component', () => {
     });
     const deleteButton = getByTestId('delete-reminder-button');
     fireEvent.press(deleteButton);
-    
-    
-    // await waitFor(() => {
-    //   expect(mockEditMedication).toHaveBeenCalled();
-    // });
-    // expect(mockEditMedication).toHaveBeenCalled();
   });
   
 });
