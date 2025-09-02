@@ -10,8 +10,6 @@ const SignOutPage = () => {
     
     const handleSignOut = async () => {
         try {
-            console.log('signing out');
-            
             // Call the backend logout API to blacklist the refresh token
             if (makeAuthenticatedRequest && refreshToken) {
                 await logoutUser(makeAuthenticatedRequest, refreshToken);

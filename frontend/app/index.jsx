@@ -10,8 +10,18 @@ import { useAuth } from "../contexts/AuthContext";
 
 export default function App() {
 
-  const { loading, isAuthenticated } = useAuth();
-  if(!loading && isAuthenticated()) return <Redirect href="/home" />
+  const { loading, hasUserMadeChoice, loginAsGuest } = useAuth();
+  if(!loading && hasUserMadeChoice()) return <Redirect href="/home" />
+
+  const handleContinueAsGuest = async () => {
+    try {
+      await loginAsGuest();
+      router.replace("/home");
+    } catch (error) {
+      console.error('Error during guest login:', error);
+    }
+  };
+
   return (
     <SafeAreaView className="bg-black-100 h-full">
     <ScrollView
@@ -49,11 +59,26 @@ export default function App() {
       <Text className="text-sm font-pregular text-gray-100 mt-7 text-center">
       Your personal medication manager designed to keep you on track with your health.
       </Text>
+
+      <Text className="text-lg font-psemibold text-white mt-8 text-center">
+        How would you like to get started?
+      </Text>
+
       <CustomButton
-      title="Continue with Email"
+      title="Create Account / Sign In"
       handlePress={()=>router.push('/signIn')}
-      containerStyles='w-full mt-7 bg-secondary-200'
+      containerStyles='w-full mt-6 bg-secondary-200'
       />
+
+      <CustomButton
+      title="Continue Without Account"
+      handlePress={handleContinueAsGuest}
+      containerStyles='w-full mt-4 bg-gray-600'
+      />
+
+      <Text className="text-xs font-pregular text-gray-100 mt-4 text-center px-2">
+        You can always create an account later to sync your data across devices
+      </Text>
     </View>
   </ScrollView>
   <StatusBar backgroundColor="#161622" style=""/>

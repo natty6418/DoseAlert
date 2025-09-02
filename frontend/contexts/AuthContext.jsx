@@ -36,6 +36,7 @@ const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Get a valid access token, refreshing if necessary
   const getValidAccessToken = async () => {
@@ -56,7 +57,6 @@ const AuthProvider = ({ children }) => {
 
       try {
         setIsRefreshing(true);
-        console.log('Token expired, refreshing...');
         
         const response = await refreshAccessToken(refreshToken);
         
@@ -130,6 +130,7 @@ const AuthProvider = ({ children }) => {
       const storedAccessToken = await AsyncStorage.getItem('accessToken');
       const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
       const storedUser = await AsyncStorage.getItem('user');
+      const storedGuestStatus = await AsyncStorage.getItem('isGuest');
 
       if (storedAccessToken && storedRefreshToken) {
         setAccessToken(storedAccessToken);
@@ -137,9 +138,20 @@ const AuthProvider = ({ children }) => {
         if (storedUser) {
           setUser(JSON.parse(storedUser));
         }
+        setIsGuest(false);
+      } else if (storedGuestStatus === 'true') {
+        setIsGuest(true);
+      } else {
+        // No stored auth data, user needs to make a choice - stay on landing page
+        setIsGuest(false);
+        setAccessToken(null);
+        setRefreshToken(null);
+        setUser(null);
       }
+      setHasInitialized(true);
     } catch (error) {
       console.error('Error loading stored tokens:', error);
+      setHasInitialized(true);
     } finally {
       setLoading(false);
     }
@@ -166,7 +178,7 @@ const AuthProvider = ({ children }) => {
 
   const clearTokens = async () => {
     try {
-      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']);
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user', 'isGuest']);
       setAccessToken(null);
       setRefreshToken(null);
       setUser(null);
@@ -177,12 +189,34 @@ const AuthProvider = ({ children }) => {
   };
 
   const loginAsGuest = async () => {
-    await clearTokens();
-    setIsGuest(true);
+    try {
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user']);
+      await AsyncStorage.setItem('isGuest', 'true');
+      setAccessToken(null);
+      setRefreshToken(null);
+      setUser(null);
+      setIsGuest(true);
+    } catch (error) {
+      console.error('Error setting guest status:', error);
+    }
+  };
+
+  const upgradeFromGuest = async (tokens, userData) => {
+    await AsyncStorage.removeItem('isGuest');
+    setIsGuest(false);
+    await storeTokens(tokens, userData);
   };
 
   const isAuthenticated = () => {
     return !!accessToken || isGuest;
+  };
+
+  const hasUserMadeChoice = () => {
+    return hasInitialized && (!!accessToken || isGuest);
+  };
+
+  const isLoggedIn = () => {
+    return !!accessToken;
   };
 
   // Refresh auth state from storage (useful after external login)
@@ -199,11 +233,14 @@ const AuthProvider = ({ children }) => {
     storeTokens,
     clearTokens,
     isAuthenticated,
+    hasUserMadeChoice,
+    isLoggedIn,
     setUser,
     getValidAccessToken,
     makeAuthenticatedRequest,
     refreshAuthState,
     loginAsGuest,
+    upgradeFromGuest,
   };
 
   return (

@@ -14,7 +14,7 @@ import { loginUser } from '../../services/UserHandler';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SignIn = () => {
-    const { refreshAuthState, loginAsGuest } = useAuth();
+    const { refreshAuthState, loginAsGuest, isGuest, upgradeFromGuest } = useAuth();
 
     const [form, setForm] = useState({
         email: "",
@@ -27,14 +27,19 @@ const SignIn = () => {
       setLoading(true);
       try {
         // Login and let the service handle token storage
-        await loginUser(form.email, form.password);
+        const response = await loginUser(form.email, form.password);
         
-        // Refresh the auth context state from storage
-        await refreshAuthState();
+        // If user was a guest, upgrade to authenticated user
+        if (isGuest && response.access && response.refresh) {
+          await upgradeFromGuest(response, response.user);
+        } else {
+          // Regular login flow
+          // Refresh the auth context state from storage
+          await refreshAuthState();
+        }
         
         router.replace("/home");
       } catch (error) {
-        console.log(error);
         setError(error.message);
       } finally {
         setLoading(false);
@@ -44,7 +49,6 @@ const SignIn = () => {
     const handleSkip = async () => {
       try {
         await loginAsGuest();
-        console.log('Guest login completed');
         // AuthLayout will handle the redirect automatically
       } catch (error) {
         console.error('Error during guest login:', error);
@@ -95,12 +99,6 @@ const SignIn = () => {
             isLoading={loading}
           />
 
-          <CustomButton
-            title="Skip for now"
-            handlePress={handleSkip}
-            containerStyles="mt-7 bg-gray-500"
-          />
-
           <View className="flex justify-center pt-5 flex-row gap-2">
             <Text className="text-lg text-gray-100 font-pregular">
               Don&apos;t have an account?
@@ -114,6 +112,13 @@ const SignIn = () => {
             </Text>
             </Link>
           </View>
+
+          <CustomButton
+            title="Continue as Guest"
+            handlePress={handleSkip}
+            containerStyles="mt-4 bg-gray-600"
+            textStyles="text-gray-300"
+          />
         </View>
         <ErrorModal
           visible={error !== null}

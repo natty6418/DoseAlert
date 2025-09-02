@@ -8,12 +8,33 @@ import { router } from 'expo-router';
 
 
 const AccountInfo = () => {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [newFirstName, setNewFirstName] = useState(user?.first_name || '');
-  const [newLastName, setNewLastName] = useState(user?.last_name || '');
+  const [newFirstName, setNewFirstName] = useState(user?.first_name || user?.firstName || '');
+  const [newLastName, setNewLastName] = useState(user?.last_name || user?.lastName || '');
   // const [newEmail, setNewEmail] = useState(user?.email || '');
+
+  // Redirect guest users to login
+  useEffect(() => {
+    if (isGuest || !user) {
+      Alert.alert(
+        'Account Required',
+        'You need to create an account or sign in to view account information.',
+        [
+          {
+            text: 'Go to Sign In',
+            onPress: () => router.replace('/(auth)/signIn')
+          },
+          {
+            text: 'Go Back',
+            onPress: () => router.back()
+          }
+        ]
+      );
+      return;
+    }
+  }, [isGuest, user]);
 
   // Handle Save Changes
     useEffect(() => {
@@ -31,6 +52,7 @@ const AccountInfo = () => {
           BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
       };
   }, []);
+
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
@@ -46,6 +68,15 @@ const AccountInfo = () => {
     }
   };
 
+  // Don't render anything if user is guest or no user data
+  if (isGuest || !user) {
+    return (
+      <SafeAreaView className="bg-black-100 h-full justify-center items-center">
+        <Text className="text-white text-lg">Loading...</Text>
+      </SafeAreaView>
+    );
+  }
+
 
 
   return (
@@ -57,17 +88,17 @@ const AccountInfo = () => {
       <View className="bg-[#232533] p-4 rounded-lg">
         <Text className="text-white mb-2">First Name</Text>
         <Text className="bg-[#1f1f2b] text-white p-3 rounded-lg mb-4">
-          {user.firstName}
+          {user?.firstName || user?.first_name || 'Not provided'}
         </Text>
 
         <Text className="text-white mb-2">Last Name</Text>
         <Text className="bg-[#1f1f2b] text-white p-3 rounded-lg mb-4">
-          {user.lastName}
+          {user?.lastName || user?.last_name || 'Not provided'}
         </Text>
 
         <Text className="text-white mb-2">Email</Text>
         <Text className="bg-[#1f1f2b] text-white p-3 rounded-lg mb-4">
-          {user.email}
+          {user?.email || 'Not provided'}
         </Text>
 
         <TouchableOpacity
@@ -86,7 +117,7 @@ const AccountInfo = () => {
 
             <FormField 
               title="First Name"
-              value={newFirstName|| user.firstName}
+              value={newFirstName || user?.firstName || user?.first_name || ''}
               handleChangeText={setNewFirstName}
               placeholder="Enter new first name"
               otherStyles='mt-4'
@@ -94,7 +125,7 @@ const AccountInfo = () => {
 
             <FormField 
               title="Last Name"
-              value={newLastName || user.lastName}
+              value={newLastName || user?.lastName || user?.last_name || ''}
               handleChangeText={setNewLastName}
               placeholder="Enter new last name"
               otherStyles='mt-7'

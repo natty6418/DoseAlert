@@ -3,9 +3,10 @@ import { StatusBar } from 'expo-status-bar'
 import { useAuth } from '../../contexts/AuthContext';
 
 const AuthLayout = () => {
-  const { isAuthenticated } = useAuth();
+  const { isLoggedIn } = useAuth();
 
-  if (isAuthenticated()) {
+  // Only redirect if user is logged in with actual credentials, not if they're a guest
+  if (isLoggedIn()) {
     return <Redirect href="/home" />;
   }
 

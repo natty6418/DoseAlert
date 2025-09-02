@@ -10,7 +10,7 @@ import { createNewAccount } from "../../services/UserHandler";
 import { useAuth } from '../../contexts/AuthContext';
 
 const SignUp = () => {
-    const { refreshAuthState } = useAuth();
+    const { refreshAuthState, loginAsGuest, isGuest, upgradeFromGuest } = useAuth();
     
     const [form, setForm] = useState({
       firstName: "",
@@ -25,24 +25,38 @@ const SignUp = () => {
     const handleSignUp = async () => {
       setLoading(true);
       try{
-        console.log(form);
         const response = await createNewAccount(form.email, form.password, form.firstName, form.lastName);
         
-        // If registration includes tokens (auto-login), refresh auth state and go to home
+        // If registration includes tokens (auto-login)
         if (response.access && response.refresh) {
-          await refreshAuthState();
+          if (isGuest) {
+            // Upgrade from guest to authenticated user
+            await upgradeFromGuest(response, response.user);
+          } else {
+            // Regular sign up flow
+            await refreshAuthState();
+          }
           router.replace("/home");
         } else {
           // If no tokens, go to sign in page
           router.replace("/signIn");
         }
       } catch(error){
-        console.log(error);
         setError(error.message);
       } finally {
         setLoading(false);
       }
     }
+
+    const handleSkip = async () => {
+      try {
+        await loginAsGuest();
+        router.replace("/home");
+      } catch (error) {
+        console.error('Error during guest login:', error);
+        setError('Failed to continue as guest. Please try again.');
+      }
+    };
   
     return (
       <SafeAreaView className="bg-black-100 h-full">
@@ -112,6 +126,13 @@ const SignUp = () => {
                 <Text>Sign In</Text>
               </Link>
             </View>
+
+            <CustomButton
+              title="Continue as Guest"
+              handlePress={handleSkip}
+              containerStyles="mt-4 bg-gray-600"
+              textStyles="text-gray-300"
+            />
           </View>
           <ErrorModal
           visible={error !== null}
