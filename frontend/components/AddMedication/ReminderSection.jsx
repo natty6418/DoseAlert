@@ -36,14 +36,19 @@ const ReminderSection = ({
         }
     };
     return (
-        <View className="bg-primary rounded-2xl p-4 mb-4">
-            <View className="flex-row items-center justify-between mb-3">
-                <Text className="text-secondary font-pmedium text-lg">Reminders</Text>
+        <View className="bg-gray-800 border border-gray-700 rounded-2xl p-5 mb-4">
+            <View className="flex-row items-center justify-between mb-4">
+                <View className="flex-row items-center">
+                    <View className="bg-yellow-500/20 p-2 rounded-xl mr-3">
+                        <icons.Bell size={18} color="#eab308" />
+                    </View>
+                    <Text className="text-white font-psemibold text-lg">Reminders</Text>
+                </View>
                 <Switch
                     value={reminderEnabled}
                     onValueChange={onToggleReminder}
-                    trackColor={{ false: '#374151', true: '#c0ee77' }}
-                    thumbColor={reminderEnabled ? '#4F46E5' : '#9ca3af'}
+                    trackColor={{ false: '#374151', true: '#eab308' }}
+                    thumbColor={reminderEnabled ? '#ffffff' : '#9ca3af'}
                     testID="enable-reminders-switch"
                 />
             </View>
@@ -51,7 +56,7 @@ const ReminderSection = ({
             {reminderEnabled && (
                 <View className="mt-2">
                     {/* Days of Week Selection */}
-                    <Text className="text-gray-100 font-pmedium mb-3">Reminder Days</Text>
+                    <Text className="text-gray-300 font-pmedium mb-3">Reminder Days</Text>
                     <View className="flex-row flex-wrap gap-2 mb-4">
                         {daysOfWeek.map(({ key, label }) => (
                             <TouchableOpacity
@@ -59,12 +64,12 @@ const ReminderSection = ({
                                 onPress={() => toggleDay(key)}
                                 className={`px-3 py-2 rounded-lg border ${
                                     reminderDays.includes(key)
-                                        ? 'bg-secondary border-secondary'
-                                        : 'bg-transparent border-gray-600'
+                                        ? 'bg-yellow-500 border-yellow-400'
+                                        : 'bg-gray-700 border-gray-600'
                                 }`}
                             >
                                 <Text className={`font-pmedium ${
-                                    reminderDays.includes(key) ? 'text-black' : 'text-gray-300'
+                                    reminderDays.includes(key) ? 'text-gray-900' : 'text-gray-300'
                                 }`}>
                                     {label}
                                 </Text>
@@ -73,22 +78,27 @@ const ReminderSection = ({
                     </View>
 
                     {/* Reminder Times */}
-                    <Text className="text-gray-100 font-pmedium mb-3">Reminder Times</Text>
+                    <Text className="text-gray-300 font-pmedium mb-3">Reminder Times</Text>
                     {reminderTimes.length > 0 && (
                         <View className="mb-3">
                             {reminderTimes.map((time, index) => (
                                 <View
                                     key={index}
-                                    className="bg-primary py-3 px-4 rounded-xl mb-2 flex-row justify-between items-center border border-gray-600"
+                                    className="bg-gray-700 py-3 px-4 rounded-xl mb-2 flex-row justify-between items-center border border-gray-600"
                                 >
-                                    <Text className="text-white font-pmedium text-base">
-                                        {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </Text>
+                                    <View className="flex-row items-center">
+                                        <View className="bg-yellow-500/20 p-1.5 rounded-lg mr-3">
+                                            <icons.Clock size={16} color="#eab308" />
+                                        </View>
+                                        <Text className="text-white font-pmedium text-base">
+                                            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                        </Text>
+                                    </View>
                                     <TouchableOpacity
                                         onPress={() => onRemoveReminderTime(index)}
-                                        className="w-8 h-8 bg-red-500 rounded-full items-center justify-center"
+                                        className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center border border-red-500"
                                     >
-                                        <icons.XMark color="#ffffff" size={16} />
+                                        <icons.XMark color="#ef4444" size={16} />
                                     </TouchableOpacity>
                                 </View>
                             ))}
@@ -97,11 +107,11 @@ const ReminderSection = ({
 
                     <TouchableOpacity
                         onPress={onShowTimePicker}
-                        className="bg-secondary p-3 rounded-xl flex-row items-center justify-center"
+                        className="bg-yellow-500 py-3 px-4 rounded-xl flex-row items-center justify-center"
                         testID={"add-reminder-button"}
                     >
-                        <icons.PlusCircle color="#000000" size={24} />
-                        <Text className="text-black font-pmedium ml-2">Add Reminder Time</Text>
+                        <icons.PlusCircle color="#1f2937" size={24} />
+                        <Text className="text-gray-900 font-psemibold ml-2">Add Reminder Time</Text>
                     </TouchableOpacity>
                 </View>
             )}

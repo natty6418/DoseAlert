@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Modal, Image, ScrollView, TouchableOpacity } from 'react-native';
+import { router } from 'expo-router';
 import { icons } from '../constants';
 import LongTextComponent from './LongTextComponent';
 
@@ -12,14 +13,45 @@ const MedicationCardModal = ({
     frequency,
     medicationSpecification,
     reminder,
-    onEdit,
     isActive,
+    medicationData, // Complete medication object for navigation
 }) => {
    
     // Filter unique reminder times - safely handle undefined reminderTimes
     console.log("Reminders ", reminder);
-    const uniqueReminderTimes = [...new Set((reminder?.reminderTimes || []).map(rt => rt.time?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })))];
-    // const uniqueReminderTimes = [...reminder.reminderTimes];
+    
+    // Handle different reminder data structures
+    let uniqueReminderTimes = [];
+    
+    if (reminder?.times && Array.isArray(reminder.times)) {
+        // If reminder.times is an array of Date objects (from transformFromDbFormat)
+        uniqueReminderTimes = reminder.times.map(time => {
+            if (time instanceof Date) {
+                return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            // If it's an object with time property
+            if (time?.time instanceof Date) {
+                return time.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            // If it's already a string
+            if (typeof time === 'string') {
+                return time;
+            }
+            return null;
+        }).filter(Boolean);
+    } else if (reminder?.reminderTimes && Array.isArray(reminder.reminderTimes)) {
+        // Legacy structure support
+        uniqueReminderTimes = reminder.reminderTimes.map(rt => {
+            if (rt?.time instanceof Date) {
+                return rt.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            return null;
+        }).filter(Boolean);
+    }
+    
+    // Remove duplicates
+    uniqueReminderTimes = [...new Set(uniqueReminderTimes)];
+    
     const checkedSideEffects = medicationSpecification.sideEffects?.filter((sideEffect) => sideEffect.checked) || [];
     return (
         <Modal
@@ -63,7 +95,28 @@ const MedicationCardModal = ({
                             {isActive && (
                                 <TouchableOpacity
                                     className="bg-blue-600 p-3 rounded-2xl shadow-lg active:opacity-80"
-                                    onPress={onEdit}
+                                    onPress={() => {
+                                        // Close the modal first
+                                        onClose();
+                                        
+                                        // Navigate to edit page with medication data
+                                        const editData = medicationData || {
+                                            medicationSpecification,
+                                            dosage,
+                                            start_date: startDate,
+                                            end_date: endDate,
+                                            frequency,
+                                            reminder,
+                                            isActive,
+                                        };
+                                        
+                                        router.push({
+                                            pathname: '/(tabs)/(medication)/edit',
+                                            params: {
+                                                medicationData: JSON.stringify(editData)
+                                            }
+                                        });
+                                    }}
                                     testID='edit-medication-button'
                                 >
                                     <icons.Pencil size={20} color="#fff" />
@@ -153,27 +206,35 @@ const MedicationCardModal = ({
                         </View>
 
                         {/* Reminder Section */}
-                        {reminder.enabled && uniqueReminderTimes.length > 0 && (
+                        {(reminder || reminder?.enabled || uniqueReminderTimes.length > 0) && (
                             <View className="bg-gray-800 rounded-2xl p-5 mb-4 border border-gray-700">
                                 <View className="flex-row items-center mb-4">
                                     <View className="bg-yellow-500/20 p-2 rounded-xl mr-3">
                                         <icons.Bell size={18} color="#eab308" />
                                     </View>
                                     <Text className="text-secondary text-lg font-semibold">
-                                        Reminder Schedule
+                                        Reminder Schedule {reminder?.enabled ? '(Enabled)' : '(Disabled)'}
                                     </Text>
                                 </View>
 
-                                <View className="space-y-2">
-                                    {uniqueReminderTimes.map((time, index) => (
-                                        <View key={index} className="flex-row items-center bg-gray-700/50 p-3 rounded-xl">
-                                            <View className="bg-accent/20 p-1.5 rounded-lg mr-3">
-                                                <icons.Clock size={16} color="#c0ee77" />
+                                {uniqueReminderTimes.length > 0 ? (
+                                    <View className="space-y-2">
+                                        {uniqueReminderTimes.map((time, index) => (
+                                            <View key={index} className="flex-row items-center bg-gray-700/50 p-3 rounded-xl">
+                                                <View className="bg-accent/20 p-1.5 rounded-lg mr-3">
+                                                    <icons.Clock size={16} color="#c0ee77" />
+                                                </View>
+                                                <Text className="text-white font-medium">{time}</Text>
                                             </View>
-                                            <Text className="text-white font-medium">{time}</Text>
-                                        </View>
-                                    ))}
-                                </View>
+                                        ))}
+                                    </View>
+                                ) : (
+                                    <View className="bg-gray-700/50 p-3 rounded-xl">
+                                        <Text className="text-gray-400 text-center">
+                                            {reminder?.enabled ? 'No reminder times set' : 'Reminders are disabled'}
+                                        </Text>
+                                    </View>
+                                )}
                             </View>
                         )}
                         {/* Side Effects Section */}

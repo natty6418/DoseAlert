@@ -398,10 +398,7 @@ const CreateScreen = () => {
           reminder={selectedMedication.reminder}
           medicationId={selectedMedication.id}
           isActive={selectedMedication.isActive}
-          onEdit={() => {
-            setMedicationCardModalVisible(false);
-            setEditMedicationModalVisible(true);
-          }}
+          medicationData={selectedMedication}
         />
       )}
 

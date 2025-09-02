@@ -197,32 +197,37 @@ const AddMedicationScreen = () => {
   return (
     <SafeAreaView className="flex-1 bg-primary ">
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 py-3 bg-primary border-b border-gray-700">
+      <View className="flex-row items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-700">
         <TouchableOpacity 
           onPress={() => router.back()}
-          className="p-2"
+          className="bg-gray-800 p-3 rounded-2xl"
         >
-          <icons.ArrowLeft size={24} color="#c0ee77" />
+          <icons.ArrowLeft size={20} color="#ffffff" />
         </TouchableOpacity>
         
-        <Text className="text-white text-lg font-psemibold">
+        <Text className="text-white text-xl font-psemibold">
           Add Medication
         </Text>
         
         <TouchableOpacity 
           onPress={handleSavePlan}
-          className="bg-secondary-200 rounded-lg px-4 py-2"
+          className="bg-secondary py-3 px-5 rounded-2xl"
         >
-          <Text className="text-white font-psemibold">Save</Text>
+          <Text className="text-primary font-psemibold">Save</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1 px-4 py-4">
+      <ScrollView className="flex-1 px-6 py-4">
         {/* Basic Information */}
-        <View className="bg-primary rounded-2xl p-4 mb-4">
-          <Text className="text-secondary font-pmedium text-lg mb-3">
-            Basic Information
-          </Text>
+        <View className="bg-gray-800 border border-gray-700 rounded-2xl p-5 mb-4">
+          <View className="flex-row items-center mb-4">
+            <View className="bg-secondary/20 p-2 rounded-xl mr-3">
+              <View className="w-5 h-5 bg-secondary rounded-full" />
+            </View>
+            <Text className="text-white font-psemibold text-lg">
+              Basic Information
+            </Text>
+          </View>
           
           <FormField
             title="Medication Name"
@@ -232,7 +237,7 @@ const AddMedicationScreen = () => {
             required={true}
           />
           {errors.name && (
-            <Text className="text-red-500 text-xs mt-1">{errors.name}</Text>
+            <Text className="text-red-400 text-sm mt-2">{errors.name}</Text>
           )}
         </View>
 
@@ -240,10 +245,8 @@ const AddMedicationScreen = () => {
         <DosageSection
           dosage={formData.dosage}
           onDosageChange={(value) => updateFormData('dosage', value)}
+          error={errors.dosage}
         />
-        {errors.dosage && (
-          <Text className="text-red-500 text-xs mt-1 mb-4">{errors.dosage}</Text>
-        )}
 
         {/* Date Picker Section */}
         <DatePickerSection

@@ -2,16 +2,23 @@ import React from 'react';
 import { View, Text } from 'react-native';
 import PropTypes from 'prop-types';
 import FormField from '../FormField';
+import { icons } from '../../constants';
 
 const AdditionalInfoSection = ({ purpose, directions, warning, onPurposeChange, onDirectionsChange, onWarningChange }) => {
     return (
-        <View className="bg-primary rounded-2xl p-4 mb-4">
-            <Text className="text-secondary font-pmedium text-lg mb-3">Additional Information</Text>
+        <View className="bg-gray-800 border border-gray-700 rounded-2xl p-5 mb-4">
+            <View className="flex-row items-center mb-4">
+                <View className="bg-purple-500/20 p-2 rounded-xl mr-3">
+                    <icons.ClipboardDocument size={18} color="#8b5cf6" />
+                </View>
+                <Text className="text-white font-psemibold text-lg">Additional Information</Text>
+            </View>
+            
             <FormField
                 title="Purpose"
                 value={purpose}
                 handleChangeText={onPurposeChange}
-                otherStyles=""
+                otherStyles="mb-3"
                 keyboardType="default"
                 placeholder="What is this medication for?"
                 maxLength={255}
@@ -20,7 +27,7 @@ const AdditionalInfoSection = ({ purpose, directions, warning, onPurposeChange, 
                 title="Directions"
                 value={directions}
                 handleChangeText={onDirectionsChange}
-                otherStyles="mt-3"
+                otherStyles="mb-3"
                 keyboardType="default"
                 placeholder="How should this be taken?"
                 multiline={true}
@@ -30,7 +37,7 @@ const AdditionalInfoSection = ({ purpose, directions, warning, onPurposeChange, 
                 title="Warning"
                 value={warning}
                 handleChangeText={onWarningChange}
-                otherStyles="mt-3"
+                otherStyles=""
                 keyboardType="default"
                 placeholder="Important warnings or precautions"
                 multiline={true}

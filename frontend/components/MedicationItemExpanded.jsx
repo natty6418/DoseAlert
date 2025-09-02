@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, Switch, ScrollView, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { router } from 'expo-router';
 import { icons } from '../constants';
 import { useApp } from '../contexts/AppContext';
 
@@ -280,7 +281,7 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
           </View>
 
           {/* Action Buttons */}
-          <View className="flex-row gap-3">
+          <View className="flex-row gap-3 mb-3">
             <TouchableOpacity
               onPress={handleSaveChanges}
               className="flex-1 bg-blue-600 py-3 px-4 rounded-lg flex-row items-center justify-center"
@@ -297,6 +298,22 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
               <Text className="text-gray-300 font-pmedium ml-2">Cancel</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Edit Medication Button */}
+          <TouchableOpacity
+            onPress={() => {
+              router.push({
+                pathname: '/(tabs)/(medication)/edit',
+                params: {
+                  medicationData: JSON.stringify(item)
+                }
+              });
+            }}
+            className="bg-secondary py-3 px-4 rounded-lg flex-row items-center justify-center"
+          >
+            <icons.Pencil color="#1f2937" size={20} />
+            <Text className="text-primary font-psemibold ml-2">Edit Medication Details</Text>
+          </TouchableOpacity>
         </ScrollView>
 
         {/* Time Picker */}
