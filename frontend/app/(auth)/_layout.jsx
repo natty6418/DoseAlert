@@ -1,7 +1,13 @@
-import { Stack } from 'expo-router'
+import { Redirect, Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
+import { useAuth } from '../../contexts/AuthContext';
 
 const AuthLayout = () => {
+  const { isAuthenticated } = useAuth();
+
+  if (isAuthenticated()) {
+    return <Redirect href="/home" />;
+  }
 
   return (
     <>

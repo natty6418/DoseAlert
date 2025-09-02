@@ -189,8 +189,8 @@ const CreateScreen = () => {
               visible={medicationCardModalVisible}
               onClose={() => setMedicationCardModalVisible(false)}
               dosage={selectedMedication.dosage}
-              startDate={selectedMedication.startDate}
-              endDate={selectedMedication.endDate}
+              startDate={selectedMedication.start_date}
+              endDate={selectedMedication.end_date}
               frequency={selectedMedication.frequency}
               medicationSpecification={selectedMedication.medicationSpecification}
               reminder={selectedMedication.reminder}

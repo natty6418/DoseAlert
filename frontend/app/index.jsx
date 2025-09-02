@@ -5,13 +5,13 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "../components/CustomButton";
 import { images } from "../constants";
 import "../global.css";
-import { useFirebaseContext } from "../contexts/FirebaseContext";
+import { useAuth } from "../contexts/AuthContext";
 
 
 export default function App() {
 
-  const context = useFirebaseContext();
-  if(!context.loading && context.isLoggedIn) return <Redirect href="/home" />
+  const { loading, isAuthenticated } = useAuth();
+  if(!loading && isAuthenticated()) return <Redirect href="/home" />
   return (
     <SafeAreaView className="bg-black-100 h-full">
     <ScrollView

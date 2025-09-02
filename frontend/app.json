@@ -15,14 +15,17 @@
     "ios": {
       "supportsTablet": true
     },
-
     "android": {
       "package": "com.DoseAlert.DoseAlert",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -31,13 +34,16 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-camera",
+      [
+        "expo-camera",
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
           "recordAudioAndroid": true
-        }],
-      ["expo-notifications",
+        }
+      ],
+      [
+        "expo-notifications",
         {
           "icon": "./assets/icons/pill.png",
           "color": "#082849"
@@ -46,6 +52,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "eab96720-e558-4503-844f-46814139b280"
+      }
     }
   }
 }

@@ -1,22 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Alert, Modal, BackHandler } from 'react-native';
-import { useFirebaseContext } from '../../../contexts/FirebaseContext';
+import { useAuth } from '../../../contexts/AuthContext';
 import FormField from '../../../components/FormField';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-import { updateUserProfile } from '../../../services/UserHandler';
+// import { updateUserProfile } from '../../../services/UserHandler';
 
 
 const AccountInfo = () => {
-  const { user, setUser } = useFirebaseContext(); // Assume this gets the logged-in user's info
+  const { user } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [newFirstName, setNewFirstName] = useState('');
-  const [newLastName, setNewLastName] = useState('');
-  const [newEmail, setNewEmail] = useState('');
+  const [newFirstName, setNewFirstName] = useState(user?.first_name || '');
+  const [newLastName, setNewLastName] = useState(user?.last_name || '');
+  // const [newEmail, setNewEmail] = useState(user?.email || '');
 
-  // Fetch user information on component mount
-    // Handle Save Changes
+  // Handle Save Changes
     useEffect(() => {
       const handleBackPress = () => {
           // Navigate back to the previous screen (Settings in this case)
@@ -35,17 +34,8 @@ const AccountInfo = () => {
   const handleSaveChanges = async () => {
     setIsSaving(true);
     try {
-      await updateUserProfile({
-        uid: user.id,
-        newFirstName,
-        newLastName,
-        newEmail: user.email, 
-      });
-      setUser((prev) => ({
-        ...prev,
-        firstName: newFirstName || prev.firstName,
-        lastName: newLastName || prev.lastName,
-      }));
+      // Mock profile update - in a real app this would call the API
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setIsModalVisible(false);
       Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {

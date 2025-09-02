@@ -16,10 +16,11 @@ const MedicationCardModal = ({
     isActive,
 }) => {
    
-    // Filter unique reminder times
-    const uniqueReminderTimes = [...new Set(reminder.reminderTimes.map(rt => rt.time?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })))];
+    // Filter unique reminder times - safely handle undefined reminderTimes
+    console.log("Reminders ", reminder);
+    const uniqueReminderTimes = [...new Set((reminder?.reminderTimes || []).map(rt => rt.time?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })))];
     // const uniqueReminderTimes = [...reminder.reminderTimes];
-    const checkedSideEffects = medicationSpecification.sideEffects.filter((sideEffect) => sideEffect.checked);
+    const checkedSideEffects = medicationSpecification.sideEffects?.filter((sideEffect) => sideEffect.checked) || [];
     return (
         <Modal
             animationType="slide"
@@ -71,13 +72,13 @@ const MedicationCardModal = ({
                             <View className="flex-row items-center">
 
                                 <Text className="text-white ml-2">
-                                    Start Date: {startDate.toLocaleDateString()}
+                                    Start Date: {startDate ? new Date(startDate).toLocaleDateString() : 'Not set'}
                                 </Text>
                             </View>
                             <View className="flex-row items-center">
 
                                 <Text className="text-white ml-2">
-                                    End Date: {endDate.toLocaleDateString()}
+                                    End Date: {endDate ? new Date(endDate).toLocaleDateString() : 'Not set'}
                                 </Text>
                             </View>
                         </View>
@@ -127,7 +128,7 @@ const MedicationCardModal = ({
                                     data={checkedSideEffects}
                                     scrollEnabled={false}
                                     keyExtractor={(item, index) => index.toString()}
-                                    renderItem={({ item, index }) => (
+                                    renderItem={({ item }) => (
                                         <View className="flex-row items-center">
 
                                             <View testID='checked'><icons.CheckCircle color="#A3E635" size={24} /></View>

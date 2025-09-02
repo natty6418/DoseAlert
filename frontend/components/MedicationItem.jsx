@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
-
 import { icons } from '../constants';
 
 
@@ -22,12 +21,14 @@ const MedicationItem = ({ item, onPress }) => {
       <View className="flex-1">
         <Text className="text-lime-400 text-xl font-semibold">{item.medicationSpecification.name}</Text>
         <View className="flex flex-row">
-          <Text className="text-gray-300 text-sm">{item.startDate?.toLocaleDateString()} - {item.endDate?.toLocaleDateString()}</Text>
+          <Text className="text-gray-300 text-sm">
+            {item.start_date ? new Date(item.start_date).toLocaleDateString() : ''} - {item.end_date ? new Date(item.end_date).toLocaleDateString() : ''}
+          </Text>
         </View>
       </View>
 
       {/* Alarm Icon if Reminder is Enabled */}
-      {item.reminder.enabled && (
+      {item.reminder?.enabled && (
         <icons.Clock color="#91D62A" size={24} />
       )}
     </TouchableOpacity>

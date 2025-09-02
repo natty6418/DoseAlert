@@ -18,7 +18,6 @@ import { useFocusEffect } from 'expo-router';
 
 
 const Home = () => {
-  const [isLoading, setIsLoading] = useState(true);
   const [expandedIndex, setExpandedIndex] = useState(null);
   const [upcomingMedicationReminders, setUpcomingMedicationReminders] = useState([]);
   
@@ -28,13 +27,14 @@ const Home = () => {
     user, 
     loadMedications, 
     updateMedication: updateMedicationContext,
-    setAdherenceResponseId
+    setAdherenceResponseId,
+    isLoading
   } = useApp();
   const { isAuthenticated } = useAuth();
 
   
   useEffect(()=>{
-    if (!isAuthenticated) {
+    if (!isAuthenticated()) {
      router.replace('/signIn');
     }
     
@@ -80,24 +80,11 @@ const Home = () => {
     };
 }, []);
 
-  // Load medications on component mount
   useEffect(() => {
-    const initializeData = async () => {
-      try {
-        if (!user) return;
-        
-        setIsLoading(true);
-        // Load medications using AppContext
-        await loadMedications();
-        setIsLoading(false);
-      } catch (error) {
-        console.log('Error loading medications:', error);
-        setIsLoading(false);
-      }
-    };
-    
-    initializeData();
-  }, [user?.id, loadMedications]);
+    if (user?.id) {
+      loadMedications();
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     // Filter medications to show only active ones with reminders enabled

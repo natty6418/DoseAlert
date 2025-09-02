@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, Modal } from 'react-native';
-import { useFirebaseContext } from '../../../contexts/FirebaseContext';
-import { setEmergencyContact } from '../../../services/UserHandler';
+import { useAuth } from '../../../contexts/AuthContext';
+// import { setEmergencyContact } from '../../../services/UserHandler';
 
 const EmergencyInfo = () => {
-  const { user, setUser } = useFirebaseContext();
-  const [emergencyInfo, setEmergencyInfo] = useState(user.emergencyContact || null); // Directly use the emergency contact from user
-  const [isModalVisible, setIsModalVisible] = useState(false); // Modal visibility
+  const { user } = useAuth();
+  // Mock emergency contact - in a real app this would come from user profile API
+  const mockEmergencyContact = null;
+  const [emergencyInfo, setEmergencyInfo] = useState(mockEmergencyContact);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [form, setForm] = useState({
     name: emergencyInfo?.name || '',
@@ -14,7 +16,7 @@ const EmergencyInfo = () => {
     relationship: emergencyInfo?.relationship || '',
   });
 
-  // Handle Save Changes
+  // Handle Save Changes - Mock implementation
   const handleSaveChanges = async () => {
     if (!form.name || !form.email || !form.relationship) {
       Alert.alert('Error', 'Please fill out all fields.');
@@ -28,11 +30,11 @@ const EmergencyInfo = () => {
 
     setIsSaving(true);
     try {
-      await setEmergencyContact(user.id, form);
+      // Mock saving - in a real app this would call the API
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setEmergencyInfo(form);
-      setUser((prev) => ({ ...prev, emergencyContact: form }));
+      Alert.alert('Success', 'Emergency contact saved successfully!');
       setIsModalVisible(false);
-      Alert.alert('Success', 'Emergency contact updated successfully.');
     } catch (error) {
       console.error('Error saving emergency contact:', error);
       Alert.alert('Error', 'Failed to update emergency contact.');

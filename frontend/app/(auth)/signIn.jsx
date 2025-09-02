@@ -14,7 +14,7 @@ import { loginUser } from '../../services/UserHandler';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SignIn = () => {
-    const { refreshAuthState } = useAuth();
+    const { refreshAuthState, loginAsGuest } = useAuth();
 
     const [form, setForm] = useState({
         email: "",
@@ -38,6 +38,17 @@ const SignIn = () => {
         setError(error.message);
       } finally {
         setLoading(false);
+      }
+    };
+
+    const handleSkip = async () => {
+      try {
+        await loginAsGuest();
+        console.log('Guest login completed');
+        // AuthLayout will handle the redirect automatically
+      } catch (error) {
+        console.error('Error during guest login:', error);
+        setError('Failed to continue as guest. Please try again.');
       }
     };
     
@@ -82,6 +93,12 @@ const SignIn = () => {
             handlePress={handleLogin}
             containerStyles="mt-7 bg-secondary-200"
             isLoading={loading}
+          />
+
+          <CustomButton
+            title="Skip for now"
+            handlePress={handleSkip}
+            containerStyles="mt-7 bg-gray-500"
           />
 
           <View className="flex justify-center pt-5 flex-row gap-2">

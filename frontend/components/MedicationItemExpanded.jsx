@@ -9,7 +9,7 @@ const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdate
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [pickerTime, setPickerTime] = useState(null);
   const [selectedReminderIndex, setSelectedReminderIndex] = useState(null); // To track the index of the reminder being edited
-  const [reminderTimes, setReminderTimes] = useState(item.reminder.reminderTimes || []);
+  const [reminderTimes, setReminderTimes] = useState(item.reminder?.reminderTimes || []);
 
   const handleTimeChange = (event, selectedDate, index = null) => {
     setShowTimePicker(false);
@@ -57,7 +57,7 @@ const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdate
           </Text>
           <View className="flex flex-row">
             <Text className="text-gray-300 text-sm">
-              {item.startDate.toLocaleDateString()} - {item.endDate.toLocaleDateString()}
+              {item.start_date ? new Date(item.start_date).toLocaleDateString() : 'Not set'} - {item.end_date ? new Date(item.end_date).toLocaleDateString() : 'Not set'}
             </Text>
           </View>
         </View>
@@ -72,14 +72,14 @@ const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdate
         <View className="flex-row items-center mb-2">
           <Text className="text-lime-500 font-semibold text-lg">Reminder</Text>
           <Switch
-            value={item.reminder.enabled}
+            value={item.reminder?.enabled || false}
             onValueChange={(value) => onToggleReminder(value)}
             testID='reminder-switch'
           />
         </View>
 
         {/* Time Picker */}
-        {item.reminder.enabled && (
+        {item.reminder?.enabled && (
           <View className="items-center flex-row gap-2 flex-wrap">
             {reminderTimes && reminderTimes.length > 0 && (
               reminderTimes.map(({ time }, index) => (

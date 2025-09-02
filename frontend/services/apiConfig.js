@@ -1,67 +1,31 @@
-// apiConfig.js
-// Common configuration and utilities for Django backend API
+// API Configuration for local SQLite database
+// This file maintains the API structure for local database operations
 
-export const BASE_URL = 'http://localhost:8000/api';
+// Local database configuration
+export const DATABASE_CONFIG = {
+  name: 'dosealert.db'
+};
 
-export function getAuthHeaders(token) {
-  return {
-    'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`,
-  };
-}
-
-export function getHeaders() {
-  return {
-    'Content-Type': 'application/json',
-  };
-}
-
-// Helper function to handle API responses
-export async function handleApiResponse(response) {
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(JSON.stringify(error));
+// Helper function to get current user ID from local storage
+export const getCurrentUserId = async () => {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const user = await AsyncStorage.getItem('user');
+    return user ? JSON.parse(user).id : null;
+  } catch (error) {
+    console.error('Error getting current user ID:', error);
+    return null;
   }
-  return response.json();
-}
+};
 
-// Helper function to make authenticated GET requests
-export async function apiGet(endpoint, token) {
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    headers: getAuthHeaders(token),
-  });
-  return handleApiResponse(response);
-}
-
-// Helper function to make authenticated POST requests
-export async function apiPost(endpoint, token, data) {
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    method: 'POST',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify(data),
-  });
-  return handleApiResponse(response);
-}
-
-// Helper function to make authenticated PATCH requests
-export async function apiPatch(endpoint, token, data) {
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    method: 'PATCH',
-    headers: getAuthHeaders(token),
-    body: JSON.stringify(data),
-  });
-  return handleApiResponse(response);
-}
-
-// Helper function to make authenticated DELETE requests
-export async function apiDelete(endpoint, token) {
-  const response = await fetch(`${BASE_URL}${endpoint}`, {
-    method: 'DELETE',
-    headers: getAuthHeaders(token),
-  });
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(JSON.stringify(error));
+// Helper function to check if user is authenticated
+export const isAuthenticated = async () => {
+  try {
+    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+    const token = await AsyncStorage.getItem('accessToken');
+    return !!token;
+  } catch (error) {
+    console.error('Error checking authentication:', error);
+    return false;
   }
-  return true;
-}
+};

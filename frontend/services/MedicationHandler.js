@@ -1,129 +1,180 @@
 // MedicationHandler.js
-// Handles medication CRUD logic using Django backend API
+// Handles medication CRUD logic using Drizzle ORM
 
-const BASE_URL = 'http://localhost:8000/api';
+import { getDatabase, isDatabaseInitialized, setupDatabase, medications } from './database.js';
+import { eq, and, desc } from 'drizzle-orm';
 
-// Transform app medication data to API format
-function transformToApiFormat(medicationData) {
+// Ensure database is initialized before any operations
+const ensureDbInitialized = async () => {
+  if (!isDatabaseInitialized()) {
+    await setupDatabase();
+  }
+  return getDatabase();
+};
+
+// Transform medication data to database format
+function transformToDbFormat(medicationData) {
+  let sideEffectsString = '';
+  if (Array.isArray(medicationData.medicationSpecification?.sideEffects)) {
+    sideEffectsString = JSON.stringify(medicationData.medicationSpecification.sideEffects);
+  } else if (Array.isArray(medicationData.side_effects)) {
+    sideEffectsString = JSON.stringify(medicationData.side_effects);
+  } else if (medicationData.medicationSpecification?.sideEffects) {
+    sideEffectsString = medicationData.medicationSpecification.sideEffects;
+  } else if (medicationData.side_effects) {
+    sideEffectsString = medicationData.side_effects;
+  }
+
   return {
     name: medicationData.medicationSpecification?.name || medicationData.name,
     directions: medicationData.medicationSpecification?.directions || medicationData.directions,
-    side_effects: Array.isArray(medicationData.medicationSpecification?.sideEffects) 
-      ? medicationData.medicationSpecification.sideEffects.join(', ') 
-      : medicationData.medicationSpecification?.sideEffects || medicationData.sideEffects,
+    sideEffects: sideEffectsString,
     purpose: medicationData.medicationSpecification?.purpose || medicationData.purpose,
     warnings: medicationData.medicationSpecification?.warnings || medicationData.warnings,
-    dosage_amount: parseFloat(medicationData.dosage?.amount || 0),
-    dosage_unit: medicationData.dosage?.unit || 'mg',
+    dosageAmount: medicationData.dosage?.amount || medicationData.dosage_amount || '0',
+    dosageUnit: medicationData.dosage?.unit || medicationData.dosage_unit || 'mg',
     notes: medicationData.notes || '',
-    start_date: medicationData.startDate ? new Date(medicationData.startDate).toISOString().split('T')[0] : null,
-    end_date: medicationData.endDate ? new Date(medicationData.endDate).toISOString().split('T')[0] : null,
+    startDate: medicationData.start_date ? new Date(medicationData.start_date).toISOString().split('T')[0] : 
+               new Date().toISOString().split('T')[0],
+    endDate: medicationData.end_date ? new Date(medicationData.end_date).toISOString().split('T')[0] : null,
     frequency: medicationData.frequency || 'Daily',
   };
 }
 
-// Transform API medication data to app format
-function transformFromApiFormat(apiData) {
+// Transform database medication data to app format
+function transformFromDbFormat(dbData) {
+  let sideEffects = [];
+  try {
+    sideEffects = dbData.sideEffects ? JSON.parse(dbData.sideEffects) : [];
+  } catch {
+    // If parsing fails, treat as string and convert to array
+    sideEffects = dbData.sideEffects ? [dbData.sideEffects] : [];
+  }
+
   return {
-    id: apiData.id,
+    id: dbData.id,
+    name: dbData.name,
+    directions: dbData.directions,
+    side_effects: sideEffects,
+    purpose: dbData.purpose,
+    warnings: dbData.warnings,
+    dosage_amount: dbData.dosageAmount,
+    dosage_unit: dbData.dosageUnit,
+    notes: dbData.notes,
+    start_date: dbData.startDate,
+    end_date: dbData.endDate,
+    frequency: dbData.frequency,
+    // Also provide the nested format for backward compatibility
     medicationSpecification: {
-      name: apiData.name,
-      directions: apiData.directions,
-      sideEffects: apiData.side_effects ? apiData.side_effects.split(', ') : [],
-      purpose: apiData.purpose,
-      warnings: apiData.warnings,
+      name: dbData.name,
+      directions: dbData.directions,
+      sideEffects: sideEffects,
+      purpose: dbData.purpose,
+      warnings: dbData.warnings,
     },
     dosage: {
-      amount: apiData.dosage_amount?.toString() || '0',
-      unit: apiData.dosage_unit || 'mg',
+      amount: dbData.dosageAmount,
+      unit: dbData.dosageUnit,
     },
-    startDate: apiData.start_date ? new Date(apiData.start_date) : null,
-    endDate: apiData.end_date ? new Date(apiData.end_date) : null,
-    frequency: apiData.frequency,
-    notes: apiData.notes,
-    isActive: true, // App-specific field
-    reminder: { // App-specific structure
-      enabled: false, // Will be set based on schedules
+    isActive: true,
+    reminder: {
+      enabled: false,
       times: [],
     },
-    createdAt: apiData.created_at ? new Date(apiData.created_at) : new Date(),
+    createdAt: dbData.createdAt ? new Date(dbData.createdAt) : new Date(),
   };
 }
 
 // Create a new medication
-export async function addMedication(makeAuthenticatedRequest, medicationData) {
-  const apiData = transformToApiFormat(medicationData);
-  
-  const res = await makeAuthenticatedRequest(`${BASE_URL}/meds/`, {
-    method: 'POST',
-    body: JSON.stringify(apiData),
-  });
-  
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(JSON.stringify(error));
+export async function addMedication(userId, medicationData) {
+  try {
+    const db = await ensureDbInitialized();
+    const dbData = transformToDbFormat(medicationData);
+    
+    const result = await db.insert(medications).values({
+      userId,
+      ...dbData
+    }).returning();
+    
+    return transformFromDbFormat(result[0]);
+  } catch (error) {
+    console.error('Error adding medication:', error);
+    throw new Error(`Failed to add medication: ${error.message}`);
   }
-  
-  const responseData = await res.json();
-  return transformFromApiFormat(responseData);
 }
 
 // Get all medications for authenticated user
-export async function getMedications(makeAuthenticatedRequest) {
-  const res = await makeAuthenticatedRequest(`${BASE_URL}/meds/`);
-  
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(JSON.stringify(error));
+export async function getMedications(userId) {
+  try {
+    const db = await ensureDbInitialized();
+    
+    const results = await db.select()
+      .from(medications)
+      .where(eq(medications.userId, userId))
+      .orderBy(desc(medications.createdAt));
+    
+    return results.map(transformFromDbFormat);
+  } catch (error) {
+    console.error('Error getting medications:', error);
+    throw new Error(`Failed to get medications: ${error.message}`);
   }
-  
-  const medications = await res.json();
-  return medications.map(transformFromApiFormat);
 }
 
 // Get a specific medication
-export async function getMedication(makeAuthenticatedRequest, medicationId) {
-  const res = await makeAuthenticatedRequest(`${BASE_URL}/meds/${medicationId}/`);
-  
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(JSON.stringify(error));
+export async function getMedication(userId, medicationId) {
+  try {
+    const db = await ensureDbInitialized();
+    
+    const result = await db.select()
+      .from(medications)
+      .where(and(eq(medications.id, medicationId), eq(medications.userId, userId)));
+    
+    if (!result || result.length === 0) {
+      throw new Error('Medication not found');
+    }
+    
+    return transformFromDbFormat(result[0]);
+  } catch (error) {
+    console.error('Error getting medication:', error);
+    throw new Error(`Failed to get medication: ${error.message}`);
   }
-  
-  const responseData = await res.json();
-  return transformFromApiFormat(responseData);
 }
 
 // Update a medication
-export async function updateMedication(makeAuthenticatedRequest, medicationId, updates) {
-  const apiData = transformToApiFormat(updates);
-  
-  const res = await makeAuthenticatedRequest(`${BASE_URL}/meds/${medicationId}/`, {
-    method: 'PATCH',
-    body: JSON.stringify(apiData),
-  });
-  
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(JSON.stringify(error));
+export async function updateMedication(userId, medicationId, updates) {
+  try {
+    const db = await ensureDbInitialized();
+    const dbData = transformToDbFormat(updates);
+    
+    const result = await db.update(medications)
+      .set(dbData)
+      .where(and(eq(medications.id, medicationId), eq(medications.userId, userId)))
+      .returning();
+    
+    if (!result || result.length === 0) {
+      throw new Error('Medication not found or update failed');
+    }
+    
+    return transformFromDbFormat(result[0]);
+  } catch (error) {
+    console.error('Error updating medication:', error);
+    throw new Error(`Failed to update medication: ${error.message}`);
   }
-  
-  const responseData = await res.json();
-  return transformFromApiFormat(responseData);
 }
 
 // Delete a medication
-export async function deleteMedication(makeAuthenticatedRequest, medicationId) {
-  const res = await makeAuthenticatedRequest(`${BASE_URL}/meds/${medicationId}/`, {
-    method: 'DELETE',
-  });
-  
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(JSON.stringify(error));
+export async function deleteMedication(userId, medicationId) {
+  try {
+    const db = await ensureDbInitialized();
+    
+    await db.delete(medications)
+      .where(and(eq(medications.id, medicationId), eq(medications.userId, userId)));
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting medication:', error);
+    throw new Error(`Failed to delete medication: ${error.message}`);
   }
-  
-  return true;
 }
 
 // Legacy function for backward compatibility
@@ -156,93 +207,133 @@ export async function addNewMedication(medicationData) {
 
 // ===== SCHEDULE MANAGEMENT =====
 
-// Transform app schedule data to API format
-function transformScheduleToApiFormat(scheduleData, medicationId) {
+// Transform app schedule data to database format
+function transformScheduleToDbFormat(scheduleData, medicationId) {
   return {
-    medication: medicationId,
+    medication_id: medicationId,
     time_of_day: scheduleData.time || '08:00:00',
     days_of_week: scheduleData.days || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
     timezone: scheduleData.timezone || 'UTC',
     active: scheduleData.active !== false,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 }
 
-// Transform API schedule data to app format
-function transformScheduleFromApiFormat(apiData) {
+// Transform database schedule data to app format
+function transformScheduleFromDbFormat(dbData) {
   return {
-    id: apiData.id,
-    medicationId: apiData.medication.id || apiData.medication,
-    time: apiData.time_of_day,
-    days: apiData.days_of_week,
-    timezone: apiData.timezone,
-    active: apiData.active,
-    isEffectivelyActive: apiData.is_effectively_active,
-    medication: apiData.medication,
-    createdAt: apiData.created_at ? new Date(apiData.created_at) : new Date(),
+    id: dbData.id,
+    medicationId: dbData.medication_id,
+    time: dbData.time_of_day,
+    days: dbData.days_of_week,
+    timezone: dbData.timezone,
+    active: dbData.active,
+    createdAt: dbData.created_at ? new Date(dbData.created_at) : new Date(),
   };
 }
 
 // Create a new schedule
-export async function addSchedule(makeAuthenticatedRequest, medicationId, scheduleData) {
-  const apiData = transformScheduleToApiFormat(scheduleData, medicationId);
-  
-  const res = await makeAuthenticatedRequest(`${BASE_URL}/schedules/`, {
-    method: 'POST',
-    body: JSON.stringify(apiData),
-  });
-  
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(JSON.stringify(error));
+export async function addSchedule(userId, medicationId, scheduleData) {
+  try {
+    const db = await ensureDbInitialized();
+    const dbData = transformScheduleToDbFormat(scheduleData, medicationId);
+    
+    const result = await db.runAsync(
+      `INSERT INTO reminders (
+        medication_id, time, is_active
+      ) VALUES (?, ?, ?)`,
+      [
+        medicationId,
+        dbData.time_of_day,
+        dbData.active ? 1 : 0
+      ]
+    );
+    
+    // Get the created reminder
+    const reminder = await db.getFirstAsync(
+      'SELECT * FROM reminders WHERE id = ?',
+      [result.lastInsertRowId]
+    );
+    
+    return transformScheduleFromDbFormat(reminder);
+  } catch (error) {
+    console.error('Error adding schedule:', error);
+    throw new Error(`Failed to add schedule: ${error.message}`);
   }
-  
-  const responseData = await res.json();
-  return transformScheduleFromApiFormat(responseData);
 }
 
 // Get all schedules for authenticated user
-export async function getSchedules(makeAuthenticatedRequest) {
-  const res = await makeAuthenticatedRequest(`${BASE_URL}/schedules/`);
-  
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(JSON.stringify(error));
+export async function getSchedules(userId) {
+  try {
+    const db = await ensureDbInitialized();
+    
+    const schedules = await db.getAllAsync(
+      `SELECT r.*, m.name as medication_name 
+       FROM reminders r 
+       JOIN medications m ON r.medication_id = m.id 
+       WHERE m.user_id = ? 
+       ORDER BY r.time`,
+      [userId]
+    );
+    
+    return schedules.map(transformScheduleFromDbFormat);
+  } catch (error) {
+    console.error('Error getting schedules:', error);
+    throw new Error(`Failed to get schedules: ${error.message}`);
   }
-  
-  const schedules = await res.json();
-  return schedules.map(transformScheduleFromApiFormat);
 }
 
 // Update a schedule
-export async function updateSchedule(makeAuthenticatedRequest, scheduleId, updates) {
-  const apiData = transformScheduleToApiFormat(updates, updates.medicationId);
-  
-  const res = await makeAuthenticatedRequest(`${BASE_URL}/schedules/${scheduleId}/`, {
-    method: 'PATCH',
-    body: JSON.stringify(apiData),
-  });
-  
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(JSON.stringify(error));
+export async function updateSchedule(userId, scheduleId, updates) {
+  try {
+    const db = await ensureDbInitialized();
+    
+    await db.runAsync(
+      `UPDATE reminders SET 
+        time = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ? AND medication_id IN (
+        SELECT id FROM medications WHERE user_id = ?
+      )`,
+      [
+        updates.time || '08:00:00',
+        updates.active ? 1 : 0,
+        scheduleId,
+        userId
+      ]
+    );
+    
+    // Get the updated reminder
+    const reminder = await db.getFirstAsync(
+      'SELECT * FROM reminders WHERE id = ?',
+      [scheduleId]
+    );
+    
+    return transformScheduleFromDbFormat(reminder);
+  } catch (error) {
+    console.error('Error updating schedule:', error);
+    throw new Error(`Failed to update schedule: ${error.message}`);
   }
-  
-  const responseData = await res.json();
-  return transformScheduleFromApiFormat(responseData);
 }
 
 // Delete a schedule
-export async function deleteSchedule(makeAuthenticatedRequest, scheduleId) {
-  const res = await makeAuthenticatedRequest(`${BASE_URL}/schedules/${scheduleId}/`, {
-    method: 'DELETE',
-  });
-  
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(JSON.stringify(error));
+export async function deleteSchedule(userId, scheduleId) {
+  try {
+    const db = await ensureDbInitialized();
+    
+    await db.runAsync(
+      `DELETE FROM reminders 
+      WHERE id = ? AND medication_id IN (
+        SELECT id FROM medications WHERE user_id = ?
+      )`,
+      [scheduleId, userId]
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Error deleting schedule:', error);
+    throw new Error(`Failed to delete schedule: ${error.message}`);
   }
-  
-  return true;
 }
 
 

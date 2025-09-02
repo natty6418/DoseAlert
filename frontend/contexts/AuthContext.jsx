@@ -35,9 +35,13 @@ const AuthProvider = ({ children }) => {
   const [refreshToken, setRefreshToken] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
 
   // Get a valid access token, refreshing if necessary
   const getValidAccessToken = async () => {
+    if (isGuest) {
+      throw new Error('Operation not available for guest users');
+    }
     if (!accessToken || !refreshToken) {
       throw new Error('No tokens available');
     }
@@ -166,13 +170,19 @@ const AuthProvider = ({ children }) => {
       setAccessToken(null);
       setRefreshToken(null);
       setUser(null);
+      setIsGuest(false);
     } catch (error) {
       console.error('Error clearing tokens:', error);
     }
   };
 
+  const loginAsGuest = async () => {
+    await clearTokens();
+    setIsGuest(true);
+  };
+
   const isAuthenticated = () => {
-    return !!accessToken;
+    return !!accessToken || isGuest;
   };
 
   // Refresh auth state from storage (useful after external login)
@@ -185,6 +195,7 @@ const AuthProvider = ({ children }) => {
     accessToken,
     refreshToken,
     loading,
+    isGuest,
     storeTokens,
     clearTokens,
     isAuthenticated,
@@ -192,6 +203,7 @@ const AuthProvider = ({ children }) => {
     getValidAccessToken,
     makeAuthenticatedRequest,
     refreshAuthState,
+    loginAsGuest,
   };
 
   return (

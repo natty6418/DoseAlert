@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Modal, View, ScrollView,TextInput, Text, Switch, TouchableOpacity } from 'react-native';
+import { Modal, View, ScrollView,TextInput, Text, Switch, TouchableOpacity, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import PropTypes from 'prop-types';
 import PickerComponent from './Picker';
 import FormField from './FormField';
 import CustomButton from './CustomButton';
-import { addMedication, addSchedule } from '../services/MedicationHandler';
+import { addMedication } from '../services/MedicationHandler';
 // import { useApp } from '../contexts/AppContext';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from './Loading';
@@ -16,10 +16,10 @@ import SideEffectChecklist from './SideEffectChecklist';
 import ErrorModal from './ErrorModal';
 
 const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) => {
-    const [name, setName] = useState(medicationData?.name || '');
-    const [dosage, setDosage] = useState({ amount: '', unit: '' });
-    const [startDate, setStartDate] = useState(null);
-    const [endDate, setEndDate] = useState(null);
+    const [name, setName] = useState(medicationData?.name || 'Aspirin');
+    const [dosage, setDosage] = useState({ amount: '200', unit: 'mg' });
+    const [startDate, setStartDate] = useState(new Date());
+    const [endDate, setEndDate] = useState(new Date());
     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
     const [frequency, setFrequency] = useState('Daily');
@@ -33,9 +33,8 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [newSideEffect, setNewSideEffect] = useState('');
 
-    // Use AppContext and AuthContext
-    // const { showError, showLoading, hideLoading } = useApp();
-    const { makeAuthenticatedRequest } = useAuth();
+    // Use AuthContext
+    const { user } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
 
@@ -112,8 +111,20 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
     const handleSavePlan = async () => {
         setIsLoading(true);
         try {
-            // Prepare medication data in app format
+            // Create unified medication data structure
             const medicationData = {
+                name,
+                directions,
+                side_effects: sideEffects.filter(effect => effect.checked).map(effect => effect.term),
+                purpose,
+                warnings: warning,
+                dosage_amount: dosage.amount,
+                dosage_unit: dosage.unit,
+                start_date: startDate?.toISOString().split('T')[0],
+                end_date: endDate?.toISOString().split('T')[0],
+                frequency,
+                notes: '',
+                // Also include nested format for backward compatibility
                 medicationSpecification: {
                     name,
                     directions,
@@ -121,39 +132,33 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                     purpose,
                     warnings: warning,
                 },
-                dosage,
+                dosage: {
+                    amount: dosage.amount,
+                    unit: dosage.unit,
+                },
                 startDate,
                 endDate,
-                frequency,
-                notes: '',
             };
 
-            // Add medication via API
-            const createdMedication = await addMedication(makeAuthenticatedRequest, medicationData);
-
-            // If reminders are enabled, create schedules
-            if (reminderEnabled && reminderTimes.length > 0) {
-                const schedulePromises = reminderTimes.map(time => {
-                    const scheduleData = {
-                        time: time.toTimeString().slice(0, 8), // HH:MM:SS format
-                        days: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', // Daily by default
-                        active: true,
-                    };
-                    return addSchedule(makeAuthenticatedRequest, createdMedication.id, scheduleData);
-                });
-
-                await Promise.all(schedulePromises);
-            }
-
-            // Update the medication object with reminder info for UI consistency
+            // Get userId - for guest users, we might use a default value or handle differently
+            const userId = user?.id || 1; // Default to 1 for guest users
+            
+            console.log('Saving medication data:', medicationData); // Debug log
+            
+            // Use the unified addMedication function
+            const createdMedication = await addMedication(userId, medicationData);
+            
+            console.log('Medication created:', createdMedication); // Debug log
+            
+            // Add reminder data to the response
             const finalMedication = {
                 ...createdMedication,
                 reminder: {
                     enabled: reminderEnabled,
-                    times: reminderTimes,
-                },
+                    times: reminderTimes
+                }
             };
-
+            
             onSave(finalMedication);
             resetToDefault();
             onClose();
@@ -232,7 +237,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             <DateTimePicker
                                 value={startDate || new Date()}
                                 mode="date"
-                                display="default"
+                                display={Platform.OS === 'ios' ? 'inline' : 'default'}
                                 onChange={handleStartDateChange}
                                 minimumDate={new Date()}
                                 maximumDate={new Date(new Date().setMonth(new Date().getMonth() + 1))}
@@ -250,7 +255,7 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
                             <DateTimePicker
                                 value={endDate || new Date()}
                                 mode="date"
-                                display="default"
+                                display={Platform.OS === 'ios' ? 'inline' : 'default'}
                                 onChange={handleEndDateChange}
                                 minimumDate={startDate || new Date()}
                                 maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}

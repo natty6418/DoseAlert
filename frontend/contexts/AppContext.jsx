@@ -1,5 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import { getMedications } from '../services/MedicationHandler';
+import { setupDatabase } from '../services/database';
+import { useAuth } from './AuthContext';
 
 const AppContext = createContext({});
 
@@ -51,7 +54,10 @@ const AppProvider = ({ children }) => {
   const [missedDoses, setMissedDoses] = useState([]);
 
   // App initialization
+  const { user } = useAuth();
+
   useEffect(() => {
+    setupDatabase();
     initializeApp();
   }, []);
 
@@ -151,9 +157,22 @@ const AppProvider = ({ children }) => {
     setActiveMedications(prev => prev.filter(med => med.id !== id));
   };
 
-  const loadMedications = (medicationList) => {
-    setMedications(medicationList);
-    setActiveMedications(medicationList.filter(med => med.isActive));
+  const loadMedications = async () => {
+    try {
+      setIsLoading(true);
+      
+      if (user?.id) {
+        // Fetch medications from local SQLite database
+        const meds = await getMedications(user.id);
+        setMedications(meds);
+        setActiveMedications(meds.filter(med => med.isActive));
+      }
+    } catch (error) {
+      console.error('Failed to load medications:', error);
+      setError('Failed to load medications');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // ===== SCHEDULE MANAGEMENT =====

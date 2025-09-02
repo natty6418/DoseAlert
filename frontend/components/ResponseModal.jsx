@@ -2,20 +2,21 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Alert, Modal } from 'react-native';
 import { recordAdherence } from '../services/AdherenceTracker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useFirebaseContext } from '../contexts/FirebaseContext';
+import { useAuth } from '../contexts/AuthContext';
 import emailEmergencyContact from '../services/EmergencyServiceHandler';
 
 const ResponseModal = ({id, name, visible, onClose, setAdherenceData, adherenceData}) => {
-    const { user } = useFirebaseContext();
+    const { user } = useAuth();
     const handleSendEmail = async () => {
-        const emergencyInfo = user.emergencyContact;
+        // Mock emergency contact for now - would need to get from user profile API
+        const emergencyInfo = { email: 'emergency@example.com' };
         if (!emergencyInfo || !emergencyInfo.email) {
           Alert.alert('Error', 'No emergency contact email found.');
           return;
         }
             
         try {
-          await emailEmergencyContact(emergencyInfo.email, user.firstName, name);
+          await emailEmergencyContact(emergencyInfo.email, user?.first_name || 'User', name);
           
         } catch (error) {
           console.error('Error sending email:', error);
@@ -24,15 +25,18 @@ const ResponseModal = ({id, name, visible, onClose, setAdherenceData, adherenceD
       };
       
     const handleConfirmAdherence = () => {
-            setAdherenceData((prev) => ({
-                ...prev,
-                [id]: {
-                    taken: prev[id]?.taken ? prev[id].taken + 1 : 1,
-                    missed: prev[id]?.missed ? prev[id].missed : 0,
-                    prevMiss: false,
-                    consecutiveMisses: 0,
-                },
-            }));
+        // Get current data or use defaults
+        const currentData = adherenceData[id] || { taken: 0, missed: 0, prevMiss: false, consecutiveMisses: 0 };
+        
+        setAdherenceData((prev) => ({
+            ...prev,
+            [id]: {
+                taken: currentData.taken + 1,
+                missed: currentData.missed,
+                prevMiss: false,
+                consecutiveMisses: 0,
+            },
+        }));
             recordAdherence(id, true).catch((error) => {
                 console.error("Error recording adherence:", error);
                 Alert.alert('Error', 'Failed to record medication adherence.');
@@ -43,17 +47,22 @@ const ResponseModal = ({id, name, visible, onClose, setAdherenceData, adherenceD
         
     };
     const handleCancel = () => {
+        // Calculate the new consecutive misses count before updating state
+        const currentData = adherenceData[id] || { taken: 0, missed: 0, prevMiss: false, consecutiveMisses: 0 };
+        const newConsecutiveMisses = currentData.prevMiss ? currentData.consecutiveMisses + 1 : 1;
 
         setAdherenceData((prev) => ({
             ...prev,
             [id]: {
-                taken: prev[id]?.taken ? prev[id].taken : 0,
-                missed: prev[id]?.missed ? prev[id].missed + 1 : 1,
+                taken: currentData.taken,
+                missed: currentData.missed + 1,
                 prevMiss: true,
-                consecutiveMisses: prev[id]?.prevMiss ? prev[id].consecutiveMisses + 1 : 1,
+                consecutiveMisses: newConsecutiveMisses,
             },
         }));
-        if(adherenceData[id].consecutiveMisses >= 2){
+        
+        // Use the calculated value instead of accessing the old adherenceData
+        if(newConsecutiveMisses >= 2){
             handleSendEmail();
         }
 

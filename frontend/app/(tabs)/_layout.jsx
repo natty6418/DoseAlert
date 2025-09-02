@@ -2,7 +2,7 @@ import { Image, View, Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import icons from '../../constants/icons';
 import { StatusBar } from 'expo-status-bar';
-
+import { useAuth } from '../../contexts/AuthContext';
 
 const TabIcon = ({ icon, color, name, focused }) => {
 
@@ -25,6 +25,8 @@ const TabIcon = ({ icon, color, name, focused }) => {
 };
 
 const TabsLayout = () => {
+  const { isGuest } = useAuth();
+
   return (
     <>
       <Tabs
@@ -78,24 +80,26 @@ const TabsLayout = () => {
         }}
         />
         
-        <Tabs.Screen
-          name="report" 
-          
-          options={{
-            title: "Report", 
-            headerShown: false,
-            tabBarIcon: ({ color, focused }) => (
-              <View className="flex items-center justify-center gap-2">
-          <icons.Newspaper size={24} color={color} />
-          <Text
-            className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
-            style={{ color: color }}
-          >
-            Report
-          </Text>
-        </View>),
-          }}
-        />
+        {!isGuest && (
+          <Tabs.Screen
+            name="report" 
+            
+            options={{
+              title: "Report", 
+              headerShown: false,
+              tabBarIcon: ({ color, focused }) => (
+                <View className="flex items-center justify-center gap-2">
+            {/* <icons.Newspaper size={24} color={color} /> */}
+            <Text
+              className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
+              style={{ color: color }}
+            >
+              Report
+            </Text>
+          </View>),
+            }}
+          />
+        )}
 
     <Tabs.Screen
       name="settings"
@@ -104,7 +108,7 @@ const TabsLayout = () => {
         headerShown: false,
         tabBarIcon: ({ color, focused }) => (
           <View className="flex items-center justify-center gap-2">
-      <icons.Cog size={24} color={color} />
+      {/* <icons.Cog size={24} color={color} /> */}
       <Text
         className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
         style={{ color: color }}
