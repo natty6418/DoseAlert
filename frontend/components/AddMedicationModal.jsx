@@ -1,183 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { Modal, View, ScrollView,TextInput, Text, Switch, TouchableOpacity, Platform } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import React from 'react';
+import { Modal, View, TouchableOpacity, Text } from 'react-native';
+import { router } from 'expo-router';
 import PropTypes from 'prop-types';
-import PickerComponent from './Picker';
-import FormField from './FormField';
-import CustomButton from './CustomButton';
-import { addMedication } from '../services/MedicationHandler';
-// import { useApp } from '../contexts/AppContext';
-import { useAuth } from '../contexts/AuthContext';
-import LoadingSpinner from './Loading';
 import { icons } from '../constants';
-import * as Notifications from 'expo-notifications';
-import { registerForPushNotificationsAsync } from '../services/Scheduler';
-import SideEffectChecklist from './SideEffectChecklist';
-import ErrorModal from './ErrorModal';
 
-const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) => {
-    const [name, setName] = useState(medicationData?.name || 'Aspirin');
-    const [dosage, setDosage] = useState({ amount: '200', unit: 'mg' });
-    const [startDate, setStartDate] = useState(new Date());
-    const [endDate, setEndDate] = useState(new Date());
-    const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-    const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-    const [frequency, setFrequency] = useState('Daily');
-    const [directions, setDirections] = useState(medicationData?.directions || '');
-    const [purpose, setPurpose] = useState(medicationData?.purpose || '');
-    const [sideEffects, setSideEffects] = useState(
-        medicationData?.sideEffects?.map(effect => ({ term: effect, checked: false })) || []);
-    const [warning, setWarning] = useState(medicationData?.warnings || '');
-    const [reminderEnabled, setReminderEnabled] = useState(false);
-    const [reminderTimes, setReminderTimes] = useState([]);
-    const [showTimePicker, setShowTimePicker] = useState(false);
-    const [newSideEffect, setNewSideEffect] = useState('');
-
-    // Use AuthContext
-    const { user } = useAuth();
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        (async () => {
-            const { status } = await Notifications.requestPermissionsAsync();
-            if (status !== 'granted') {
-                alert('Permission not granted for notifications.');
+const AddMedicationModal = ({ visible, onClose, medicationData }) => {
+    const handleOpenPage = () => {
+        onClose();
+        router.push({
+            pathname: '/add-medication',
+            params: { 
+                medicationData: JSON.stringify(medicationData || {}),
+                returnPath: router.canGoBack() ? 'back' : '/(tabs)/home'
             }
-            await registerForPushNotificationsAsync();
-        })();
-
-    }, []);
-
-    // Update form fields when medicationData changes
-    useEffect(() => {
-        if (medicationData) {
-            setName(medicationData.name || '');
-            setDirections(medicationData.directions || '');
-            setPurpose(medicationData.purpose || '');
-            setWarning(medicationData.warnings || '');
-            setSideEffects(
-                medicationData.sideEffects?.map(effect => ({ 
-                    term: typeof effect === 'string' ? effect : effect.term, 
-                    checked: false 
-                })) || []
-            );
-        }
-    }, [medicationData]);
-
-    const resetToDefault = () => {
-        setName('');
-        setDosage({ amount: '', unit: '' });
-        setStartDate(null);
-        setEndDate(null);
-        setFrequency('Daily');
-        setDirections('');
-        setPurpose('');
-        setSideEffects([]);
-        setWarning('');
-        setReminderEnabled(false);
-        setReminderTimes([]);
-        setShowStartDatePicker(false);
-        setShowEndDatePicker(false);
-        setShowTimePicker(false);
-        setError(null);
+        });
     };
 
-    const handleStartDateChange = (event, selectedDate) => {
-        setShowStartDatePicker(false);
-        if (event.type === 'set' && selectedDate) {
-            setStartDate(selectedDate);
-        }
-    };
-
-
-    const handleEndDateChange = (event, selectedDate) => {
-        setShowEndDatePicker(false);
-        if (event.type === 'set' && selectedDate) {
-            setEndDate(selectedDate);
-        }
-    };
-
-    const addReminderTime = (event, selectedDate) => {
-        if (event.type === 'set') {
-            const newTime = selectedDate || new Date();
-            !reminderTimes.some(time => time.getHours() === newTime.getHours() && time.getMinutes() === newTime.getMinutes())&& setReminderTimes([...reminderTimes, newTime]);
-        }
-        setShowTimePicker(false);
-    };
-
-    const toggleReminder = () => setReminderEnabled(!reminderEnabled);
-
-    const handleSavePlan = async () => {
-        setIsLoading(true);
-        try {
-            // Create unified medication data structure
-            const medicationData = {
-                name,
-                directions,
-                side_effects: sideEffects.filter(effect => effect.checked).map(effect => effect.term),
-                purpose,
-                warnings: warning,
-                dosage_amount: dosage.amount,
-                dosage_unit: dosage.unit,
-                start_date: startDate?.toISOString().split('T')[0],
-                end_date: endDate?.toISOString().split('T')[0],
-                frequency,
-                notes: '',
-                // Also include nested format for backward compatibility
-                medicationSpecification: {
-                    name,
-                    directions,
-                    sideEffects: sideEffects.filter(effect => effect.checked).map(effect => effect.term),
-                    purpose,
-                    warnings: warning,
-                },
-                dosage: {
-                    amount: dosage.amount,
-                    unit: dosage.unit,
-                },
-                startDate,
-                endDate,
-            };
-
-            // Get userId - for guest users, we might use a default value or handle differently
-            const userId = user?.id || 1; // Default to 1 for guest users
-            
-            console.log('Saving medication data:', medicationData); // Debug log
-            
-            // Use the unified addMedication function
-            const createdMedication = await addMedication(userId, medicationData);
-            
-            console.log('Medication created:', createdMedication); // Debug log
-            
-            // Add reminder data to the response
-            const finalMedication = {
-                ...createdMedication,
-                reminder: {
-                    enabled: reminderEnabled,
-                    times: reminderTimes
-                }
-            };
-            
-            onSave(finalMedication);
-            resetToDefault();
-            onClose();
-        } catch (error) {
-            console.log('Error saving medication plan:', error);
-            setError(error.message || 'Failed to save medication plan');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    if (error) {
-        console.log('Error:', error);
-        return <ErrorModal message={error} onClose={() => setError(null)} />;
-    }
-
-    if (isLoading) {
-        return <LoadingSpinner testID="loading-spinner" />;
-    }
+    if (!visible) return null;
 
     return (
         <Modal
@@ -187,242 +26,34 @@ const AddMedicationPlanModal = ({ visible, onClose, onSave, medicationData }) =>
             onRequestClose={onClose}
             testID='add-medication-modal'
         >
-            <View className="flex-1 justify-center items-center bg-black-70">
-                <View className="bg-black-100  px-6">
-                    <ScrollView className="flex-1">
-                        <Text className="text-2xl font-semibold text-secondary-100 mt-5 font-psemibold">Add Medication Plan</Text>
-
-                        {/* Form Fields */}
-                        <FormField
-                            title="Name"
-                            value={name}
-                            handleChangeText={(e) => setName(e)}
-                            otherStyles="mt-7"
-                            keyboardType="default"
-                            placeholder="e.g. Aspirin"
-                            required={true}
-                            maxLength={32}
-                        />
-                        <View className={'flex-1 flex-row w-full justify-between gap-2'}>
-                            <FormField
-                                title="Dosage"
-                                value={dosage.amount}
-                                handleChangeText={(e) => setDosage({ ...dosage, amount: e })}
-                                otherStyles="mt-7 flex-1"
-                                keyboardType="default"
-                                placeholder="Amount (e.g. 200)"
-                                required={true}
-                                maxLength={5}
-
-                            />
-                            <FormField
-                                title=" "
-                                value={dosage.unit}
-                                handleChangeText={(e) => setDosage({ ...dosage, unit: e })}
-                                otherStyles="mt-7 flex-1"
-                                keyboardType="default"
-                                placeholder="Units (e.g. mg)"
-                                maxLength={8}
-
-                            />
-                        </View>
-                        <View className={'flex flex-row mt-7'}>
-                            <Text className="text-base text-gray-100 font-pmedium">Start Date</Text>
-                            <Text className="text-red-500 text-base font-pmedium">*</Text>
-                        </View>
-                        <TouchableOpacity testID='start-date-field' onPress={() => setShowStartDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
-                            <Text className="flex-1 text-white font-psemibold text-base">{startDate?.toDateString()}</Text>
+            <View className="flex-1 bg-black/80 justify-center items-center">
+                <View className="bg-black-100 rounded-3xl p-6 mx-4 w-[90%]">
+                    <View className="flex-row justify-between items-center mb-4">
+                        <TouchableOpacity
+                            onPress={onClose}
+                            className="w-8 h-8 bg-gray-600 rounded-full items-center justify-center"
+                        >
+                            <icons.XMark color="#ffffff" size={16} />
                         </TouchableOpacity>
-                        {showStartDatePicker && (
-                            <DateTimePicker
-                                value={startDate || new Date()}
-                                mode="date"
-                                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                                onChange={handleStartDateChange}
-                                minimumDate={new Date()}
-                                maximumDate={new Date(new Date().setMonth(new Date().getMonth() + 1))}
-                                testID='start-date-picker'
-                            />
-                        )}
-                        <View className={'flex flex-row mt-7'}>
-                            <Text className="text-base text-gray-100 font-pmedium">End Date</Text>
-                            <Text className="text-red-500 text-base font-pmedium">*</Text>
-                        </View>
-                        <TouchableOpacity testID='end-date-field' onPress={() => setShowEndDatePicker(true)} className="w-full h-16 px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row items-center">
-                            <Text className="flex-1 text-white font-psemibold text-base">{endDate?.toDateString()}</Text>
-                        </TouchableOpacity>
-                        {showEndDatePicker && (
-                            <DateTimePicker
-                                value={endDate || new Date()}
-                                mode="date"
-                                display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                                onChange={handleEndDateChange}
-                                minimumDate={startDate || new Date()}
-                                maximumDate={new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
-                                testID='end-date-picker'
-                            />
-                        )}
-                        {/* End Date Picker */}
-
-                        <PickerComponent
-                            title="Frequency"
-                            value={frequency}
-                            handleValueChange={(itemValue) => setFrequency(itemValue)}
-                            otherStyles="mt-7"
-                            options={{
-                                Daily: 'Daily',
-                                Weekly: 'Weekly',
-                                Monthly: 'Monthly',
-                            }}
-                            mode="dropdown"
-                        />
-
-                        <View className="flex-row items-center mt-2">
-                            <Text className="text-base text-gray-100 font-pmedium">Enable Reminders</Text>
-                            <Switch
-                                value={reminderEnabled}
-                                onValueChange={toggleReminder}
-                                trackColor={{ false: '#d1d5db', true: '#0099ff' }}
-                                thumbColor={reminderEnabled ? '#66c2ff' : '#f3f4f6'}
-                                testID="enable-reminders-switch"
-                            />
-                        </View>
-
-                        {/* Reminder Times Section */}
-                        {reminderEnabled && (
-                            <View className="w-full text-center p-4 border-2 border-black-200 rounded-lg">
-                                <Text className="text-base text-white font-pmedium mb-3 mx-auto">Reminder Times</Text>
-                                {reminderTimes.length > 0 && (
-                                    reminderTimes.map((time, index) => (
-                                        <View
-                                            key={index}
-                                            className="bg-gray-700 py-2 px-4 rounded-lg mb-2 flex-row justify-between items-center"
-                                        >
-                                            <Text className="text-white font-pmedium">
-                                                {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </Text>
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    // Remove the selected reminder time
-                                                    const updatedTimes = reminderTimes.filter((_, i) => i !== index);
-                                                    setReminderTimes(updatedTimes);
-                                                }}
-                                                className="p-2 rounded-full ml-2"
-                                            >
-                                                <icons.XMark color="#ef4444" size={12} />
-                                            </TouchableOpacity>
-                                        </View>
-                                    ))
-                                )}
-
-                                <TouchableOpacity
-                                    onPress={() => setShowTimePicker(true)}
-                                    className="bg-blue-400 p-3 rounded-full flex-row items-center justify-center shadow-md"
-                                    testID={"add-reminder-button"}
-                                >
-                                    <icons.PlusCircle color="#FFF" size={48} />
-                                </TouchableOpacity>
-                            </View>
-                        )}
-
-
-                        {/* Show DateTimePicker if triggered */}
-                        {showTimePicker && (
-                            <DateTimePicker
-                                mode="time"
-                                is24Hour={false}
-                                display="default"
-                                value={new Date()}
-                                onChange={addReminderTime}
-                                textColor="#00000"
-                                accentColor="#00000"
-                                testID="date-time-picker"
-                            />
-                        )}
-                        <FormField
-                            title="Purpose"
-                            value={purpose}
-                            handleChangeText={(e) => setPurpose(e)}
-                            otherStyles="mt-5"
-                            keyboardType="default"
-                            placeholder="Enter text"
-                            maxLength={255}
-
-                        />
-                        <FormField
-                            title="Directions"
-                            value={directions}
-                            handleChangeText={(e) => setDirections(e)}
-                            otherStyles="mt-7"
-                            keyboardType="default"
-                            placeholder="Enter text"
-                            multiline={true}
-                            maxLength={255}
-
-                        />
-                        <FormField
-                            title="Warning"
-                            value={warning}
-                            handleChangeText={(e) => setWarning(e)}
-                            otherStyles="mt-7"
-                            keyboardType="default"
-                            placeholder="Enter text"
-                            multiline={true}
-                            maxLength={255}
-                        />
-
-                        <SideEffectChecklist sideEffects={sideEffects} setSideEffects={setSideEffects}/>
-                        <View className='flex flex-row'>
-                            <icons.PlusCircle color="#9CA3AF" size={24} />
-                            <TextInput
-                                value={newSideEffect}
-                                onChangeText={(e) => setNewSideEffect(e)}
-                                className="ml-2 w-full text-white font-pregular"
-                                placeholder='Add item....'
-                                placeholderTextColor='#9CA3AF'
-                                onSubmitEditing={() => {
-                                    setSideEffects([...sideEffects, { term: newSideEffect, checked: true }]);
-                                    setNewSideEffect('');
-                                }}
-                            />
-
-                        </View>
-
-                        {/* Close Button */}
-                        <View className="flex flex-1 flex-row w-full justify-between">
-                            <CustomButton
-                                title="Save Plan"
-                                handlePress={() => {
-
-                                    handleSavePlan();
-
-                                }}
-                                containerStyles="mt-4 flex-1 mx-2 bg-secondary-200"
-                                textStyles="text-lg"
-                                isLoading={isLoading}
-                            />
-                            <CustomButton
-                                title="Cancel"
-                                handlePress={() => {
-                                    onClose();
-                                    resetToDefault();
-                                }}
-                                containerStyles="mt-4 flex-1 mx-2 bg-red-400"
-                                textStyles="text-lg"
-                                isLoading={isLoading}
-                            />
-                        </View>
-                    </ScrollView>
+                    </View>
+                    
+                    <TouchableOpacity
+                        onPress={handleOpenPage}
+                        className="bg-secondary p-4 rounded-2xl items-center"
+                    >
+                        <icons.PlusCircle color="#000000" size={48} />
+                        <Text className="text-black text-xl font-psemibold mt-2">Add New Medication</Text>
+                        <Text className="text-black/70 text-base font-pmedium mt-1">Create a detailed medication plan</Text>
+                    </TouchableOpacity>
                 </View>
             </View>
         </Modal>
     );
 };
 
-AddMedicationPlanModal.propTypes = {
+AddMedicationModal.propTypes = {
     visible: PropTypes.bool.isRequired,
     onClose: PropTypes.func.isRequired,
-    onSave: PropTypes.func.isRequired,
     medicationData: PropTypes.shape({
         name: PropTypes.string,
         directions: PropTypes.string,
@@ -432,4 +63,4 @@ AddMedicationPlanModal.propTypes = {
     }),
 };
 
-export default AddMedicationPlanModal;
+export default AddMedicationModal;

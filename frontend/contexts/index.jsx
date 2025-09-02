@@ -4,11 +4,11 @@ import PropTypes from 'prop-types';
 
 const Providers = ({children}) => {
     return (
-        <AppProvider>
-            <AuthProvider>
+        <AuthProvider>
+            <AppProvider>
                 {children}
-            </AuthProvider>
-        </AppProvider>
+            </AppProvider>
+        </AuthProvider>
     );
 };
 

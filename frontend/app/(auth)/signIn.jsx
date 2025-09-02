@@ -14,7 +14,7 @@ import { loginUser } from '../../services/UserHandler';
 import { useAuth } from '../../contexts/AuthContext';
 
 const SignIn = () => {
-    const { refreshAuthState, loginAsGuest, isGuest, upgradeFromGuest } = useAuth();
+    const { storeTokens, loginAsGuest, isGuest, upgradeFromGuest } = useAuth();
 
     const [form, setForm] = useState({
         email: "",
@@ -26,16 +26,21 @@ const SignIn = () => {
     const handleLogin = async () => {
       setLoading(true);
       try {
-        // Login and let the service handle token storage
+        // Login and get the response
         const response = await loginUser(form.email, form.password);
         
-        // If user was a guest, upgrade to authenticated user
-        if (isGuest && response.access && response.refresh) {
-          await upgradeFromGuest(response, response.user);
+        // Store tokens and user data in AuthContext
+        const tokens = {
+          access: response.access,
+          refresh: response.refresh
+        };
+        
+        if (isGuest) {
+          // If user was a guest, upgrade to authenticated user
+          await upgradeFromGuest(tokens, response.user);
         } else {
-          // Regular login flow
-          // Refresh the auth context state from storage
-          await refreshAuthState();
+          // Regular login - store tokens and user data
+          await storeTokens(tokens, response.user);
         }
         
         router.replace("/home");
@@ -49,7 +54,7 @@ const SignIn = () => {
     const handleSkip = async () => {
       try {
         await loginAsGuest();
-        // AuthLayout will handle the redirect automatically
+        router.replace("/home");
       } catch (error) {
         console.error('Error during guest login:', error);
         setError('Failed to continue as guest. Please try again.');
@@ -57,7 +62,7 @@ const SignIn = () => {
     };
     
   return (
-    <SafeAreaView className="bg-black-100 h-full">
+    <SafeAreaView className="bg-primary h-full">
       <ScrollView>
         <View
           className="w-full flex justify-center px-4 my-6"

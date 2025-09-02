@@ -7,7 +7,7 @@ export default function SettingLayout() {
         <Stack initialRouteName='index' >
         <Stack.Screen name="index" options={{headerShown: false}} />
         <Stack.Screen name="AccountInfo" options={{headerShown: false}} />
-        <Stack.Screen name="EmergencyInfo" options={{headerShown: false}} />
+        
         <Stack.Screen name='PrivacyPolicy' options={{headerShown: false}} />
         </Stack>
     );

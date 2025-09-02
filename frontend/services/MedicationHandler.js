@@ -1,15 +1,32 @@
 // MedicationHandler.js
 // Handles medication CRUD logic using Drizzle ORM
 
-import { getDatabase, isDatabaseInitialized, setupDatabase, medications } from './database.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { getDatabase, isDatabaseInitialized, setupDatabase, medications, schedules } from './database.js';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 
 // Ensure database is initialized before any operations
 const ensureDbInitialized = async () => {
-  if (!isDatabaseInitialized()) {
-    await setupDatabase();
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  while (retryCount < maxRetries) {
+    try {
+      if (!isDatabaseInitialized()) {
+        await setupDatabase();
+      }
+      return getDatabase();
+    } catch (error) {
+      retryCount++;
+      console.error(`Database initialization error (attempt ${retryCount}):`, error);
+      
+      if (retryCount < maxRetries) {
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
+      } else {
+        throw error;
+      }
+    }
   }
-  return getDatabase();
 };
 
 // Transform medication data to database format
@@ -42,7 +59,7 @@ function transformToDbFormat(medicationData) {
 }
 
 // Transform database medication data to app format
-function transformFromDbFormat(dbData) {
+function transformFromDbFormat(dbData, schedules = []) {
   let sideEffects = [];
   try {
     sideEffects = dbData.sideEffects ? JSON.parse(dbData.sideEffects) : [];
@@ -50,6 +67,23 @@ function transformFromDbFormat(dbData) {
     // If parsing fails, treat as string and convert to array
     sideEffects = dbData.sideEffects ? [dbData.sideEffects] : [];
   }
+
+  // Process schedules to extract reminder information
+  const reminderTimes = schedules.map(schedule => {
+    // Convert time string (HH:MM:SS) to Date object for today
+    const [hours, minutes, seconds] = schedule.timeOfDay.split(':');
+    const date = new Date();
+    date.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds || 0), 0);
+    return date;
+  });
+
+  // Check if any schedule has reminders enabled
+  const reminderEnabled = schedules.some(schedule => schedule.reminderEnabled);
+
+  // Determine if medication is active based on end date
+  const now = new Date();
+  const endDate = dbData.endDate ? new Date(dbData.endDate) : null;
+  const isActive = !endDate || endDate >= now;
 
   return {
     id: dbData.id,
@@ -76,10 +110,10 @@ function transformFromDbFormat(dbData) {
       amount: dbData.dosageAmount,
       unit: dbData.dosageUnit,
     },
-    isActive: true,
+    isActive,
     reminder: {
-      enabled: false,
-      times: [],
+      enabled: reminderEnabled,
+      times: reminderTimes,
     },
     createdAt: dbData.createdAt ? new Date(dbData.createdAt) : new Date(),
   };
@@ -87,19 +121,39 @@ function transformFromDbFormat(dbData) {
 
 // Create a new medication
 export async function addMedication(userId, medicationData) {
-  try {
-    const db = await ensureDbInitialized();
-    const dbData = transformToDbFormat(medicationData);
-    
-    const result = await db.insert(medications).values({
-      userId,
-      ...dbData
-    }).returning();
-    
-    return transformFromDbFormat(result[0]);
-  } catch (error) {
-    console.error('Error adding medication:', error);
-    throw new Error(`Failed to add medication: ${error.message}`);
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  while (retryCount < maxRetries) {
+    try {
+      const db = await ensureDbInitialized();
+      const dbData = transformToDbFormat(medicationData);
+      
+      const result = await db.insert(medications).values({
+        userId,
+        ...dbData
+      }).returning();
+      
+      // Get schedules for the new medication (should be empty for new medications)
+      const medicationSchedules = await db.select()
+        .from(schedules)
+        .where(eq(schedules.medicationId, result[0].id));
+      
+      return transformFromDbFormat(result[0], medicationSchedules);
+    } catch (error) {
+      console.error(`Error adding medication (attempt ${retryCount + 1}):`, error);
+      
+      // If it's a database lock error, wait and retry
+      if (error.message.includes('database is locked') && retryCount < maxRetries - 1) {
+        retryCount++;
+        console.log(`Retrying medication insert... (attempt ${retryCount + 1})`);
+        // Wait for a short time before retrying
+        await new Promise(resolve => setTimeout(resolve, 100 * retryCount));
+        continue;
+      }
+      
+      throw new Error(`Failed to add medication: ${error.message}`);
+    }
   }
 }
 
@@ -108,12 +162,34 @@ export async function getMedications(userId) {
   try {
     const db = await ensureDbInitialized();
     
-    const results = await db.select()
+    // First get all medications
+    const medicationResults = await db.select()
       .from(medications)
       .where(eq(medications.userId, userId))
       .orderBy(desc(medications.createdAt));
     
-    return results.map(transformFromDbFormat);
+    // Get medication IDs to query schedules
+    const medicationIds = medicationResults.map(med => med.id);
+    
+    // Then get all schedules for these medications
+    let scheduleResults = [];
+    if (medicationIds.length > 0) {
+      scheduleResults = await db.select()
+        .from(schedules)
+        .where(inArray(schedules.medicationId, medicationIds));
+    }
+    
+    // Transform medications and include reminder data from schedules
+    const transformedMedications = medicationResults.map(medication => {
+      // Find schedules for this medication
+      const medicationSchedules = scheduleResults.filter(
+        schedule => schedule.medicationId === medication.id
+      );
+      
+      return transformFromDbFormat(medication, medicationSchedules);
+    });
+    
+    return transformedMedications;
   } catch (error) {
     console.error('Error getting medications:', error);
     throw new Error(`Failed to get medications: ${error.message}`);
@@ -133,7 +209,12 @@ export async function getMedication(userId, medicationId) {
       throw new Error('Medication not found');
     }
     
-    return transformFromDbFormat(result[0]);
+    // Get schedules for this medication
+    const medicationSchedules = await db.select()
+      .from(schedules)
+      .where(eq(schedules.medicationId, medicationId));
+    
+    return transformFromDbFormat(result[0], medicationSchedules);
   } catch (error) {
     console.error('Error getting medication:', error);
     throw new Error(`Failed to get medication: ${error.message}`);
@@ -155,7 +236,19 @@ export async function updateMedication(userId, medicationId, updates) {
       throw new Error('Medication not found or update failed');
     }
     
-    return transformFromDbFormat(result[0]);
+    // Update schedules if reminder settings have changed
+    if (updates.reminder) {
+      await db.update(schedules)
+        .set({ reminderEnabled: updates.reminder.enabled })
+        .where(eq(schedules.medicationId, medicationId));
+    }
+    
+    // Get schedules for the updated medication
+    const medicationSchedules = await db.select()
+      .from(schedules)
+      .where(eq(schedules.medicationId, medicationId));
+    
+    return transformFromDbFormat(result[0], medicationSchedules);
   } catch (error) {
     console.error('Error updating medication:', error);
     throw new Error(`Failed to update medication: ${error.message}`);

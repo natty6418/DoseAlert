@@ -2,21 +2,48 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { icons } from '../constants';
 
-const MedicationItem = ({ item, onPress }) => {
+const SelectableMedicationItem = ({ 
+  item, 
+  onPress, 
+  isSelectionMode = false, 
+  isSelected = false, 
+  onSelect 
+}) => {
   const isActive = item.isActive;
   const currentDate = new Date();
   const endDate = item.end_date ? new Date(item.end_date) : null;
   const isExpired = endDate && endDate < currentDate;
 
+  const handlePress = () => {
+    if (isSelectionMode && onSelect) {
+      onSelect(item.id);
+    } else if (onPress) {
+      onPress();
+    }
+  };
+
   return (
     <TouchableOpacity
       className={`p-4 rounded-2xl shadow-sm border flex-row items-center ${
-        isActive && !isExpired 
+        isSelected 
+          ? 'bg-secondary-100 border-secondary-200' 
+          : isActive && !isExpired 
           ? 'bg-gray-800 border-gray-700' 
           : 'bg-gray-900 border-gray-800'
       }`}
-      onPress={onPress}
+      onPress={handlePress}
     >
+      {/* Selection Checkbox */}
+      {isSelectionMode && (
+        <View className="mr-3">
+          {isSelected ? (
+            <icons.CheckSquare color="#6366F1" size={24} />
+          ) : (
+            <icons.Square color="#6B7280" size={24} />
+          )}
+        </View>
+      )}
+
       {/* Status Indicator and Pill Icon */}
       <View className="flex-row items-center mr-4">
         <View className={`w-3 h-3 rounded-full mr-3 ${
@@ -38,7 +65,11 @@ const MedicationItem = ({ item, onPress }) => {
       <View className="flex-1">
         <View className="flex-row items-center justify-between mb-1">
           <Text className={`text-lg font-psemibold ${
-            isActive && !isExpired ? 'text-white' : 'text-gray-400'
+            isSelected
+              ? 'text-white'
+              : isActive && !isExpired 
+              ? 'text-white' 
+              : 'text-gray-400'
           }`}>
             {item.medicationSpecification?.name || 'Unknown Medication'}
           </Text>
@@ -51,28 +82,50 @@ const MedicationItem = ({ item, onPress }) => {
         
         <View className="flex-row items-center mb-2">
           <Text className={`text-sm font-pregular ${
-            isActive && !isExpired ? 'text-gray-300' : 'text-gray-500'
+            isSelected
+              ? 'text-gray-200'
+              : isActive && !isExpired 
+              ? 'text-gray-300' 
+              : 'text-gray-500'
           }`}>
             {item.dosage?.amount && item.dosage?.unit 
               ? `${item.dosage.amount} ${item.dosage.unit}` 
               : item.dosage || 'No dosage specified'}
           </Text>
           <Text className={`text-sm font-pregular mx-2 ${
-            isActive && !isExpired ? 'text-gray-300' : 'text-gray-500'
+            isSelected
+              ? 'text-gray-200'
+              : isActive && !isExpired 
+              ? 'text-gray-300' 
+              : 'text-gray-500'
           }`}>
             •
           </Text>
           <Text className={`text-sm font-pregular ${
-            isActive && !isExpired ? 'text-gray-300' : 'text-gray-500'
+            isSelected
+              ? 'text-gray-200'
+              : isActive && !isExpired 
+              ? 'text-gray-300' 
+              : 'text-gray-500'
           }`}>
             {item.frequency || 'No frequency set'}
           </Text>
         </View>
 
         <View className="flex-row items-center">
-          <icons.Calendar color={isActive && !isExpired ? "#9CA3AF" : "#6B7280"} size={14} />
+          <icons.Calendar color={
+            isSelected
+              ? "#D1D5DB"
+              : isActive && !isExpired 
+              ? "#9CA3AF" 
+              : "#6B7280"
+          } size={14} />
           <Text className={`text-xs font-pregular ml-1 ${
-            isActive && !isExpired ? 'text-gray-400' : 'text-gray-600'
+            isSelected
+              ? 'text-gray-300'
+              : isActive && !isExpired 
+              ? 'text-gray-400' 
+              : 'text-gray-600'
           }`}>
             {item.start_date ? new Date(item.start_date).toLocaleDateString() : 'No start date'} - {item.end_date ? new Date(item.end_date).toLocaleDateString() : 'Ongoing'}
           </Text>
@@ -80,20 +133,22 @@ const MedicationItem = ({ item, onPress }) => {
       </View>
 
       {/* Status Icons */}
-      <View className="items-center ml-3">
-        {item.reminder?.enabled && (
-          <View className="mb-2">
-            <icons.Bell color={isActive && !isExpired ? "#10B981" : "#6B7280"} size={20} />
+      {!isSelectionMode && (
+        <View className="items-center ml-3">
+          {item.reminder?.enabled && (
+            <View className="mb-2">
+              <icons.Bell color={isActive && !isExpired ? "#10B981" : "#6B7280"} size={20} />
+            </View>
+          )}
+          <View className={`p-1 rounded-full ${
+            isActive && !isExpired ? 'bg-gray-700' : 'bg-gray-800'
+          }`}>
+            <icons.ChevronUp color={isActive && !isExpired ? "#6366F1" : "#6B7280"} size={16} />
           </View>
-        )}
-        <View className={`p-1 rounded-full ${
-          isActive && !isExpired ? 'bg-gray-700' : 'bg-gray-800'
-        }`}>
-          <icons.ChevronUp color={isActive && !isExpired ? "#6366F1" : "#6B7280"} size={16} />
         </View>
-      </View>
+      )}
     </TouchableOpacity>
   );
 };
 
-export default MedicationItem;
+export default SelectableMedicationItem;

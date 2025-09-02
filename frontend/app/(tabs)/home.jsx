@@ -18,19 +18,20 @@ import { useFocusEffect } from 'expo-router';
 
 
 const Home = () => {
-  const [expandedIndex, setExpandedIndex] = useState(null);
+  const [expandedReminderIndex, setExpandedReminderIndex] = useState(null);
+  const [expandedMedicationIndex, setExpandedMedicationIndex] = useState(null);
   const [upcomingMedicationReminders, setUpcomingMedicationReminders] = useState([]);
   
   // Use new contexts
   const { 
     medications, 
-    user, 
     loadMedications, 
     updateMedication: updateMedicationContext,
     setAdherenceResponseId,
     isLoading
   } = useApp();
-  const { isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isGuest } = useAuth();
+ 
 
   
   useEffect(()=>{
@@ -87,7 +88,7 @@ const Home = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    // Filter medications to show only active ones with reminders enabled
+    // Filter medications to show only active ones with reminders enabled for upcoming reminders
     const upcomingReminders = medications.filter(med => {
       const isActive = new Date(med.end_date || med.endDate) >= new Date();
       return isActive && med.reminder?.enabled;
@@ -115,6 +116,22 @@ const Home = () => {
     toggleExpand: PropTypes.func.isRequired,
     onToggleReminder: PropTypes.func.isRequired,
     onUpdateReminderTimes: PropTypes.func.isRequired,
+  };
+
+  const handleUpdateMedication = async (index, medicationData) => {
+    try {
+      const activeMedications = medications.filter(med => med.isActive);
+      const medicationToUpdate = activeMedications[index];
+      
+      // Update using AppContext
+      await updateMedicationContext(medicationToUpdate.id, medicationData);
+      
+      // Reload medications to get the latest data
+      await loadMedications();
+      
+    } catch (error) {
+      console.log('Error updating medication:', error);
+    }
   };
 
   const handleUpdateReminder = async (index, times, enable) => {
@@ -148,7 +165,7 @@ const Home = () => {
   if (isLoading) return <LoadingSpinner />;
 
   return (
-    <SafeAreaView className="bg-black-100 h-full py-4">
+    <SafeAreaView className="bg-primary h-full py-4">
       <View className="flex-1 h-full">
         <View className="flex-row items-center justify-between px-4 py-2 rounded-b-2xl">
           
@@ -162,24 +179,66 @@ const Home = () => {
               router.push('/settings/AccountInfo')
             }}
           >
-            <icons.UserCircle color="#A3E635" size={36} />
+            <icons.UserCircle color="#c0ee77" size={36} />
           </TouchableOpacity>
         </View>
         <ScrollView>
-          <Greeting name={user?.firstName} />
+          <Greeting name={isGuest ? "Guest" : user?.first_name || "User"} />
 
           <View className="px-4 mt-2">
             <Text className="text-gray-400 text-lg mb-2">Upcoming Reminders</Text>
             {upcomingMedicationReminders.length > 0 ? (
               upcomingMedicationReminders.map((med, index) => (
-                <ReminderItem
-                  key={index}
-                  item={med}
-                  isExpanded={expandedIndex === index}
-                  toggleExpand={() => setExpandedIndex(expandedIndex === index ? null : index)}
-                  onToggleReminder={(enabled) => handleUpdateReminder(index, med.reminder.reminderTimes, enabled)}
-                  onUpdateReminderTimes={(times) => handleUpdateReminder(index, times, true)}
-                />
+                <View key={index} className="mb-2">
+                  <ReminderItem
+                    item={med}
+                    isExpanded={expandedReminderIndex === index}
+                    toggleExpand={() => setExpandedReminderIndex(expandedReminderIndex === index ? null : index)}
+                    onToggleReminder={(enabled) => handleUpdateReminder(index, med.reminder.reminderTimes, enabled)}
+                    onUpdateReminderTimes={(times) => handleUpdateReminder(index, times, true)}
+                  />
+                </View>
+              ))
+            ) : (
+              <Text className="text-gray-500 text-center mt-2">No active reminders found.</Text>
+            )}
+          </View>
+
+          {/* All Active Medications Section */}
+          <View className="px-4 mt-4">
+            <Text className="text-gray-400 text-lg mb-2">All Active Medications</Text>
+            {medications && medications.filter(med => med.isActive).length > 0 ? (
+              medications.filter(med => med.isActive).map((med, index) => (
+                <View key={med.id || index} className="mb-2">
+                  <ReminderItem
+                    item={med}
+                    isExpanded={expandedMedicationIndex === index}
+                    toggleExpand={() => setExpandedMedicationIndex(expandedMedicationIndex === index ? null : index)}
+                    onToggleReminder={(enabled) => {
+                      // Handle reminder toggle for all medications
+                      const updatedMed = {
+                        ...med,
+                        reminder: {
+                          ...med.reminder,
+                          enabled
+                        }
+                      };
+                      handleUpdateMedication(index, updatedMed);
+                    }}
+                    onUpdateReminderTimes={(times) => {
+                      // Handle reminder times update for all medications
+                      const updatedMed = {
+                        ...med,
+                        reminder: {
+                          ...med.reminder,
+                          times,
+                          enabled: times.length > 0
+                        }
+                      };
+                      handleUpdateMedication(index, updatedMed);
+                    }}
+                  />
+                </View>
               ))
             ) : (
               <Text className="text-gray-500 text-center mt-4">No medications found.</Text>
@@ -187,10 +246,10 @@ const Home = () => {
           </View>
 
           <TouchableOpacity
-            className="bg-gray-900 p-4 rounded-xl mx-4 mt-2 border border-lime-500 shadow-lg active:opacity-80"
+            className="bg-gray-900 p-4 rounded-xl mx-4 mt-6 border border-secondary-200 shadow-lg active:opacity-80"
             onPress={() => router.push('/create')}
           >
-            <Text className="text-lime-400 text-center text-xl font-semibold">+ Add More</Text>
+            <Text className="text-secondary text-center text-xl font-semibold">+ Add More</Text>
           </TouchableOpacity>
           <Footer />
         </ScrollView>

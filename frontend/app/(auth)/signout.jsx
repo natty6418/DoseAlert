@@ -6,16 +6,14 @@ import { router } from "expo-router";
 import { logoutUser } from '../../services/UserHandler';
 
 const SignOutPage = () => {
-    const { refreshToken, clearTokens, makeAuthenticatedRequest } = useAuth();
+    const { clearTokens } = useAuth();
     
     const handleSignOut = async () => {
         try {
             // Call the backend logout API to blacklist the refresh token
-            if (makeAuthenticatedRequest && refreshToken) {
-                await logoutUser(makeAuthenticatedRequest, refreshToken);
-            }
+            await logoutUser();
             
-            // Clear local tokens
+            // Clear local tokens (logoutUser already does this, but keeping for safety)
             await clearTokens();
             
             // Navigate to sign in

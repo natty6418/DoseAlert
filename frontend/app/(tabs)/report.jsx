@@ -102,8 +102,8 @@ if (isLoading) {
         <ScrollView>
           <View className="px-4 mt-4">
            
-            <View className="bg-gray-800 p-4 mb-6 rounded-lg border border-lime-500 shadow-lg">
-              <Text className="text-lime-400 text-xl font-semibold mb-4 text-center">
+            <View className="bg-gray-800 p-4 mb-6 rounded-lg border border-secondary-200 shadow-lg">
+              <Text className="text-secondary text-xl font-semibold mb-4 text-center">
                 Overall Adherence
               </Text>
               <View className="flex items-center relative">
@@ -117,7 +117,7 @@ if (isLoading) {
               hideLegend={true}
             />
             <Text
-                className="text-lime-400 text-2xl font-semibold absolute top-[42%]"
+                className="text-secondary text-2xl font-semibold absolute top-[42%]"
                 >
                   {Math.round(overallAdherencePercentage * 100)}%
                 </Text>
@@ -133,7 +133,7 @@ if (isLoading) {
                 const adherencePercentage = Math.round(medAdherence.adherence_rate || 0);
 
                 return (
-                  <View key={index} className="bg-gray-800 p-4 mb-4 rounded-lg border border-lime-500 shadow-lg">
+                  <View key={index} className="bg-gray-800 p-4 mb-4 rounded-lg border border-secondary-200 shadow-lg">
                     <MedicationReportItem
                       medication={{
                         ...med,
@@ -146,13 +146,13 @@ if (isLoading) {
                       missed={medAdherence.missed || 0}
                     />
                     <View className="mt-2">
-                      <Text className="text-lime-400 text-lg">
+                      <Text className="text-secondary text-lg">
                         Current Taken Streak: <Text className="font-semibold">{medAdherence.current_taken_streak || 0}</Text>
                       </Text>
-                      <Text className="text-lime-400 text-lg">
+                      <Text className="text-secondary text-lg">
                         Longest Taken Streak: <Text className="font-semibold">{medAdherence.longest_taken_streak || 0}</Text>
                       </Text>
-                      <Text className="text-lime-400 text-lg">
+                      <Text className="text-secondary text-lg">
                         Adherence Percentage: <Text className="font-semibold">{adherencePercentage}%</Text>
                       </Text>
                       {medAdherence.current_missed_streak > 0 ? (
@@ -160,7 +160,7 @@ if (isLoading) {
                           Current missed streak: {medAdherence.current_missed_streak}
                         </Text>
                       ) : (
-                        <Text className="text-green-400 text-lg font-semibold mt-1">On track with medication</Text>
+                        <Text className="text-accent text-lg font-semibold mt-1">On track with medication</Text>
                       )}
                     </View>
                   </View>

@@ -16,10 +16,37 @@ import pill from "../assets/icons/pill.png";
 import phone from "../assets/icons/phone.png";
 import documents from "../assets/icons/documents.png";
 
-
 import medication from "../assets/icons/medication.png";
-import { UserCircle, Newspaper, Cog } from "@nandorojo/heroicons/24/solid";
-import { Bars3, MagnifyingGlass, PlusCircle, XMark, Camera, XCircle, Clock, Calendar, ClipboardDocument, Bell, ShieldExclamation, ExclamationTriangle, CheckCircle, Pencil, ChevronUp, ChevronDoubleUp, ChevronDoubleDown } from '@nandorojo/heroicons/24/outline'
+
+// Import from lucide-react-native for better compatibility
+import { 
+  Square, 
+  CheckSquare, 
+  Trash2,
+  User,
+  Newspaper,
+  Settings,
+  Menu,
+  Search,
+  Plus,
+  X,
+  Camera,
+  XCircle,
+  Clock,
+  Calendar,
+  ClipboardList,
+  Bell,
+  Shield,
+  AlertTriangle,
+  CheckCircle,
+  Edit,
+  ChevronUp,
+  ChevronDown,
+  ArrowLeft,
+  Beaker,
+  PlayCircle,
+  StopCircle
+} from 'lucide-react-native';
 
 // const MagnifyingGlass = ({ size, color }) => {
 //   return <MagnifyingGlassIcon size={size} color={color} />;
@@ -30,21 +57,21 @@ import { Bars3, MagnifyingGlass, PlusCircle, XMark, Camera, XCircle, Clock, Cale
 // }
 
 export default {
-  MagnifyingGlass,
-  Bars3,
-  UserCircle,
-  PlusCircle,
-  XMark,
+  MagnifyingGlass: Search,
+  Bars3: Menu,
+  UserCircle: User,
+  PlusCircle: Plus,
+  XMark: X,
   Camera,
   XCircle,
   Clock,
   Calendar,
-  ClipboardDocument,
-  ExclamationTriangle,
-  ShieldExclamation,
+  ClipboardDocument: ClipboardList,
+  ExclamationTriangle: AlertTriangle,
+  ShieldExclamation: Shield,
   Bell,
   CheckCircle,
-  Pencil,
+  Pencil: Edit,
   Newspaper,
   pill,
   play,
@@ -61,11 +88,19 @@ export default {
   eyeHide,
   eye,
   capture,
-  Cog,
+  Cog: Settings,
   medication,
   ChevronUp,
+  ChevronDown,
   phone,
-  ChevronDoubleUp,
-  ChevronDoubleDown,
-  documents
+  ChevronDoubleUp: ChevronUp,
+  ChevronDoubleDown: ChevronDown,
+  documents,
+  ArrowLeft,
+  Square,
+  CheckSquare,
+  Trash: Trash2,
+  Beaker,
+  PlayCircle,
+  StopCircle
 };

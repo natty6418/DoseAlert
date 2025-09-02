@@ -72,9 +72,9 @@ const PrivacyPolicy = () => {
               {section.title}
             </Text>
             {openSections[index] ? (
-              <icons.ChevronDoubleUp color="#c0ee77" size={20} />
+              <icons.ChevronDoubleUp color="#6366F1" size={20} />
             ) : (
-              <icons.ChevronDoubleDown color="#c0ee77" size={20} />
+              <icons.ChevronDoubleDown color="#6366F1" size={20} />
             )}
           </TouchableOpacity>
 

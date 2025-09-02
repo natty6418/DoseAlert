@@ -43,7 +43,7 @@ export default function App() {
       />
 
       <View className="relative mt-5">
-        <Text className="text-3xl text-primary font-bold text-center">
+        <Text className="text-3xl text-white font-bold text-center">
         Medication made simple,{"\n"}
         with{" "}
           <Text className="text-secondary-200">DoseAlert</Text>

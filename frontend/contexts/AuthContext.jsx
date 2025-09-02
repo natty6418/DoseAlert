@@ -131,7 +131,10 @@ const AuthProvider = ({ children }) => {
       const storedRefreshToken = await AsyncStorage.getItem('refreshToken');
       const storedUser = await AsyncStorage.getItem('user');
       const storedGuestStatus = await AsyncStorage.getItem('isGuest');
-
+      console.log(
+        'Loaded auth state from storage:',
+        { storedAccessToken, storedRefreshToken, storedUser, storedGuestStatus }
+      );
       if (storedAccessToken && storedRefreshToken) {
         setAccessToken(storedAccessToken);
         setRefreshToken(storedRefreshToken);
@@ -140,6 +143,9 @@ const AuthProvider = ({ children }) => {
         }
         setIsGuest(false);
       } else if (storedGuestStatus === 'true') {
+        // Set a default guest user object with ID 1
+        const guestUser = { id: 1, username: 'guest', email: 'guest@local' };
+        setUser(guestUser);
         setIsGuest(true);
       } else {
         // No stored auth data, user needs to make a choice - stay on landing page
@@ -178,6 +184,7 @@ const AuthProvider = ({ children }) => {
 
   const clearTokens = async () => {
     try {
+      console.log("Clearing Tokens...");
       await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user', 'isGuest']);
       setAccessToken(null);
       setRefreshToken(null);
@@ -194,7 +201,9 @@ const AuthProvider = ({ children }) => {
       await AsyncStorage.setItem('isGuest', 'true');
       setAccessToken(null);
       setRefreshToken(null);
-      setUser(null);
+      // Set a default guest user object with ID 1
+      const guestUser = { id: 1, username: 'guest', email: 'guest@local' };
+      setUser(guestUser);
       setIsGuest(true);
     } catch (error) {
       console.error('Error setting guest status:', error);

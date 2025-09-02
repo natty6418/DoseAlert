@@ -11,7 +11,7 @@ const LongTextComponent = ({Icon, title, content }) => {
     return (
         <View className="mb-2">
             <View className="flex flex-row items-center gap-1">
-                <Icon size={20} color="#65a30d" />
+                <Icon size={20} color="#6366F1" />
                 <Text className="text-white font-medium flex-row items-center">
                    {title}:
                 </Text>
@@ -23,7 +23,7 @@ const LongTextComponent = ({Icon, title, content }) => {
             </Text>
             {content.length > maxLength && (
                 <TouchableOpacity onPress={toggleExpanded}>
-                    <Text className="text-green-400 ml-6 ">
+                    <Text className="text-secondary ml-6 ">
                         {isExpanded ? 'See less' : 'See more'}
                     </Text>
                 </TouchableOpacity>

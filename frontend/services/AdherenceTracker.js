@@ -1,28 +1,64 @@
 // AdherenceTracker.js
-// Handles medication adherence tracking logic using Drizzle ORM
+// Handles medication adherence tracking logic using Drizzle ORM with new schema
 
-import { getDatabase, isDatabaseInitialized, setupDatabase, adherenceLogs, medications, reminders } from './database.js';
-import { eq, desc, and } from 'drizzle-orm';
+import { getDatabase, isDatabaseInitialized, setupDatabase, adherenceRecords, adherenceStreaks, medications} from './database.js';
+import { eq, desc, and, isNull, or } from 'drizzle-orm';
 
 // Ensure database is initialized before any operations
 const ensureDbInitialized = async () => {
-  if (!isDatabaseInitialized()) {
-    await setupDatabase();
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  while (retryCount < maxRetries) {
+    try {
+      if (!isDatabaseInitialized()) {
+        await setupDatabase();
+      }
+      return getDatabase();
+    } catch (error) {
+      retryCount++;
+      console.error(`Database initialization error (attempt ${retryCount}):`, error);
+      
+      if (retryCount < maxRetries) {
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
+      } else {
+        throw error;
+      }
+    }
   }
-  return getDatabase();
 };
 
 // Record adherence response for a medication reminder
-export async function recordAdherence(userId, medicationId, wasTaken, actualTime, notes) {
+export async function recordAdherence(userId, medicationId, status, scheduledTime, actualTime, notes, reminderId = null) {
   try {
     const db = await ensureDbInitialized();
     
-    const result = await db.insert(adherenceLogs).values({
+    // Calculate if late and minutes late
+    const scheduled = new Date(scheduledTime);
+    const actual = actualTime ? new Date(actualTime) : new Date();
+    const diffMinutes = Math.floor((actual - scheduled) / (1000 * 60));
+    const isLate = diffMinutes > 0;
+    
+    const result = await db.insert(adherenceRecords).values({
       medicationId,
-      takenAt: actualTime || new Date().toISOString(),
-      wasTaken: wasTaken ? true : false,
-      notes: notes || ''
+      reminderId,
+      status, // 'taken', 'missed', 'skipped', 'pending'
+      scheduledTime,
+      actualTime: actualTime || new Date().toISOString(),
+      responseTime: new Date().toISOString(),
+      isLate,
+      minutesLate: Math.max(0, diffMinutes),
+      notes: notes || '',
+      isDirty: true // Mark for sync
     }).returning();
+    
+    // Update adherence streak if status is 'taken'
+    if (status === 'taken') {
+      await updateAdherenceStreak(medicationId, true);
+    } else if (status === 'missed') {
+      await updateAdherenceStreak(medicationId, false);
+    }
     
     return result[0];
   } catch (error) {
@@ -31,25 +67,33 @@ export async function recordAdherence(userId, medicationId, wasTaken, actualTime
   }
 }
 
-// Get all adherence records for authenticated user
+// Get adherence records for authenticated user
 export async function getAdherenceRecords(userId) {
   try {
     const db = await ensureDbInitialized();
     
     const records = await db
       .select({
-        id: adherenceLogs.id,
-        medicationId: adherenceLogs.medicationId,
-        takenAt: adherenceLogs.takenAt,
-        wasTaken: adherenceLogs.wasTaken,
-        notes: adherenceLogs.notes,
-        createdAt: adherenceLogs.createdAt,
+        id: adherenceRecords.id,
+        medicationId: adherenceRecords.medicationId,
+        reminderId: adherenceRecords.reminderId,
+        status: adherenceRecords.status,
+        scheduledTime: adherenceRecords.scheduledTime,
+        actualTime: adherenceRecords.actualTime,
+        responseTime: adherenceRecords.responseTime,
+        isLate: adherenceRecords.isLate,
+        minutesLate: adherenceRecords.minutesLate,
+        notes: adherenceRecords.notes,
+        createdAt: adherenceRecords.createdAt,
         medicationName: medications.name
       })
-      .from(adherenceLogs)
-      .innerJoin(medications, eq(adherenceLogs.medicationId, medications.id))
-      .where(eq(medications.userId, userId))
-      .orderBy(desc(adherenceLogs.createdAt));
+      .from(adherenceRecords)
+      .innerJoin(medications, eq(adherenceRecords.medicationId, medications.id))
+      .where(and(
+        eq(medications.userId, userId),
+        or(eq(adherenceRecords.isDeleted, false), isNull(adherenceRecords.isDeleted))
+      ))
+      .orderBy(desc(adherenceRecords.scheduledTime));
     
     return records;
   } catch (error) {
@@ -58,72 +102,146 @@ export async function getAdherenceRecords(userId) {
   }
 }
 
-// Get pending adherence records (this is a simplified version since we don't have a status field)
-export async function getPendingAdherenceRecords(userId) {
-  try {
-    const db = await ensureDbInitialized();
-    
-    // For now, get all user medications - you may want to implement more complex logic
-    const records = await db.select()
-      .from(medications)
-      .where(eq(medications.userId, userId));
-    
-    return records;
-  } catch (error) {
-    console.error('Error getting pending adherence records:', error);
-    throw new Error(`Failed to get pending adherence records: ${error.message}`);
-  }
-}
-
-// Get overdue adherence records (medications not taken today)
-export async function getOverdueAdherenceRecords(userId) {
-  try {
-    const db = await ensureDbInitialized();
-    
-    // Simplified version - get active reminders for user medications
-    const records = await db
-      .select({
-        id: medications.id,
-        name: medications.name,
-        dosage: medications.dosage,
-        frequency: medications.frequency,
-        time: reminders.time,
-        isActive: reminders.isActive
-      })
-      .from(medications)
-      .innerJoin(reminders, eq(medications.id, reminders.medicationId))
-      .where(and(eq(medications.userId, userId), eq(reminders.isActive, true)));
-    
-    return records;
-  } catch (error) {
-    console.error('Error getting overdue adherence records:', error);
-    throw new Error(`Failed to get overdue adherence records: ${error.message}`);
-  }
-}
-
-// Get adherence summary for authenticated user
-export async function getAdherenceSummary(userId) {
+// Get adherence records for a specific medication
+export async function getAdherenceRecordsForMedication(userId, medicationId) {
   try {
     const db = await ensureDbInitialized();
     
     const records = await db
+      .select()
+      .from(adherenceRecords)
+      .innerJoin(medications, eq(adherenceRecords.medicationId, medications.id))
+      .where(and(
+        eq(medications.userId, userId),
+        eq(adherenceRecords.medicationId, medicationId),
+        or(eq(adherenceRecords.isDeleted, false), isNull(adherenceRecords.isDeleted))
+      ))
+      .orderBy(desc(adherenceRecords.scheduledTime));
+    
+    return records;
+  } catch (error) {
+    console.error('Error getting adherence records for medication:', error);
+    throw new Error(`Failed to get adherence records for medication: ${error.message}`);
+  }
+}
+
+// Update adherence streak for a medication
+export async function updateAdherenceStreak(medicationId, wasTaken) {
+  try {
+    const db = await ensureDbInitialized();
+    
+    // Get existing streak or create new one
+    const existingStreaks = await db
+      .select()
+      .from(adherenceStreaks)
+      .where(eq(adherenceStreaks.medicationId, medicationId));
+    
+    const now = new Date().toISOString();
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    if (existingStreaks.length > 0) {
+      const streak = existingStreaks[0];
+      let newCurrentStreak = streak.currentStreak;
+      let newLongestStreak = streak.longestStreak;
+      let newLastTaken = streak.lastTaken;
+      let newStreakStartDate = streak.streakStartDate;
+      
+      if (wasTaken) {
+        newCurrentStreak += 1;
+        newLastTaken = now;
+        if (!newStreakStartDate) {
+          newStreakStartDate = today;
+        }
+        if (newCurrentStreak > newLongestStreak) {
+          newLongestStreak = newCurrentStreak;
+        }
+      } else {
+        // Missed dose breaks the streak
+        newCurrentStreak = 0;
+        newStreakStartDate = null;
+      }
+      
+      await db
+        .update(adherenceStreaks)
+        .set({
+          currentStreak: newCurrentStreak,
+          longestStreak: newLongestStreak,
+          lastTaken: newLastTaken,
+          streakStartDate: newStreakStartDate,
+          updatedAt: now,
+          isDirty: true
+        })
+        .where(eq(adherenceStreaks.medicationId, medicationId));
+    } else {
+      // Create new streak
+      await db.insert(adherenceStreaks).values({
+        medicationId,
+        currentStreak: wasTaken ? 1 : 0,
+        longestStreak: wasTaken ? 1 : 0,
+        lastTaken: wasTaken ? now : null,
+        streakStartDate: wasTaken ? today : null,
+        isDirty: true
+      });
+    }
+  } catch (error) {
+    console.error('Error updating adherence streak:', error);
+    throw new Error(`Failed to update adherence streak: ${error.message}`);
+  }
+}
+
+// Get adherence streak for a medication
+export async function getAdherenceStreak(userId, medicationId) {
+  try {
+    const db = await ensureDbInitialized();
+    
+    const streaks = await db
+      .select()
+      .from(adherenceStreaks)
+      .innerJoin(medications, eq(adherenceStreaks.medicationId, medications.id))
+      .where(and(
+        eq(medications.userId, userId),
+        eq(adherenceStreaks.medicationId, medicationId)
+      ));
+    
+    return streaks.length > 0 ? streaks[0] : null;
+  } catch (error) {
+    console.error('Error getting adherence streak:', error);
+    throw new Error(`Failed to get adherence streak: ${error.message}`);
+  }
+}
+
+// Get adherence summary for a user
+export async function getAdherenceSummary(userId, days = 30) {
+  try {
+    const db = await ensureDbInitialized();
+    
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    
+    
+    const records = await db
       .select({
-        id: adherenceLogs.id,
-        wasTaken: adherenceLogs.wasTaken,
+        status: adherenceRecords.status,
         medicationName: medications.name
       })
-      .from(adherenceLogs)
-      .innerJoin(medications, eq(adherenceLogs.medicationId, medications.id))
-      .where(eq(medications.userId, userId));
+      .from(adherenceRecords)
+      .innerJoin(medications, eq(adherenceRecords.medicationId, medications.id))
+      .where(and(
+        eq(medications.userId, userId),
+        or(eq(adherenceRecords.isDeleted, false), isNull(adherenceRecords.isDeleted))
+      ));
     
     const summary = {
-      total: records.length,
-      taken: records.filter(r => r.wasTaken === true).length,
-      missed: records.filter(r => r.wasTaken === false).length,
+      totalDoses: records.length,
+      takenDoses: records.filter(r => r.status === 'taken').length,
+      missedDoses: records.filter(r => r.status === 'missed').length,
+      skippedDoses: records.filter(r => r.status === 'skipped').length,
+      pendingDoses: records.filter(r => r.status === 'pending').length
     };
     
-    summary.adherenceRate = summary.total > 0 ? 
-      ((summary.taken / summary.total) * 100).toFixed(1) : 0;
+    summary.adherenceRate = summary.totalDoses > 0 
+      ? (summary.takenDoses / summary.totalDoses) * 100 
+      : 0;
     
     return summary;
   } catch (error) {
@@ -132,89 +250,32 @@ export async function getAdherenceSummary(userId) {
   }
 }
 
-// Get adherence streaks for authenticated user
-export async function getAdherenceStreaks(userId) {
+// Get pending adherence responses (overdue reminders)
+export async function getPendingAdherenceResponses(userId) {
   try {
     const db = await ensureDbInitialized();
     
-    const records = await db
+    const pendingRecords = await db
       .select({
-        wasTaken: adherenceLogs.wasTaken,
-        takenAt: adherenceLogs.takenAt
+        id: adherenceRecords.id,
+        medicationId: adherenceRecords.medicationId,
+        reminderId: adherenceRecords.reminderId,
+        scheduledTime: adherenceRecords.scheduledTime,
+        status: adherenceRecords.status,
+        medicationName: medications.name
       })
-      .from(adherenceLogs)
-      .innerJoin(medications, eq(adherenceLogs.medicationId, medications.id))
-      .where(eq(medications.userId, userId))
-      .orderBy(adherenceLogs.takenAt);
+      .from(adherenceRecords)
+      .innerJoin(medications, eq(adherenceRecords.medicationId, medications.id))
+      .where(and(
+        eq(medications.userId, userId),
+        eq(adherenceRecords.status, 'pending'),
+        or(eq(adherenceRecords.isDeleted, false), isNull(adherenceRecords.isDeleted))
+      ))
+      .orderBy(adherenceRecords.scheduledTime);
     
-    let currentStreak = 0;
-    let longestStreak = 0;
-    let tempStreak = 0;
-    
-    for (const record of records) {
-      if (record.wasTaken === true) {
-        tempStreak++;
-        if (tempStreak === 1) currentStreak = tempStreak;
-        longestStreak = Math.max(longestStreak, tempStreak);
-      } else {
-        if (tempStreak > 0 && currentStreak === tempStreak) {
-          currentStreak = 0;
-        }
-        tempStreak = 0;
-      }
-    }
-    
-    return {
-      current: currentStreak,
-      longest: longestStreak,
-    };
+    return pendingRecords;
   } catch (error) {
-    console.error('Error getting adherence streaks:', error);
-    throw new Error(`Failed to get adherence streaks: ${error.message}`);
-  }
-}
-
-// Get comprehensive adherence report with detailed analytics
-export async function getAdherenceReport(userId, days = 30) {
-  try {
-    const db = await ensureDbInitialized();
-    
-    const records = await db
-      .select()
-      .from(adherenceLogs)
-      .innerJoin(medications, eq(adherenceLogs.medicationId, medications.id))
-      .where(eq(medications.userId, userId));
-    
-    const summary = await getAdherenceSummary(userId);
-    const streaks = await getAdherenceStreaks(userId);
-    
-    return {
-      records,
-      summary,
-      streaks,
-      period: days,
-    };
-  } catch (error) {
-    console.error('Error getting adherence report:', error);
-    throw new Error(`Failed to get adherence report: ${error.message}`);
-  }
-}
-
-// Create adherence record
-export async function createAdherenceRecord(userId, recordData) {
-  try {
-    const db = await ensureDbInitialized();
-    
-    const result = await db.insert(adherenceLogs).values({
-      medicationId: recordData.medication_id,
-      takenAt: recordData.actual_time || new Date().toISOString(),
-      wasTaken: recordData.status === 'taken' ? true : false,
-      notes: recordData.notes || '',
-    }).returning();
-    
-    return result[0];
-  } catch (error) {
-    console.error('Error creating adherence record:', error);
-    throw new Error(`Failed to create adherence record: ${error.message}`);
+    console.error('Error getting pending adherence responses:', error);
+    throw new Error(`Failed to get pending adherence responses: ${error.message}`);
   }
 }

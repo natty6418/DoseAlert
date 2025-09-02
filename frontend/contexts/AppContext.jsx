@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { getMedications } from '../services/MedicationHandler';
+import { getMedications, deleteMedication, addMedication as saveMedicationToDb, updateMedication as updateMedicationInDb } from '../services/MedicationHandler';
 import { setupDatabase } from '../services/database';
 import { useAuth } from './AuthContext';
 
@@ -54,12 +54,24 @@ const AppProvider = ({ children }) => {
   const [missedDoses, setMissedDoses] = useState([]);
 
   // App initialization
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
 
   useEffect(() => {
     setupDatabase();
     initializeApp();
   }, []);
+
+  // Load medications when user becomes available
+  useEffect(() => {
+    console.log('User changed:', user?.id, 'isGuest:', isGuest);
+    if (user?.id) {
+      console.log('Triggering medication load for user:', user.id);
+      // Add a small delay to ensure database is fully initialized
+      setTimeout(() => {
+        loadMedications();
+      }, 100);
+    }
+  }, [user?.id]);
 
   const initializeApp = async () => {
     try {
@@ -123,33 +135,67 @@ const AppProvider = ({ children }) => {
   };
 
   // ===== MEDICATION MANAGEMENT =====
-  const addMedication = (medication) => {
-    const newMedication = {
-      id: Date.now().toString(),
-      createdAt: new Date().toISOString(),
-      isActive: true,
-      ...medication,
-    };
-    setMedications(prev => [...prev, newMedication]);
-    if (newMedication.isActive) {
-      setActiveMedications(prev => [...prev, newMedication]);
+  const addMedication = async (medication) => {
+    try {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      // Save to database using MedicationHandler
+      const savedMedication = await saveMedicationToDb(user.id, medication);
+      
+      // Update local state with the saved medication
+      setMedications(prev => [...prev, savedMedication]);
+      if (savedMedication.isActive) {
+        setActiveMedications(prev => [...prev, savedMedication]);
+      }
+      
+      return savedMedication;
+    } catch (error) {
+      console.error('Error adding medication:', error);
+      throw new Error(`Failed to save medication: ${error.message}`);
     }
-    return newMedication;
   };
 
-  const updateMedication = (id, updates) => {
-    setMedications(prev => prev.map(med => 
-      med.id === id ? { ...med, ...updates } : med
-    ));
-    setActiveMedications(prev => prev.map(med => 
-      med.id === id ? { ...med, ...updates } : med
-    ));
+  const updateMedication = async (id, updates) => {
+    try {
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      // Update in database
+      const updatedMedication = await updateMedicationInDb(user.id, id, updates);
+      
+      // Update local state
+      setMedications(prev => prev.map(med => 
+        med.id === id ? updatedMedication : med
+      ));
+      setActiveMedications(prev => prev.map(med => 
+        med.id === id ? updatedMedication : med
+      ));
+      
+      return updatedMedication;
+    } catch (error) {
+      console.error('Error updating medication:', error);
+      throw new Error(`Failed to update medication: ${error.message}`);
+    }
   };
 
-  const removeMedication = (id) => {
-    setMedications(prev => prev.filter(med => med.id !== id));
-    setActiveMedications(prev => prev.filter(med => med.id !== id));
-    setMedicationHistory(prev => [...prev, ...prev.filter(med => med.id === id)]);
+  const removeMedication = async (id) => {
+    try {
+      if (user?.id) {
+        // Delete from database
+        await deleteMedication(user.id, id);
+      }
+      
+      // Update local state
+      setMedications(prev => prev.filter(med => med.id !== id));
+      setActiveMedications(prev => prev.filter(med => med.id !== id));
+      setMedicationHistory(prev => [...prev, ...prev.filter(med => med.id === id)]);
+    } catch (error) {
+      console.error('Error removing medication:', error);
+      showError('Failed to delete medication. Please try again.');
+    }
   };
 
   const deactivateMedication = (id) => {
@@ -160,12 +206,16 @@ const AppProvider = ({ children }) => {
   const loadMedications = async () => {
     try {
       setIsLoading(true);
+      console.log('Loading medications for user:', user?.id);
       
       if (user?.id) {
         // Fetch medications from local SQLite database
         const meds = await getMedications(user.id);
+        console.log('Loaded medications:', meds.length, 'medications');
         setMedications(meds);
         setActiveMedications(meds.filter(med => med.isActive));
+      } else {
+        console.log('No user ID available, skipping medication load');
       }
     } catch (error) {
       console.error('Failed to load medications:', error);

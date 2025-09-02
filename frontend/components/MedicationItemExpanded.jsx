@@ -1,135 +1,311 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Image, Switch } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, Image, Switch, ScrollView, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { icons } from '../constants';
+import { useApp } from '../contexts/AppContext';
 
-
-
-const MedicationItemExpanded = ({ item, toggleExpand, onToggleReminder, onUpdateReminderTimes }) => {
+const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
+  const { updateMedication, loadMedications } = useApp();
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [pickerTime, setPickerTime] = useState(null);
-  const [selectedReminderIndex, setSelectedReminderIndex] = useState(null); // To track the index of the reminder being edited
-  const [reminderTimes, setReminderTimes] = useState(item.reminder?.reminderTimes || []);
+  const [selectedReminderIndex, setSelectedReminderIndex] = useState(null);
+  const [reminderTimes, setReminderTimes] = useState(item.reminder?.times || []);
+  const [reminderEnabled, setReminderEnabled] = useState(item.reminder?.enabled || false);
+  const [selectedDays, setSelectedDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 
-  const handleTimeChange = (event, selectedDate, index = null) => {
+  const daysOfWeek = [
+    { short: 'Mon', full: 'Monday' },
+    { short: 'Tue', full: 'Tuesday' },
+    { short: 'Wed', full: 'Wednesday' },
+    { short: 'Thu', full: 'Thursday' },
+    { short: 'Fri', full: 'Friday' },
+    { short: 'Sat', full: 'Saturday' },
+    { short: 'Sun', full: 'Sunday' }
+  ];
+
+  useEffect(() => {
+    setReminderTimes(item.reminder?.times || []);
+    setReminderEnabled(item.reminder?.enabled || false);
+  }, [item]);
+
+  const handleTimeChange = (event, selectedDate) => {
     setShowTimePicker(false);
     if (selectedDate && event.type === 'set') {
       if (selectedReminderIndex !== null) {
-        // Update the selected reminder time
-        const updatedTimes = reminderTimes.map((reminder, index) =>
-          index === selectedReminderIndex ? { ...reminder, time: selectedDate } : reminder
-        );
+        // Update existing reminder time
+        const updatedTimes = [...reminderTimes];
+        updatedTimes[selectedReminderIndex] = selectedDate;
         setReminderTimes(updatedTimes);
-        setSelectedReminderIndex(null); // Reset the selected index
-        onUpdateReminderTimes(updatedTimes); // Call the parent update function
+        setSelectedReminderIndex(null);
       } else {
-        // Add a new reminder time
-        const updatedTimes = [...reminderTimes, { time: selectedDate }];
-        setReminderTimes(updatedTimes);
-        onUpdateReminderTimes(updatedTimes); // Call the parent update function
+        // Add new reminder time
+        setReminderTimes([...reminderTimes, selectedDate]);
       }
-    } else {
-      if (index !== null) {
-        const updatedTimes = reminderTimes.filter((_, i) => i !== index);
-        setReminderTimes(updatedTimes);
-        onUpdateReminderTimes(updatedTimes);
-      }
-      console.log("No time selected");
     }
   };
 
-  return (
-    <View className="p-4 bg-gray-800 mt-2 rounded-lg shadow-lg border border-lime-500">
-      {/* Header */}
-      <TouchableOpacity onPress={toggleExpand} className="flex-row items-center">
-        {/* Pill Icon */}
-        <Image
-          source={icons.pill}
-          resizeMode="contain"
-          tintColor="#91D62A"
-          className="w-8 h-8 mr-2"
-        />
+  const removeReminderTime = (index) => {
+    const updatedTimes = reminderTimes.filter((_, i) => i !== index);
+    setReminderTimes(updatedTimes);
+  };
 
-        {/* Medication Name and Dates */}
+  const toggleDay = (day) => {
+    setSelectedDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day]
+    );
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      const updatedMedication = {
+        ...item,
+        reminder: {
+          enabled: reminderEnabled,
+          times: reminderTimes
+        },
+        reminderDays: selectedDays
+      };
+
+      await updateMedication(item.id, updatedMedication);
+      
+      // Reload medications to ensure we have the latest data including schedules
+      await loadMedications();
+      
+      // Notify parent component of the update
+      if (onMedicationUpdate) {
+        onMedicationUpdate(updatedMedication);
+      }
+      
+      Alert.alert('Success', 'Medication updated successfully!');
+    } catch (error) {
+      console.error('Error updating medication:', error);
+      Alert.alert('Error', 'Failed to update medication. Please try again.');
+    }
+  };
+
+  const isActive = item.isActive;
+  const currentDate = new Date();
+  const endDate = item.end_date ? new Date(item.end_date) : null;
+  const isExpired = endDate && endDate < currentDate;
+
+  return (
+    <View className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
+      {/* Header */}
+      <TouchableOpacity 
+        onPress={toggleExpand} 
+        className="flex-row items-center p-4 bg-gray-750"
+      >
+        {/* Status Indicator and Pill Icon */}
+        <View className="flex-row items-center mr-4">
+          <View className={`w-3 h-3 rounded-full mr-3 ${
+            isActive && !isExpired ? 'bg-green-400' : 'bg-gray-500'
+          }`} />
+          <View className={`p-3 rounded-xl ${
+            isActive && !isExpired ? 'bg-blue-600' : 'bg-gray-600'
+          }`}>
+            <Image
+              source={icons.pill}
+              resizeMode="contain"
+              tintColor="#FFF"
+              className="w-6 h-6"
+            />
+          </View>
+        </View>
+
+        {/* Medication Details */}
         <View className="flex-1">
-          <Text className="text-lime-400 text-xl font-semibold">
-            {item.medicationSpecification.name}
-          </Text>
-          <View className="flex flex-row">
-            <Text className="text-gray-300 text-sm">
-              {item.start_date ? new Date(item.start_date).toLocaleDateString() : 'Not set'} - {item.end_date ? new Date(item.end_date).toLocaleDateString() : 'Not set'}
+          <View className="flex-row items-center justify-between mb-1">
+            <Text className="text-lg font-psemibold text-white">
+              {item.medicationSpecification?.name || item.name || 'Unknown Medication'}
+            </Text>
+            {isExpired && (
+              <View className="bg-red-500 px-2 py-1 rounded-full">
+                <Text className="text-white text-xs font-pmedium">Expired</Text>
+              </View>
+            )}
+          </View>
+          
+          <View className="flex-row items-center mb-2">
+            <Text className="text-sm font-pregular text-gray-300">
+              {item.dosage?.amount && item.dosage?.unit 
+                ? `${item.dosage.amount} ${item.dosage.unit}` 
+                : item.dosage_amount && item.dosage_unit
+                ? `${item.dosage_amount} ${item.dosage_unit}`
+                : 'No dosage specified'}
+            </Text>
+            <Text className="text-sm font-pregular mx-2 text-gray-300">•</Text>
+            <Text className="text-sm font-pregular text-gray-300">
+              {item.frequency || 'No frequency set'}
+            </Text>
+          </View>
+
+          <View className="flex-row items-center">
+            <icons.Calendar color="#9CA3AF" size={14} />
+            <Text className="text-xs font-pregular ml-1 text-gray-400">
+              {item.start_date ? new Date(item.start_date).toLocaleDateString() : 'No start date'} - {item.end_date ? new Date(item.end_date).toLocaleDateString() : 'Ongoing'}
             </Text>
           </View>
         </View>
 
-        {/* Collapse Icon */}
-        <icons.ChevronUp color="#91D62A" size={24} />
+        {/* Status Icons */}
+        <View className="items-center ml-3">
+          {reminderEnabled && (
+            <View className="mb-2">
+              <icons.Bell color="#10B981" size={20} />
+            </View>
+          )}
+          <View className="p-1 rounded-full bg-gray-700">
+            <icons.ChevronDown color="#6366F1" size={16} />
+          </View>
+        </View>
       </TouchableOpacity>
 
-      {/* Settings */}
-      <View className="mt-4">
-        {/* Reminder Toggle */}
-        <View className="flex-row items-center mb-2">
-          <Text className="text-lime-500 font-semibold text-lg">Reminder</Text>
-          <Switch
-            value={item.reminder?.enabled || false}
-            onValueChange={(value) => onToggleReminder(value)}
-            testID='reminder-switch'
-          />
-        </View>
+      {/* Expanded Content */}
+      <View className="p-4 bg-gray-800">
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Reminder Toggle Section */}
+          <View className="mb-6">
+            <View className="flex-row items-center justify-between mb-4">
+              <Text className="text-lg font-psemibold text-white">Reminders</Text>
+              <Switch
+                value={reminderEnabled}
+                onValueChange={setReminderEnabled}
+                trackColor={{ false: '#374151', true: '#6366F1' }}
+                thumbColor={reminderEnabled ? '#FFF' : '#9CA3AF'}
+              />
+            </View>
 
-        {/* Time Picker */}
-        {item.reminder?.enabled && (
-          <View className="items-center flex-row gap-2 flex-wrap">
-            {reminderTimes && reminderTimes.length > 0 && (
-              reminderTimes.map(({ time }, index) => (
-                <View
-                  key={index}
-                  className="w-32 justify-between py-3 px-4 rounded-lg flex-row items-center border-2 border-lime-600"
-                >
-                  <TouchableOpacity
-                    onPress={() => {
-                      setPickerTime(new Date(time)); // Set the time to the existing reminder time
-                      setSelectedReminderIndex(index); // Set the selected index for editing
-                      setShowTimePicker(true);
-                    }}
-                  >
-                    <Text className="text-lime-500 font-pmedium">
-                      {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      handleTimeChange({ type: 'set' }, null, index); // Call the update function
-                    }}
-                    testID='delete-reminder-button'
-                  >
-                    <icons.XMark color="#ef4444" height={18} width={18} />
-                  </TouchableOpacity>
+            {reminderEnabled && (
+              <>
+                {/* Days Selection */}
+                <View className="mb-4">
+                  <Text className="text-sm font-pmedium text-gray-300 mb-3">
+                    Reminder Days
+                  </Text>
+                  <View className="flex-row flex-wrap gap-2">
+                    {daysOfWeek.map((day) => (
+                      <TouchableOpacity
+                        key={day.short}
+                        onPress={() => toggleDay(day.short)}
+                        className={`px-3 py-2 rounded-lg border ${
+                          selectedDays.includes(day.short)
+                            ? 'bg-blue-600 border-blue-500'
+                            : 'bg-gray-700 border-gray-600'
+                        }`}
+                      >
+                        <Text className={`text-sm font-pmedium ${
+                          selectedDays.includes(day.short) ? 'text-white' : 'text-gray-400'
+                        }`}>
+                          {day.short}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 </View>
-              ))
+
+                {/* Reminder Times */}
+                <View className="mb-4">
+                  <Text className="text-sm font-pmedium text-gray-300 mb-3">
+                    Reminder Times
+                  </Text>
+                  
+                  <View className="flex-row flex-wrap gap-2">
+                    {reminderTimes.map((time, index) => (
+                      <View
+                        key={index}
+                        className="flex-row items-center bg-gray-700 border border-gray-600 rounded-lg px-3 py-2"
+                      >
+                        <TouchableOpacity
+                          onPress={() => {
+                            setSelectedReminderIndex(index);
+                            setShowTimePicker(true);
+                          }}
+                          className="mr-3"
+                        >
+                          <Text className="font-pmedium text-white">
+                            {new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => removeReminderTime(index)}
+                          className="p-1"
+                        >
+                          <icons.XMark color="#ef4444" size={16} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+
+                    {/* Add Time Button */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedReminderIndex(null);
+                        setShowTimePicker(true);
+                      }}
+                      className="flex-row items-center justify-center px-4 py-2 border-2 border-dashed border-blue-600 bg-gray-700 rounded-lg min-w-[80px]"
+                    >
+                      <icons.PlusCircle color="#6366F1" size={20} />
+                      <Text className="text-blue-400 text-sm font-pmedium ml-2">Add Time</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </>
+            )}
+          </View>
+
+          {/* Medication Information */}
+          <View className="mb-6">
+            <Text className="text-lg font-psemibold text-white mb-4">Information</Text>
+            
+            {item.medicationSpecification?.purpose && (
+              <View className="mb-3">
+                <Text className="text-sm font-pmedium text-gray-400 mb-1">Purpose</Text>
+                <Text className="text-sm text-gray-300">{item.medicationSpecification.purpose}</Text>
+              </View>
             )}
 
+            {item.medicationSpecification?.directions && (
+              <View className="mb-3">
+                <Text className="text-sm font-pmedium text-gray-400 mb-1">Directions</Text>
+                <Text className="text-sm text-gray-300">{item.medicationSpecification.directions}</Text>
+              </View>
+            )}
+
+            {item.medicationSpecification?.warnings && (
+              <View className="mb-3">
+                <Text className="text-sm font-pmedium text-gray-400 mb-1">Warnings</Text>
+                <Text className="text-sm text-red-400">{item.medicationSpecification.warnings}</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Action Buttons */}
+          <View className="flex-row gap-3">
             <TouchableOpacity
-              onPress={() => {
-                setPickerTime(null); // Clear picker time for adding a new reminder
-                setSelectedReminderIndex(null); // Clear selected index for adding a new reminder
-                setShowTimePicker(true);
-              }}
-              className="items-center"
-              testID={"add-reminder-button"}
+              onPress={handleSaveChanges}
+              className="flex-1 bg-blue-600 py-3 px-4 rounded-lg flex-row items-center justify-center"
             >
-              <icons.PlusCircle color="#4caf50" width={32} height={32} />
+              <icons.CheckCircle color="#FFF" size={20} />
+              <Text className="text-white font-psemibold ml-2">Save Changes</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              onPress={toggleExpand}
+              className="bg-gray-700 py-3 px-4 rounded-lg flex-row items-center justify-center"
+            >
+              <icons.XMark color="#9CA3AF" size={20} />
+              <Text className="text-gray-300 font-pmedium ml-2">Cancel</Text>
             </TouchableOpacity>
           </View>
-        )}
+        </ScrollView>
+
+        {/* Time Picker */}
         {showTimePicker && (
           <DateTimePicker
-            value={pickerTime || new Date()}
+            value={selectedReminderIndex !== null ? new Date(reminderTimes[selectedReminderIndex]) : new Date()}
             mode="time"
             display="default"
             onChange={handleTimeChange}
-            testID='time-picker'
           />
         )}
       </View>

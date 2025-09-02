@@ -1,7 +1,6 @@
 import { Image, View, Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import icons from '../../constants/icons';
-import { StatusBar } from 'expo-status-bar';
 import { useAuth } from '../../contexts/AuthContext';
 
 const TabIcon = ({ icon, color, name, focused }) => {
@@ -28,21 +27,20 @@ const TabsLayout = () => {
   const { isGuest } = useAuth();
 
   return (
-    <>
-      <Tabs
-        initialRouteName='home'
-        screenOptions={{
-          tabBarActiveTintColor: "#c0ee77",
-          tabBarInactiveTintColor: "#CDCDE0",
-          tabBarShowLabel: false,
-          tabBarStyle: {
-            backgroundColor: "#161622",
-            borderTopWidth: 1,
-            borderTopColor: "#232533",
-            height: 84,
-          },
-        }}
-      >
+    <Tabs
+      initialRouteName='home'
+      screenOptions={{
+        tabBarActiveTintColor: "#c0ee77",
+        tabBarInactiveTintColor: "#9CA3AF",
+        tabBarShowLabel: false,
+        tabBarStyle: {
+          backgroundColor: "#0F0F23",
+          borderTopWidth: 1,
+          borderTopColor: "#1E1B3A",
+          height: 84,
+        },
+      }}
+    >
         <Tabs.Screen
           name="home"
           options={{
@@ -65,7 +63,7 @@ const TabsLayout = () => {
         
         
         <Tabs.Screen
-        name="create"
+        name="(medication)"
         options={{
           title: "Repository",
           headerShown: false,
@@ -80,54 +78,46 @@ const TabsLayout = () => {
         }}
         />
         
-        {!isGuest && (
-          <Tabs.Screen
-            name="report" 
-            
-            options={{
-              title: "Report", 
-              headerShown: false,
-              tabBarIcon: ({ color, focused }) => (
-                <View className="flex items-center justify-center gap-2">
-            {/* <icons.Newspaper size={24} color={color} /> */}
-            <Text
-              className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
-              style={{ color: color }}
-            >
-              Report
-            </Text>
-          </View>),
-            }}
-          />
-        )}
+        <Tabs.Screen
+          name="report" 
+          options={{
+            title: "Report", 
+            headerShown: false,
+            href: !isGuest ? "/report" : null,
+            tabBarIcon: ({ color, focused }) => (
+              <View className="flex items-center justify-center gap-2">
+                {/* <icons.Newspaper size={24} color={color} /> */}
+                <Text
+                  className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
+                  style={{ color: color }}
+                >
+                  Report
+                </Text>
+              </View>
+            ),
+          }}
+        />
 
-    <Tabs.Screen
-      name="settings"
-      options={{
-        title: "Settings",
-        headerShown: false,
-        tabBarIcon: ({ color, focused }) => (
-          <View className="flex items-center justify-center gap-2">
-      {/* <icons.Cog size={24} color={color} /> */}
-      <Text
-        className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
-        style={{ color: color }}
-      >
-        Settings
-      </Text>
-    </View>
-        ),
-      }}
-    />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: "Settings",
+            headerShown: false,
+            tabBarIcon: ({ color, focused }) => (
+              <View className="flex items-center justify-center gap-2">
+                <icons.Cog size={24} color={color} />
+                <Text
+                  className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
+                  style={{ color: color }}
+                >
+                  Settings
+                </Text>
+              </View>
+            ),
+          }}
+        />
     
   </Tabs>
-  <StatusBar
-  hidden={false}
-        backgroundColor='#1a1a1a'
-        style='light'
-    />
-
-    </>
   );
 };
 

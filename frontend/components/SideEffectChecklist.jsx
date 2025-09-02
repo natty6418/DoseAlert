@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { icons } from '../constants';
 
@@ -13,23 +13,36 @@ const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) => {
   };
 
   return (
-    <View className={`${darker ? "bg-black-100" : "bg-black-200"} rounded-lg mt-7`}>
-      <Text className="text-base text-gray-100 font-pmedium mb-2">Side Effects Checklist</Text>
-      {sideEffects.length > 0 && <FlatList
-        data={sideEffects}
-        scrollEnabled={false}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item, index }) => (
-          <TouchableOpacity
-            onPress={() => toggleChecked(index)}
-            className="flex-row items-center"
-          >
-            {item.checked ? <View testID='checked'><icons.CheckCircle color="#A3E635" size={24} /></View> : <View testID='not-checked'><icons.PlusCircle color="#9CA3AF" size={24} /></View> }
-            <Text className="ml-2 text-white font-pregular">{item.term}</Text>
-          </TouchableOpacity>
-        )}
-      />}
-      
+    <View className={`${darker ? "bg-primary" : "bg-black-200"} rounded-xl p-3`}>
+      <Text className="text-gray-300 text-sm font-pregular mb-3">Known Side Effects</Text>
+      {sideEffects.length > 0 ? (
+        <FlatList
+          data={sideEffects}
+          scrollEnabled={false}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item, index }) => (
+            <TouchableOpacity
+              onPress={() => toggleChecked(index)}
+              className="flex-row items-center py-2 px-3 mb-2 bg-black-100 rounded-lg border border-gray-600"
+            >
+              <View className="mr-3">
+                {item.checked ? (
+                  <icons.CheckCircle color="#10B981" size={20} />
+                ) : (
+                  <View className="w-5 h-5 border-2 border-gray-500 rounded-full" />
+                )}
+              </View>
+              <Text className={`flex-1 font-pregular ${item.checked ? 'text-white' : 'text-white'}`}>
+                {item.term}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      ) : (
+        <Text className="text-gray-500 text-sm font-pregular italic text-center py-4">
+          No side effects listed. Add some below.
+        </Text>
+      )}
     </View>
   );
 };

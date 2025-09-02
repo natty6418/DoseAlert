@@ -25,7 +25,7 @@ const FormField = ({
       <View 
       className={`w-full ${
         multiline ? 'h-32' : 'h-16'
-      } px-4 bg-black-100 rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row`}
+      } px-4 bg-primary rounded-2xl border-2 border-black-200 focus:border-secondary flex flex-row`}
       >
         <TextInput
         className={`flex-1 text-white  text-base ${

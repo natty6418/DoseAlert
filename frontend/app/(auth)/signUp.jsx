@@ -10,13 +10,13 @@ import { createNewAccount } from "../../services/UserHandler";
 import { useAuth } from '../../contexts/AuthContext';
 
 const SignUp = () => {
-    const { refreshAuthState, loginAsGuest, isGuest, upgradeFromGuest } = useAuth();
+    const { storeTokens, loginAsGuest, isGuest, upgradeFromGuest } = useAuth();
     
     const [form, setForm] = useState({
-      firstName: "",
-      lastName: "",
-      email: "",
-      password: "",
+      firstName: "John",
+      lastName: "Doe",
+      email: "john.doe@example.com",
+      password: "password@123",
     });
     // const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -29,12 +29,17 @@ const SignUp = () => {
         
         // If registration includes tokens (auto-login)
         if (response.access && response.refresh) {
+          const tokens = {
+            access: response.access,
+            refresh: response.refresh
+          };
+          
           if (isGuest) {
             // Upgrade from guest to authenticated user
-            await upgradeFromGuest(response, response.user);
+            await upgradeFromGuest(tokens, response.user);
           } else {
-            // Regular sign up flow
-            await refreshAuthState();
+            // Regular sign up - store tokens and user data
+            await storeTokens(tokens, response.user);
           }
           router.replace("/home");
         } else {
@@ -59,7 +64,7 @@ const SignUp = () => {
     };
   
     return (
-      <SafeAreaView className="bg-black-100 h-full">
+      <SafeAreaView className="bg-primary h-full">
         <ScrollView>
           <View
             className="w-full flex justify-center px-4 my-6"

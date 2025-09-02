@@ -5,7 +5,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: "#FFFFFF", // White as the primary color
+        primary: "#0F0F23", // Dark navy background
         secondary: {
           DEFAULT: "#c0ee77", // Lime
           100: "#B8F64E",     // Lighter lime shade

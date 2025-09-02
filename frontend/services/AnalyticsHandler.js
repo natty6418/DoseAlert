@@ -1,15 +1,32 @@
 // AnalyticsHandler.js
-// Handles analytics-related operations using Drizzle ORM
+// Handles analytics-related operations using Drizzle ORM with new schema
 
-import { getDatabase, isDatabaseInitialized, setupDatabase, medications, adherenceLogs, reminders } from './database.js';
-import { eq, count } from 'drizzle-orm';
+import { getDatabase, isDatabaseInitialized, setupDatabase, medications, adherenceRecords, reminders } from './database.js';
+import { eq, count, and, isNull, or } from 'drizzle-orm';
 
 // Ensure database is initialized before any operations
 const ensureDbInitialized = async () => {
-  if (!isDatabaseInitialized()) {
-    await setupDatabase();
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  while (retryCount < maxRetries) {
+    try {
+      if (!isDatabaseInitialized()) {
+        await setupDatabase();
+      }
+      return getDatabase();
+    } catch (error) {
+      retryCount++;
+      console.error(`Database initialization error (attempt ${retryCount}):`, error);
+      
+      if (retryCount < maxRetries) {
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
+      } else {
+        throw error;
+      }
+    }
   }
-  return getDatabase();
 };
 
 // Get analytics summary
@@ -25,15 +42,20 @@ export async function getAnalyticsSummary(userId) {
     const totalMedications = totalMedicationsResult[0]?.count || 0;
     
     // Get adherence records for analytics
-    const adherenceRecords = await db
+    const adherenceData = await db
       .select()
-      .from(adherenceLogs)
-      .innerJoin(medications, eq(adherenceLogs.medicationId, medications.id))
-      .where(eq(medications.userId, userId));
+      .from(adherenceRecords)
+      .innerJoin(medications, eq(adherenceRecords.medicationId, medications.id))
+      .where(and(
+        eq(medications.userId, userId),
+        or(eq(adherenceRecords.isDeleted, false), isNull(adherenceRecords.isDeleted))
+      ));
     
     // Calculate adherence rate
-    const totalRecords = adherenceRecords.length;
-    const takenRecords = adherenceRecords.filter(r => r.adherence_logs.wasTaken === true).length;
+    const totalRecords = adherenceData.length;
+    const takenRecords = adherenceData.filter(r => r.adherence_records.status === 'taken').length;
+    const missedRecords = adherenceData.filter(r => r.adherence_records.status === 'missed').length;
+    const skippedRecords = adherenceData.filter(r => r.adherence_records.status === 'skipped').length;
     const adherenceRate = totalRecords > 0 ? (takenRecords / totalRecords) * 100 : 0;
     
     // Get recent reminders (simplified version)
@@ -50,8 +72,9 @@ export async function getAnalyticsSummary(userId) {
       totalAdherenceRecords: totalRecords,
       recentReminders,
       summary: {
-        taken: adherenceRecords.filter(r => r.was_taken === 1).length,
-        missed: adherenceRecords.filter(r => r.was_taken === 0).length,
+        taken: takenRecords,
+        missed: missedRecords,
+        skipped: skippedRecords,
       }
     };
   } catch (error) {

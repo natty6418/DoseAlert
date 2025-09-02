@@ -1,6 +1,7 @@
 import { useFonts } from 'expo-font';
 import { Stack, SplashScreen } from 'expo-router';
 import { useEffect } from 'react';
+import { StatusBar } from 'expo-status-bar';
 import Providers from '../contexts';
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 
@@ -29,6 +30,11 @@ export default function RootLayout() {
 
   return (
     <Providers>
+      <StatusBar
+        hidden={false}
+        backgroundColor='#1a1a1a'
+        style='light'
+      />
       <Stack initialRouteName='index'>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

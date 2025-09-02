@@ -5,14 +5,32 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
-import { getDatabase, isDatabaseInitialized, setupDatabase } from './database.js';
+import { getDatabase, isDatabaseInitialized, setupDatabase, schedules, medications  } from './database.js';
+import { eq, and,  isNull, or } from 'drizzle-orm';
 
 // Ensure database is initialized before any operations
 const ensureDbInitialized = async () => {
-  if (!isDatabaseInitialized()) {
-    await setupDatabase();
+  let retryCount = 0;
+  const maxRetries = 3;
+  
+  while (retryCount < maxRetries) {
+    try {
+      if (!isDatabaseInitialized()) {
+        await setupDatabase();
+      }
+      return getDatabase();
+    } catch (error) {
+      retryCount++;
+      console.error(`Database initialization error (attempt ${retryCount}):`, error);
+      
+      if (retryCount < maxRetries) {
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, 200 * retryCount));
+      } else {
+        throw error;
+      }
+    }
   }
-  return getDatabase();
 };
 
 // --- SQLite database integration for schedule CRUD ---
@@ -22,23 +40,17 @@ export async function addSchedule(userId, schedule) {
   try {
     const db = await ensureDbInitialized();
     
-    const result = await db.runAsync(
-      `INSERT INTO reminders (medication_id, time, is_active) 
-       VALUES (?, ?, ?)`,
-      [
-        schedule.medication_id,
-        schedule.time_of_day || '08:00:00',
-        schedule.active !== false ? 1 : 0
-      ]
-    );
+    const result = await db.insert(schedules).values({
+      medicationId: schedule.medication_id,
+      timeOfDay: schedule.time_of_day || '08:00:00',
+      daysOfWeek: schedule.days_of_week || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
+      timezone: schedule.timezone || 'UTC',
+      active: schedule.active !== false,
+      reminderEnabled: schedule.reminderEnabled !== false, // Default to true for reminders
+      isDirty: true // Mark for sync
+    }).returning();
     
-    // Get the created reminder
-    const reminder = await db.getFirstAsync(
-      'SELECT * FROM reminders WHERE id = ?',
-      [result.lastInsertRowId]
-    );
-    
-    return reminder;
+    return result[0];
   } catch (error) {
     console.error('Error adding schedule:', error);
     throw new Error(`Failed to add schedule: ${error.message}`);
@@ -50,16 +62,28 @@ export async function getSchedules(userId) {
   try {
     const db = await ensureDbInitialized();
     
-    const schedules = await db.getAllAsync(
-      `SELECT r.*, m.name as medication_name 
-       FROM reminders r 
-       JOIN medications m ON r.medication_id = m.id 
-       WHERE m.user_id = ? 
-       ORDER BY r.time`,
-      [userId]
-    );
+    const scheduleResults = await db
+      .select({
+        id: schedules.id,
+        backendId: schedules.backendId,
+        medicationId: schedules.medicationId,
+        timeOfDay: schedules.timeOfDay,
+        daysOfWeek: schedules.daysOfWeek,
+        timezone: schedules.timezone,
+        active: schedules.active,
+        createdAt: schedules.createdAt,
+        updatedAt: schedules.updatedAt,
+        medicationName: medications.name
+      })
+      .from(schedules)
+      .innerJoin(medications, eq(schedules.medicationId, medications.id))
+      .where(and(
+        eq(medications.userId, userId),
+        or(eq(schedules.isDeleted, false), isNull(schedules.isDeleted))
+      ))
+      .orderBy(schedules.timeOfDay);
     
-    return schedules;
+    return scheduleResults;
   } catch (error) {
     console.error('Error getting schedules:', error);
     throw new Error(`Failed to get schedules: ${error.message}`);
@@ -71,19 +95,31 @@ export async function getSchedule(userId, scheduleId) {
   try {
     const db = await ensureDbInitialized();
     
-    const schedule = await db.getFirstAsync(
-      `SELECT r.*, m.name as medication_name 
-       FROM reminders r 
-       JOIN medications m ON r.medication_id = m.id 
-       WHERE r.id = ? AND m.user_id = ?`,
-      [scheduleId, userId]
-    );
+    const scheduleResults = await db
+      .select({
+        id: schedules.id,
+        backendId: schedules.backendId,
+        medicationId: schedules.medicationId,
+        timeOfDay: schedules.timeOfDay,
+        daysOfWeek: schedules.daysOfWeek,
+        timezone: schedules.timezone,
+        active: schedules.active,
+        createdAt: schedules.createdAt,
+        updatedAt: schedules.updatedAt,
+        medicationName: medications.name
+      })
+      .from(schedules)
+      .innerJoin(medications, eq(schedules.medicationId, medications.id))
+      .where(and(
+        eq(schedules.id, scheduleId),
+        eq(medications.userId, userId)
+      ));
     
-    if (!schedule) {
+    if (!scheduleResults || scheduleResults.length === 0) {
       throw new Error('Schedule not found');
     }
     
-    return schedule;
+    return scheduleResults[0];
   } catch (error) {
     console.error('Error getting schedule:', error);
     throw new Error(`Failed to get schedule: ${error.message}`);
@@ -95,27 +131,34 @@ export async function updateSchedule(userId, scheduleId, updates) {
   try {
     const db = await ensureDbInitialized();
     
-    await db.runAsync(
-      `UPDATE reminders SET 
-        time = ?, is_active = ?, updated_at = CURRENT_TIMESTAMP
-       WHERE id = ? AND medication_id IN (
-         SELECT id FROM medications WHERE user_id = ?
-       )`,
-      [
-        updates.time_of_day || '08:00:00',
-        updates.active !== false ? 1 : 0,
-        scheduleId,
-        userId
-      ]
-    );
+    // First verify the schedule belongs to the user
+    const existing = await db
+      .select()
+      .from(schedules)
+      .innerJoin(medications, eq(schedules.medicationId, medications.id))
+      .where(and(
+        eq(schedules.id, scheduleId),
+        eq(medications.userId, userId)
+      ));
     
-    // Get the updated reminder
-    const updatedSchedule = await db.getFirstAsync(
-      'SELECT * FROM reminders WHERE id = ?',
-      [scheduleId]
-    );
+    if (!existing || existing.length === 0) {
+      throw new Error('Schedule not found');
+    }
     
-    return updatedSchedule;
+    const result = await db
+      .update(schedules)
+      .set({
+        timeOfDay: updates.time_of_day || updates.timeOfDay,
+        daysOfWeek: updates.days_of_week || updates.daysOfWeek,
+        timezone: updates.timezone,
+        active: updates.active !== false,
+        updatedAt: new Date().toISOString(),
+        isDirty: true // Mark for sync
+      })
+      .where(eq(schedules.id, scheduleId))
+      .returning();
+    
+    return result[0];
   } catch (error) {
     console.error('Error updating schedule:', error);
     throw new Error(`Failed to update schedule: ${error.message}`);
@@ -127,13 +170,29 @@ export async function deleteSchedule(userId, scheduleId) {
   try {
     const db = await ensureDbInitialized();
     
-    await db.runAsync(
-      `DELETE FROM reminders 
-       WHERE id = ? AND medication_id IN (
-         SELECT id FROM medications WHERE user_id = ?
-       )`,
-      [scheduleId, userId]
-    );
+    // First verify the schedule belongs to the user
+    const existing = await db
+      .select()
+      .from(schedules)
+      .innerJoin(medications, eq(schedules.medicationId, medications.id))
+      .where(and(
+        eq(schedules.id, scheduleId),
+        eq(medications.userId, userId)
+      ));
+    
+    if (!existing || existing.length === 0) {
+      throw new Error('Schedule not found');
+    }
+    
+    // Soft delete the schedule
+    await db
+      .update(schedules)
+      .set({
+        isDeleted: true,
+        updatedAt: new Date().toISOString(),
+        isDirty: true // Mark for sync
+      })
+      .where(eq(schedules.id, scheduleId));
     
     return true;
   } catch (error) {
