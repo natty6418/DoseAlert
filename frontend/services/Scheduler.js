@@ -40,9 +40,14 @@ export async function addSchedule(userId, schedule) {
   try {
     const db = await ensureDbInitialized();
     
+    // Validate that we have a proper time_of_day
+    if (!schedule.time_of_day) {
+      throw new Error('time_of_day is required for schedule');
+    }
+    
     const result = await db.insert(schedules).values({
       medicationId: schedule.medication_id,
-      timeOfDay: schedule.time_of_day || '08:00:00',
+      timeOfDay: schedule.time_of_day,
       daysOfWeek: schedule.days_of_week || 'Mon,Tue,Wed,Thu,Fri,Sat,Sun',
       timezone: schedule.timezone || 'UTC',
       active: schedule.active !== false,
@@ -201,6 +206,18 @@ export async function deleteSchedule(userId, scheduleId) {
   }
 }
 
+// Delete all schedules for a medication
+export async function deleteSchedulesForMedication(medicationId) {
+  try {
+    const db = await ensureDbInitialized();
+    await db.delete(schedules).where(eq(schedules.medicationId, medicationId));
+    return true;
+  } catch (error) {
+    console.error('Error deleting schedules for medication:', error);
+    throw new Error(`Failed to delete schedules: ${error.message}`);
+  }
+}
+
 // --- Local notification scheduling logic ---
 
 Notifications.setNotificationHandler({
@@ -255,9 +272,20 @@ async function registerForPushNotificationsAsync() {
 
 export const scheduleReminders = async (reminderTimes, message, medicationId) => {
     const reminders = [];
+    
     for (const time of reminderTimes) {
-        const triggerDate = new Date();
-        triggerDate.setHours(time.getHours(), time.getMinutes(), 0, 0);
+        // Ensure we have a valid Date object
+        let triggerDate;
+        if (time instanceof Date) {
+            triggerDate = new Date(time);
+        } else {
+            console.warn('Invalid time object:', time);
+            triggerDate = new Date(time);
+        }
+        
+        // Ensure we maintain the exact hours and minutes
+        const hours = triggerDate.getHours();
+        const minutes = triggerDate.getMinutes();
         
         // Schedule notification at the specified time, daily
         const id = await Notifications.scheduleNotificationAsync({
@@ -267,25 +295,40 @@ export const scheduleReminders = async (reminderTimes, message, medicationId) =>
                 data: {medicationId}
             },
             trigger: {
-                hour: triggerDate.getHours(),
-                minute: triggerDate.getMinutes(),
+                hour: hours,
+                minute: minutes,
                 repeats: true,
             },
         });
-        reminders.push({ id, time: triggerDate });
+        
+        reminders.push({ 
+            id, 
+            time: triggerDate,
+            scheduledHour: hours,
+            scheduledMinute: minutes 
+        });
     }
+    
     return reminders;
 };
 
-export const cancelReminders = async (reminders) => {
+export const cancelScheduledReminders = async (medicationId) => {
   try {
-    const notificationIds = reminders.filter(reminder=>reminder.id).map((reminder) => reminder.id);
-    for (const id of notificationIds) {
-      await Notifications.cancelScheduledNotificationAsync(id);
+    const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+    let canceledCount = 0;
+
+    for (const notification of scheduledNotifications) {
+      if (notification.content.data?.medicationId === medicationId) {
+        await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+        canceledCount++;
+      }
     }
-    console.log('Cancelled notifications:', notificationIds);
+
+    console.log(`Cancelled ${canceledCount} notifications for medication ID: ${medicationId}`);
+    return canceledCount;
   } catch (error) {
-    throw new Error('Error cancelling notifications:', error);
+    console.error('Error cancelling scheduled reminders:', error);
+    throw new Error(`Failed to cancel reminders: ${error.message}`);
   }
 };
 

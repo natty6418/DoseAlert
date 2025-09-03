@@ -4,14 +4,17 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
 import { icons } from '../constants';
 import { useApp } from '../contexts/AppContext';
+import { useAuth } from '../contexts/AuthContext';
+import { deleteSchedulesForMedication, addSchedule } from '../services/Scheduler';
 
 const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
   const { updateMedication, loadMedications } = useApp();
+  const { user } = useAuth();
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedReminderIndex, setSelectedReminderIndex] = useState(null);
   const [reminderTimes, setReminderTimes] = useState(item.reminder?.times || []);
   const [reminderEnabled, setReminderEnabled] = useState(item.reminder?.enabled || false);
-  const [selectedDays, setSelectedDays] = useState(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+  const [selectedDays, setSelectedDays] = useState(item.schedule?.daysOfWeek ? item.schedule.daysOfWeek.split(',') : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
 
   const daysOfWeek = [
     { short: 'Mon', full: 'Monday' },
@@ -32,13 +35,11 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
     setShowTimePicker(false);
     if (selectedDate && event.type === 'set') {
       if (selectedReminderIndex !== null) {
-        // Update existing reminder time
         const updatedTimes = [...reminderTimes];
         updatedTimes[selectedReminderIndex] = selectedDate;
         setReminderTimes(updatedTimes);
         setSelectedReminderIndex(null);
       } else {
-        // Add new reminder time
         setReminderTimes([...reminderTimes, selectedDate]);
       }
     }
@@ -65,15 +66,28 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
           enabled: reminderEnabled,
           times: reminderTimes
         },
-        reminderDays: selectedDays
       };
 
       await updateMedication(item.id, updatedMedication);
+
+      await deleteSchedulesForMedication(item.id);
+
+      if (reminderEnabled && reminderTimes.length > 0 && user?.id) {
+        for (const reminderTime of reminderTimes) {
+          const schedule = {
+            medication_id: item.id,
+            time_of_day: new Date(reminderTime).toTimeString().split(' ')[0],
+            days_of_week: selectedDays.join(','),
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            active: true,
+            reminderEnabled: reminderEnabled,
+          };
+          await addSchedule(user.id, schedule);
+        }
+      }
       
-      // Reload medications to ensure we have the latest data including schedules
       await loadMedications();
       
-      // Notify parent component of the update
       if (onMedicationUpdate) {
         onMedicationUpdate(updatedMedication);
       }
@@ -92,12 +106,10 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
 
   return (
     <View className="bg-gray-800 rounded-2xl border border-gray-700 overflow-hidden">
-      {/* Header */}
       <TouchableOpacity 
         onPress={toggleExpand} 
         className="flex-row items-center p-4 bg-gray-750"
       >
-        {/* Status Indicator and Pill Icon */}
         <View className="flex-row items-center mr-4">
           <View className={`w-3 h-3 rounded-full mr-3 ${
             isActive && !isExpired ? 'bg-green-400' : 'bg-gray-500'
@@ -114,7 +126,6 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
           </View>
         </View>
 
-        {/* Medication Details */}
         <View className="flex-1">
           <View className="flex-row items-center justify-between mb-1">
             <Text className="text-lg font-psemibold text-white">
@@ -149,7 +160,6 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
           </View>
         </View>
 
-        {/* Status Icons */}
         <View className="items-center ml-3">
           {reminderEnabled && (
             <View className="mb-2">
@@ -162,10 +172,8 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
         </View>
       </TouchableOpacity>
 
-      {/* Expanded Content */}
       <View className="p-4 bg-gray-800">
         <ScrollView showsVerticalScrollIndicator={false}>
-          {/* Reminder Toggle Section */}
           <View className="mb-6">
             <View className="flex-row items-center justify-between mb-4">
               <Text className="text-lg font-psemibold text-white">Reminders</Text>
@@ -179,7 +187,6 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
 
             {reminderEnabled && (
               <>
-                {/* Days Selection */}
                 <View className="mb-4">
                   <Text className="text-sm font-pmedium text-gray-300 mb-3">
                     Reminder Days
@@ -194,6 +201,7 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
                             ? 'bg-blue-600 border-blue-500'
                             : 'bg-gray-700 border-gray-600'
                         }`}
+                        accessibilityState={{ selected: selectedDays.includes(day.short) }}
                       >
                         <Text className={`text-sm font-pmedium ${
                           selectedDays.includes(day.short) ? 'text-white' : 'text-gray-400'
@@ -205,7 +213,6 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
                   </View>
                 </View>
 
-                {/* Reminder Times */}
                 <View className="mb-4">
                   <Text className="text-sm font-pmedium text-gray-300 mb-3">
                     Reminder Times
@@ -237,7 +244,6 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
                       </View>
                     ))}
 
-                    {/* Add Time Button */}
                     <TouchableOpacity
                       onPress={() => {
                         setSelectedReminderIndex(null);
@@ -254,7 +260,6 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
             )}
           </View>
 
-          {/* Medication Information */}
           <View className="mb-6">
             <Text className="text-lg font-psemibold text-white mb-4">Information</Text>
             
@@ -280,7 +285,6 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
             )}
           </View>
 
-          {/* Action Buttons */}
           <View className="flex-row gap-3 mb-3">
             <TouchableOpacity
               onPress={handleSaveChanges}
@@ -299,7 +303,6 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Edit Medication Button */}
           <TouchableOpacity
             onPress={() => {
               router.push({
@@ -316,7 +319,6 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
           </TouchableOpacity>
         </ScrollView>
 
-        {/* Time Picker */}
         {showTimePicker && (
           <DateTimePicker
             value={selectedReminderIndex !== null ? new Date(reminderTimes[selectedReminderIndex]) : new Date()}

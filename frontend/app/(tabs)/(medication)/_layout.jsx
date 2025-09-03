@@ -19,6 +19,14 @@ const MedicationLayout = () => {
           presentation: "modal"
         }} 
       />
+      <Stack.Screen
+        name="edit"
+        options={{
+          title: "Edit Medication",
+          headerShown: false,
+          presentation: "modal"
+        }}
+      />
     </Stack>
   );
 };

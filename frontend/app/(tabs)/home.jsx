@@ -13,7 +13,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/Loading';
 import { icons, images } from '../../constants';
 import MedicationItemExpanded from '../../components/MedicationItemExpanded';
-import { Notifications, registerForPushNotificationsAsync } from '../../services/Scheduler';
+import { registerForPushNotificationsAsync } from '../../services/Scheduler';
+import * as Notifications from 'expo-notifications';
 import { useFocusEffect } from 'expo-router';
 
 

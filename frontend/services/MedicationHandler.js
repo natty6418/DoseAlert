@@ -73,6 +73,7 @@ function transformFromDbFormat(dbData, schedules = []) {
     // Convert time string (HH:MM:SS) to Date object for today
     const [hours, minutes, seconds] = schedule.timeOfDay.split(':');
     const date = new Date();
+    date.setFullYear(date.getFullYear(), date.getMonth(), date.getDate());
     date.setHours(parseInt(hours), parseInt(minutes), parseInt(seconds || 0), 0);
     return date;
   });
@@ -114,6 +115,9 @@ function transformFromDbFormat(dbData, schedules = []) {
     reminder: {
       enabled: reminderEnabled,
       times: reminderTimes,
+    },
+    schedule: {
+        daysOfWeek: schedules.length > 0 ? schedules[0].daysOfWeek : '',
     },
     createdAt: dbData.createdAt ? new Date(dbData.createdAt) : new Date(),
   };

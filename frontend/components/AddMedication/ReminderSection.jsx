@@ -27,11 +27,9 @@ const ReminderSection = ({
 
     const toggleDay = (day) => {
         if (reminderDays.includes(day)) {
-            // Remove the day
             const newDays = reminderDays.filter(d => d !== day);
             onReminderDaysChange(newDays);
         } else {
-            // Add the day
             onReminderDaysChange([...reminderDays, day]);
         }
     };
@@ -55,7 +53,6 @@ const ReminderSection = ({
 
             {reminderEnabled && (
                 <View className="mt-2">
-                    {/* Days of Week Selection */}
                     <Text className="text-gray-300 font-pmedium mb-3">Reminder Days</Text>
                     <View className="flex-row flex-wrap gap-2 mb-4">
                         {daysOfWeek.map(({ key, label }) => (
@@ -67,6 +64,7 @@ const ReminderSection = ({
                                         ? 'bg-yellow-500 border-yellow-400'
                                         : 'bg-gray-700 border-gray-600'
                                 }`}
+                                accessibilityState={{ selected: reminderDays.includes(key) }}
                             >
                                 <Text className={`font-pmedium ${
                                     reminderDays.includes(key) ? 'text-gray-900' : 'text-gray-300'
@@ -77,7 +75,6 @@ const ReminderSection = ({
                         ))}
                     </View>
 
-                    {/* Reminder Times */}
                     <Text className="text-gray-300 font-pmedium mb-3">Reminder Times</Text>
                     {reminderTimes.length > 0 && (
                         <View className="mb-3">

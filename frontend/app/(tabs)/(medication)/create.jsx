@@ -9,13 +9,13 @@ import CameraModal from '../../../components/CameraModal';
 import MedicationCardModal from '../../../components/MedicationCard';
 import SelectableMedicationItem from '../../../components/SelectableMedicationItem';
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../../services/externalDrugAPI';
-import EditMedicationPlanModal from '../../../components/EditMedicationModal';
+
 import ErrorModal from '../../../components/ErrorModal';
 import { useFocusEffect } from 'expo-router';
 import { router } from 'expo-router';
 
 const CreateScreen = () => {
-  const [editMedicationModalVisible, setEditMedicationModalVisible] = useState(false);
+ 
   const [medicationCardModalVisible, setMedicationCardModalVisible] = useState(false);
   const [isScanned, setIsScanned] = useState(false);
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
@@ -29,7 +29,7 @@ const CreateScreen = () => {
   // Use AppContext for medication management
   const { 
     medications, 
-    updateMedication, 
+    
     removeMedication,
     isLoading,
     error,
@@ -47,11 +47,6 @@ const CreateScreen = () => {
     // Medications are automatically managed by AppContext
   }, [medications]);
 
-  const handleEditPlan = (editedPlan) => {
-    // Use AppContext to update medication
-    updateMedication(editedPlan.id, editedPlan);
-    setEditMedicationModalVisible(false);
-  };
   const extractSideEffectTerms = (sideEffectsData) => {
     const terms = sideEffectsData.map(effect => effect.term);
     return terms.length > 10 ? terms.slice(0, 10) : terms;
@@ -121,16 +116,6 @@ const CreateScreen = () => {
     }
   };
 
-  const handleDeletePlan = async (medicationId) => {
-    try {
-      // Use AppContext to remove medication
-      await removeMedication(medicationId);
-      setEditMedicationModalVisible(false);
-    } catch (error) {
-      console.error('Error deleting medication:', error);
-      showError('Failed to delete medication. Please try again.');
-    }
-  }
 
   const filteredPlans = medications.filter(plan =>
     plan.medicationSpecification?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -402,13 +387,7 @@ const CreateScreen = () => {
         />
       )}
 
-      <EditMedicationPlanModal
-        visible={editMedicationModalVisible}
-        onClose={() => setEditMedicationModalVisible(false)}
-        onSave={handleEditPlan}
-        medicationData={selectedMedication}
-        onDeleteMedication={handleDeletePlan}
-      />
+      
 
       <CameraModal
         isVisible={cameraModalVisible}

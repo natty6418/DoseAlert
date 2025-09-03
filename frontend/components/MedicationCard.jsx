@@ -110,6 +110,17 @@ const MedicationCardModal = ({
                                             isActive,
                                         };
                                         
+                                        // Convert Date objects in reminder.times to time strings to avoid timezone issues
+                                        if (editData.reminder && editData.reminder.times) {
+                                            editData.reminder.times = editData.reminder.times.map(time => {
+                                                if (time instanceof Date) {
+                                                    // Convert to HH:MM:SS format to avoid timezone conversion
+                                                    return `${time.getHours().toString().padStart(2, '0')}:${time.getMinutes().toString().padStart(2, '0')}:00`;
+                                                }
+                                                return time;
+                                            });
+                                        }
+                                        
                                         router.push({
                                             pathname: '/(tabs)/(medication)/edit',
                                             params: {
