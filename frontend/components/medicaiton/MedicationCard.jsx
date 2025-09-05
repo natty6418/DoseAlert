@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, Modal, Image, ScrollView, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
-import { icons } from '../constants';
+import { icons } from '../../constants';
 import LongTextComponent from './LongTextComponent';
 
 const MedicationCardModal = ({

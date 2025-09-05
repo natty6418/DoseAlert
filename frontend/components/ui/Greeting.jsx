@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image } from 'react-native';
-import {images} from '../constants';
+import {images} from '../../constants';
 
 export default function Greeting({name}) {
   const isGuest = name === "Guest";

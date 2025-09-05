@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Image, Switch, ScrollView, Alert } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { router } from 'expo-router';
-import { icons } from '../constants';
-import { useApp } from '../contexts/AppContext';
-import { useAuth } from '../contexts/AuthContext';
-import { deleteSchedulesForMedication, addSchedule } from '../services/Scheduler';
+import { icons } from '../../constants';
+import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { deleteSchedulesForMedication, addSchedule } from '../../services/Scheduler';
 
 const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
   const { updateMedication, loadMedications } = useApp();

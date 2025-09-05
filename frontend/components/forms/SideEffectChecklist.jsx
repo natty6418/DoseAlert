@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
-import { icons } from '../constants';
+import { icons } from '../../constants';
 
 const SideEffectChecklist = ({ sideEffects, setSideEffects, darker=true }) => {
   // Initialize each side effect with unchecked status

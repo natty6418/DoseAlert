@@ -1,6 +1,6 @@
 import { View, TextInput, TouchableOpacity } from 'react-native';
 import React from 'react'
-import { icons } from '../constants';
+import { icons } from '../../constants';
 
 const SearchBar = ({searchTerm, setSearchTerm, placeholder = "Search medication plans..."}) => {
     return (

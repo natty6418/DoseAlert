@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import { Modal, View, TouchableOpacity, Text, StatusBar } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { icons } from '../constants';
+import { icons } from '../../constants';
 import PropTypes from 'prop-types';
 
 

@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Alert, Modal } from 'react-native';
-import { recordAdherence } from '../services/AdherenceTracker';
+import { recordAdherence } from '../../services/AdherenceTracker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import emailEmergencyContact from '../services/EmergencyServiceHandler';
 
 const ResponseModal = ({id, name, visible, onClose, setAdherenceData, adherenceData}) => {

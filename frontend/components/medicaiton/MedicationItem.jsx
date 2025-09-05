@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
-import { icons } from '../constants';
+import { icons } from '../../constants';
 
 const MedicationItem = ({ item, onPress }) => {
   const isActive = item.isActive;
