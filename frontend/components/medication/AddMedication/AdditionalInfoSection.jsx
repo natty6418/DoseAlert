@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import PropTypes from 'prop-types';
-import FormField from '../FormField';
+import FormField from '../../forms/FormField';
 import { icons } from '../../../constants';
 
 const AdditionalInfoSection = ({ purpose, directions, warning, onPurposeChange, onDirectionsChange, onWarningChange }) => {

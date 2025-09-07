@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TextInput } from 'react-native';
 import PropTypes from 'prop-types';
-import SideEffectChecklist from '../SideEffectChecklist';
+import SideEffectChecklist from '../../forms/SideEffectChecklist';
 import { icons } from '../../../constants';
 
 const SideEffectsSection = ({ 

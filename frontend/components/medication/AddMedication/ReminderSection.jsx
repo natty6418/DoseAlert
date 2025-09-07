@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Switch, TouchableOpacity } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import PropTypes from 'prop-types';
-import { icons } from '../../constants';
+import { icons } from '../../../constants';
 
 const ReminderSection = ({
     reminderEnabled,

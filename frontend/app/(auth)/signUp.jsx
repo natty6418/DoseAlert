@@ -3,9 +3,9 @@ import { Link, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { View, Text, ScrollView, Dimensions, Image } from "react-native";
 import { images } from "../../constants";
-import CustomButton from "../../components/CustomButton";
-import FormField from "../../components/FormField";
-import ErrorModal from "../../components/ErrorModal";
+import CustomButton from "../../components/ui/CustomButton";
+import FormField from "../../components/forms/FormField";
+import ErrorModal from "../../components/modals/ErrorModal";
 import { createNewAccount } from "../../services/UserHandler";
 import { useAuth } from '../../contexts/AuthContext';
 

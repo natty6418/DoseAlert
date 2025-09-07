@@ -1,6 +1,6 @@
 import { View, Text } from 'react-native'
 import React from 'react'
-import CustomButton from '../../components/CustomButton'
+import CustomButton from '../../components/ui/CustomButton'
 import { useAuth } from '../../contexts/AuthContext'
 import { router } from "expo-router";
 import { logoutUser } from '../../services/UserHandler';

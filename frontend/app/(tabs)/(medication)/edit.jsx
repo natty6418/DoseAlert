@@ -11,8 +11,8 @@ import {
   ReminderSection,
   AdditionalInfoSection,
   SideEffectsSection
-} from '../../../components/AddMedication';
-import FormField from '../../../components/FormField';
+} from '../../../components/medication/AddMedication';
+import FormField from '../../../components/forms/FormField';
 import { scheduleReminders, cancelScheduledReminders, addSchedule, deleteSchedulesForMedication } from '../../../services/Scheduler';
 
 const EditMedicationScreen = () => {

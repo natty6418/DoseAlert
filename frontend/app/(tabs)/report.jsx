@@ -3,8 +3,8 @@ import { View, Text, SafeAreaView, ScrollView, Dimensions } from 'react-native';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAdherenceReport, getAdherenceSummary } from '../../services/AdherenceTracker';
-import LoadingSpinner from '../../components/Loading';
-import MedicationReportItem from '../../components/MedicationReportItem';
+import LoadingSpinner from '../../components/ui/Loading';
+import MedicationReportItem from '../../components/medication/MedicationReportItem';
 import { ProgressChart } from 'react-native-chart-kit';
 
 

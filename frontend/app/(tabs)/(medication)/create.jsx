@@ -2,15 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { useApp } from '../../../contexts/AppContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import LoadingSpinner from '../../../components/Loading';
-import SearchBar from '../../../components/SearchBar';
+import LoadingSpinner from '../../../components/ui/Loading';
+import SearchBar from '../../../components/ui/SearchBar';
 import { icons } from '../../../constants';
-import CameraModal from '../../../components/CameraModal';
-import MedicationCardModal from '../../../components/MedicationCard';
-import SelectableMedicationItem from '../../../components/SelectableMedicationItem';
+import CameraModal from '../../../components/modals/CameraModal';
+import MedicationCardModal from '../../../components/medication/MedicationCard';
+import SelectableMedicationItem from '../../../components/medication/SelectableMedicationItem';
 import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../../services/externalDrugAPI';
 
-import ErrorModal from '../../../components/ErrorModal';
+import ErrorModal from '../../../components/modals/ErrorModal';
 import { useFocusEffect } from 'expo-router';
 import { router } from 'expo-router';
 

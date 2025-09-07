@@ -6,7 +6,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { icons } from '../../../constants';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logoutUser } from '../../../services/UserHandler';
-import CustomButton from '../../../components/CustomButton';
+import CustomButton from '../../../components/ui/CustomButton';
 
 
 const SettingsScreen = () => {

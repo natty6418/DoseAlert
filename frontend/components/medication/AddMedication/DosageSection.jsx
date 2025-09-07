@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import PropTypes from 'prop-types';
-import FormField from '../FormField';
+import FormField from '../../forms/FormField';
 
 const DosageSection = ({ dosage, onDosageChange, error }) => {
     return (

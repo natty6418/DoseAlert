@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import Providers from '../contexts';
 import { useApp } from '../contexts/AppContext';
-import Loading from '../components/Loading';
+import Loading from '../components/ui/Loading';
 
 const AppLayout = () => {
   const { isLoading } = useApp();

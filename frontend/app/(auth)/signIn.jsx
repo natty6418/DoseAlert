@@ -6,9 +6,11 @@ import { View, Text, ScrollView, Dimensions, Image } from "react-native";
 // import { signInWithEmailAndPassword } from 'firebase/auth';
 // import { auth } from '../../services/firebaseConfig';
 import { images } from "../../constants";
-import CustomButton from "../../components/CustomButton";
-import FormField from "../../components/FormField";
-import ErrorModal from '../../components/ErrorModal';
+
+import CustomButton from "../../components/ui/CustomButton";
+import FormField from "../../components/forms/FormField";
+import ErrorModal from "../../components/modals/ErrorModal";
+
 // import { logIn } from '../../services/UserHandler';
 import { loginUser } from '../../services/UserHandler';
 import { useAuth } from '../../contexts/AuthContext';

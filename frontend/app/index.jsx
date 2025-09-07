@@ -2,7 +2,7 @@ import { StatusBar } from "expo-status-bar";
 import { Redirect, router } from "expo-router";
 import { View, Text, Image, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import CustomButton from "../components/CustomButton";
+import CustomButton from "../components/ui/CustomButton";
 import { images } from "../constants";
 import "../global.css";
 import { useAuth } from "../contexts/AuthContext";
