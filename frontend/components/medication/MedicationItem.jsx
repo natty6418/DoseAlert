@@ -4,9 +4,21 @@ import { icons } from '../../constants';
 
 const MedicationItem = ({ item, onPress }) => {
   const isActive = item.isActive;
+  const isDemoMedication = item.isDemoMedication;
   const currentDate = new Date();
-  const endDate = item.end_date ? new Date(item.end_date) : null;
+  const endDate = item.end_date || item.endDate ? new Date(item.end_date || item.endDate) : null;
   const isExpired = endDate && endDate < currentDate;
+
+  // Handle both demo medication format and regular medication format
+  const medicationName = item.name || item.medicationSpecification?.name || 'Unknown Medication';
+  const dosageText = item.dosage && item.dosageUnit 
+    ? `${item.dosage} ${item.dosageUnit}`
+    : (item.dosage?.amount && item.dosage?.unit 
+        ? `${item.dosage.amount} ${item.dosage.unit}` 
+        : item.dosage || 'No dosage specified');
+  const frequencyText = item.frequency || 'No frequency set';
+  const startDate = item.start_date || item.startDate;
+  const endDateForDisplay = item.end_date || item.endDate;
 
   return (
     <TouchableOpacity
@@ -37,11 +49,18 @@ const MedicationItem = ({ item, onPress }) => {
       {/* Medication Details */}
       <View className="flex-1">
         <View className="flex-row items-center justify-between mb-1">
-          <Text className={`text-lg font-psemibold ${
-            isActive && !isExpired ? 'text-white' : 'text-gray-400'
-          }`}>
-            {item.medicationSpecification?.name || 'Unknown Medication'}
-          </Text>
+          <View className="flex-row items-center flex-1">
+            <Text className={`text-lg font-psemibold ${
+              isActive && !isExpired ? 'text-white' : 'text-gray-400'
+            }`}>
+              {medicationName}
+            </Text>
+            {isDemoMedication && (
+              <View className="bg-blue-500 px-2 py-1 rounded-full ml-2">
+                <Text className="text-white text-xs font-pmedium">Sample</Text>
+              </View>
+            )}
+          </View>
           {isExpired && (
             <View className="bg-red-500 px-2 py-1 rounded-full">
               <Text className="text-white text-xs font-pmedium">Expired</Text>
@@ -53,9 +72,7 @@ const MedicationItem = ({ item, onPress }) => {
           <Text className={`text-sm font-pregular ${
             isActive && !isExpired ? 'text-gray-300' : 'text-gray-500'
           }`}>
-            {item.dosage?.amount && item.dosage?.unit 
-              ? `${item.dosage.amount} ${item.dosage.unit}` 
-              : item.dosage || 'No dosage specified'}
+            {dosageText}
           </Text>
           <Text className={`text-sm font-pregular mx-2 ${
             isActive && !isExpired ? 'text-gray-300' : 'text-gray-500'
@@ -65,7 +82,7 @@ const MedicationItem = ({ item, onPress }) => {
           <Text className={`text-sm font-pregular ${
             isActive && !isExpired ? 'text-gray-300' : 'text-gray-500'
           }`}>
-            {item.frequency || 'No frequency set'}
+            {frequencyText}
           </Text>
         </View>
 
@@ -74,7 +91,7 @@ const MedicationItem = ({ item, onPress }) => {
           <Text className={`text-xs font-pregular ml-1 ${
             isActive && !isExpired ? 'text-gray-400' : 'text-gray-600'
           }`}>
-            {item.start_date ? new Date(item.start_date).toLocaleDateString() : 'No start date'} - {item.end_date ? new Date(item.end_date).toLocaleDateString() : 'Ongoing'}
+            {startDate ? new Date(startDate).toLocaleDateString() : 'No start date'} - {endDateForDisplay ? new Date(endDateForDisplay).toLocaleDateString() : 'Ongoing'}
           </Text>
         </View>
       </View>

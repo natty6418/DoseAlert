@@ -196,6 +196,13 @@ const CreateScreen = () => {
     );
   };
 
+  const handleLongPress = (medicationId) => {
+    if (!isSelectionMode) {
+      setIsSelectionMode(true);
+      setSelectedMedicationIds(new Set([medicationId]));
+    }
+  };
+
   if (isLoading) {
     return <LoadingSpinner />;
   }
@@ -212,64 +219,18 @@ const CreateScreen = () => {
             </Text>
           </View>
           
-          {/* Selection Mode Toggle */}
-          {medications.length > 0 && (
+          {/* Cancel Selection Button - Only show when in selection mode */}
+          {isSelectionMode && (
             <TouchableOpacity
               onPress={toggleSelectionMode}
-              className={`px-4 py-2 rounded-lg border ${
-                isSelectionMode 
-                  ? 'bg-secondary-200 border-secondary-200' 
-                  : 'bg-transparent border-gray-600'
-              }`}
+              className="px-4 py-2 rounded-lg border bg-transparent border-gray-600"
             >
-              <Text className={`font-psemibold ${
-                isSelectionMode ? 'text-white' : 'text-gray-300'
-              }`}>
-                {isSelectionMode ? 'Cancel' : 'Select'}
-              </Text>
+              <Text className="text-gray-300 font-psemibold">Cancel</Text>
             </TouchableOpacity>
           )}
         </View>
         
-        {/* Selection Mode Controls */}
-        {isSelectionMode && (
-          <View className="mt-3 p-3 bg-gray-800 rounded-lg">
-            {/* Top row: Select All / Deselect All and Selected count */}
-            <View className="flex-row items-center justify-between mb-3">
-              <View className="flex-row items-center">
-                <TouchableOpacity
-                  onPress={selectedMedicationIds.size === filteredPlans.length ? deselectAllMedications : selectAllMedications}
-                  className="flex-row items-center"
-                >
-                  <icons.CheckSquare 
-                    color={selectedMedicationIds.size === filteredPlans.length ? "#6366F1" : "#6B7280"} 
-                    size={20} 
-                  />
-                  <Text className="text-gray-300 font-pregular ml-2">
-                    {selectedMedicationIds.size === filteredPlans.length ? 'Deselect All' : 'Select All'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-              
-              <Text className="text-gray-300 font-pregular">
-                {selectedMedicationIds.size} of {filteredPlans.length} selected
-              </Text>
-            </View>
-            
-            {/* Bottom row: Delete button (only show when items are selected) */}
-            {selectedMedicationIds.size > 0 && (
-              <TouchableOpacity
-                onPress={handleBulkDelete}
-                className="bg-red-600 px-4 py-2 rounded-lg flex-row items-center justify-center"
-              >
-                <icons.Trash color="#FFF" size={16} />
-                <Text className="text-white font-psemibold ml-2">
-                  Delete {selectedMedicationIds.size} medication{selectedMedicationIds.size > 1 ? 's' : ''}
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
+        {/* Selection Mode Controls - Removed from here */}
       </View>
 
       {/* Search Section */}
@@ -286,7 +247,7 @@ const CreateScreen = () => {
         {filteredPlans.length === 0 ? (
           <View className="flex-1 justify-center items-center">
             <View className="bg-secondary-100 rounded-full p-6 mb-4">
-              <icons.PlusCircle color="#6366F1" size={64} />
+              <icons.PlusCircle color="#fff" size={64} />
             </View>
             <Text className="text-white text-xl font-psemibold mb-2">No medications yet</Text>
             <Text className="text-gray-300 text-center font-pregular mb-8 px-8">
@@ -311,7 +272,7 @@ const CreateScreen = () => {
                   }}
                   className="bg-gray-700 px-6 py-3 rounded-xl flex-row items-center border border-secondary-200"
                 >
-                  <icons.Camera color="#6366F1" size={20} />
+                  <icons.Camera color="#c0ee77" size={20} />
                   <Text className="text-secondary font-psemibold ml-2">Scan Bottle</Text>
                 </TouchableOpacity>
               </View>
@@ -329,6 +290,7 @@ const CreateScreen = () => {
                   isSelectionMode={isSelectionMode}
                   isSelected={selectedMedicationIds.has(item.id)}
                   onSelect={toggleMedicationSelection}
+                  onLongPress={() => handleLongPress(item.id)}
                   onPress={() => {
                     if (!isSelectionMode) {
                       setSelectedMedication(item);
@@ -370,6 +332,46 @@ const CreateScreen = () => {
         </View>
       )}
 
+      {/* Selection Mode Controls - Fixed at bottom */}
+      {isSelectionMode && (
+        <View className="absolute bottom-0 left-0 right-0 bg-gray-800 border-t border-gray-700 px-6 py-4 pb-8">
+          {/* Top row: Select All / Deselect All and Selected count */}
+          <View className="flex-row items-center justify-between mb-3">
+            <View className="flex-row items-center">
+              <TouchableOpacity
+                onPress={selectedMedicationIds.size === filteredPlans.length ? deselectAllMedications : selectAllMedications}
+                className="flex-row items-center"
+              >
+                <icons.CheckSquare 
+                  color={selectedMedicationIds.size === filteredPlans.length ? "#c0ee77" : "#6B7280"} 
+                  size={20} 
+                />
+                <Text className="text-gray-300 font-pregular ml-2">
+                  {selectedMedicationIds.size === filteredPlans.length ? 'Deselect All' : 'Select All'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            
+            <Text className="text-secondary font-pregular">
+              {selectedMedicationIds.size} of {filteredPlans.length} selected
+            </Text>
+          </View>
+          
+          {/* Bottom row: Delete button */}
+          {selectedMedicationIds.size > 0 && (
+            <TouchableOpacity
+              onPress={handleBulkDelete}
+              className="bg-red-500 px-4 py-3 rounded-lg flex-row items-center justify-center"
+            >
+              <icons.Trash color="#FFF" size={16} />
+              <Text className="text-white font-psemibold ml-2">
+                Delete {selectedMedicationIds.size} medication{selectedMedicationIds.size > 1 ? 's' : ''}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Modals */}
       {selectedMedication && (
         <MedicationCardModal
@@ -386,8 +388,6 @@ const CreateScreen = () => {
           medicationData={selectedMedication}
         />
       )}
-
-      
 
       <CameraModal
         isVisible={cameraModalVisible}

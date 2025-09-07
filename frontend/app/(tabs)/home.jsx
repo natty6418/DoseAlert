@@ -19,9 +19,10 @@ import { useFocusEffect } from 'expo-router';
 
 
 const Home = () => {
-  const [expandedReminderIndex, setExpandedReminderIndex] = useState(null);
-  const [expandedMedicationIndex, setExpandedMedicationIndex] = useState(null);
-  const [upcomingMedicationReminders, setUpcomingMedicationReminders] = useState([]);
+  const [expandedTodayIndex, setExpandedTodayIndex] = useState(null);
+  const [expandedOtherIndex, setExpandedOtherIndex] = useState(null);
+  const [todaysMedications, setTodaysMedications] = useState([]);
+  const [otherActiveMedications, setOtherActiveMedications] = useState([]);
   
   // Use new contexts
   const { 
@@ -29,7 +30,9 @@ const Home = () => {
     loadMedications, 
     updateMedication: updateMedicationContext,
     setAdherenceResponseId,
-    isLoading
+    isLoading,
+    hasDemoMedications,
+    clearDemoMedications
   } = useApp();
   const { user, isAuthenticated, isGuest } = useAuth();
  
@@ -89,12 +92,50 @@ const Home = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    // Filter medications to show only active ones with reminders enabled for upcoming reminders
-    const upcomingReminders = medications.filter(med => {
-      const isActive = new Date(med.end_date || med.endDate) >= new Date();
-      return isActive && med.reminder?.enabled;
+    // Get current day of week and time
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes(); // minutes since midnight
+    
+    // Filter active medications - handle both database format and demo format
+    const activeMedications = medications.filter(med => {
+      // Check if medication is active and not expired
+      const isActive = med.isActive !== false; // Default to true if not specified
+      const endDate = med.end_date || med.endDate;
+      const isNotExpired = !endDate || new Date(endDate) >= new Date();
+      
+      return isActive && isNotExpired;
     });
-    setUpcomingMedicationReminders(upcomingReminders);
+
+    console.log('All medications:', medications.length);
+    console.log('Active medications:', activeMedications.length);
+    activeMedications.forEach(med => {
+      console.log('Active med:', med.name || med.medicationSpecification?.name, 'hasReminder:', med.reminder?.enabled);
+    });
+
+    // Separate medications with today's reminders vs others
+    const todaysReminders = [];
+    const otherMedications = [];
+
+    activeMedications.forEach(med => {
+      const hasReminderToday = med.reminder?.enabled && 
+        med.reminder?.reminderTimes?.some(time => {
+          const [hours, minutes] = time.split(':').map(Number);
+          const reminderTime = hours * 60 + minutes;
+          return reminderTime >= currentTime; // Still upcoming today
+        });
+
+      if (hasReminderToday) {
+        todaysReminders.push(med);
+      } else {
+        otherMedications.push(med);
+      }
+    });
+
+    console.log('Today\'s reminders:', todaysReminders.length);
+    console.log('Other medications:', otherMedications.length);
+
+    setTodaysMedications(todaysReminders);
+    setOtherActiveMedications(otherMedications);
   }, [medications]);
 
 
@@ -119,26 +160,19 @@ const Home = () => {
     onUpdateReminderTimes: PropTypes.func.isRequired,
   };
 
-  const handleUpdateMedication = async (index, medicationData) => {
-    try {
-      const activeMedications = medications.filter(med => med.isActive);
-      const medicationToUpdate = activeMedications[index];
-      
-      // Update using AppContext
-      await updateMedicationContext(medicationToUpdate.id, medicationData);
-      
-      // Reload medications to get the latest data
-      await loadMedications();
-      
-    } catch (error) {
-      console.log('Error updating medication:', error);
-    }
-  };
 
-  const handleUpdateReminder = async (index, times, enable) => {
+  const handleUpdateReminder = async (medicationId, times, enable, isTodaysSection = true) => {
     try {
       const enabled = times.length > 0 ? enable : false;
-      const medicationToUpdate = upcomingMedicationReminders[index];
+      
+      // Find the medication in the appropriate array
+      const sourceArray = isTodaysSection ? todaysMedications : otherActiveMedications;
+      const medicationToUpdate = sourceArray.find(med => med.id === medicationId);
+      
+      if (!medicationToUpdate) {
+        console.log('Medication not found');
+        return;
+      }
       
       // Prepare medication data for update
       const updateData = {
@@ -153,10 +187,7 @@ const Home = () => {
       // Update using AppContext
       await updateMedicationContext(medicationToUpdate.id, updateData);
       
-      // Update local state
-      const updatedMedications = [...upcomingMedicationReminders];
-      updatedMedications[index] = updateData;
-      setUpcomingMedicationReminders(updatedMedications);
+      // The useEffect will automatically update the arrays when medications change
       
     } catch (error) {
       console.log('Error updating medication reminder:', error);
@@ -186,72 +217,148 @@ const Home = () => {
         <ScrollView>
           <Greeting name={isGuest ? "Guest" : user?.first_name || "User"} />
 
-          <View className="px-4 mt-2">
-            <Text className="text-gray-400 text-lg mb-2">Upcoming Reminders</Text>
-            {upcomingMedicationReminders.length > 0 ? (
-              upcomingMedicationReminders.map((med, index) => (
-                <View key={index} className="mb-2">
-                  <ReminderItem
-                    item={med}
-                    isExpanded={expandedReminderIndex === index}
-                    toggleExpand={() => setExpandedReminderIndex(expandedReminderIndex === index ? null : index)}
-                    onToggleReminder={(enabled) => handleUpdateReminder(index, med.reminder.reminderTimes, enabled)}
-                    onUpdateReminderTimes={(times) => handleUpdateReminder(index, times, true)}
-                  />
+          {/* Demo Medications Banner */}
+          {hasDemoMedications() && (
+            <View className="px-4 mt-4 mb-2">
+              <View className="bg-gradient-to-r from-blue-500/20 to-indigo-500/20 border border-blue-400/30 rounded-xl p-4">
+                <View className="flex-row items-start">
+                  <View className="bg-blue-500 rounded-full p-2 mr-3">
+                    <Text className="text-white text-xs font-bold">?</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-blue-300 font-psemibold text-base mb-1">
+                      Welcome to DoseAlert!
+                    </Text>
+                    <Text className="text-blue-200 text-sm mb-3">
+                      We&apos;ve added some sample medications to help you get started. 
+                      You can edit, delete, or add reminders to them.
+                    </Text>
+                    <View className="flex-row space-x-2">
+                      <TouchableOpacity
+                        className="bg-blue-500 px-3 py-2 rounded-lg mr-2"
+                        onPress={() => {
+                          clearDemoMedications();
+                        }}
+                      >
+                        <Text className="text-white text-sm font-psemibold">Clear All Samples</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        className="bg-transparent border border-blue-400 px-3 py-2 rounded-lg"
+                        onPress={() => router.push('/create')}
+                      >
+                        <Text className="text-blue-300 text-sm font-pmedium">Add My Own</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
                 </View>
-              ))
-            ) : (
-              <Text className="text-gray-500 text-center mt-2">No active reminders found.</Text>
-            )}
-          </View>
+              </View>
+            </View>
+          )}
 
-          {/* All Active Medications Section */}
-          <View className="px-4 mt-4">
-            <Text className="text-gray-400 text-lg mb-2">All Active Medications</Text>
-            {medications && medications.filter(med => med.isActive).length > 0 ? (
-              medications.filter(med => med.isActive).map((med, index) => (
+          {/* Quick Stats */}
+          {medications.length > 0 && (
+            <View className="px-4 mt-2 mb-4">
+              <View className="bg-[#232533] rounded-xl p-4">
+                <View className="flex-row justify-between items-center">
+                  <View className="items-center flex-1">
+                    <Text className="text-secondary-200 text-2xl font-pbold">{todaysMedications.length}</Text>
+                    <Text className="text-gray-400 text-sm">Today&apos;s Reminders</Text>
+                  </View>
+                  <View className="w-px h-8 bg-gray-600" />
+                  <View className="items-center flex-1">
+                    <Text className="text-white text-2xl font-pbold">{medications.filter(med => med.isActive).length}</Text>
+                    <Text className="text-gray-400 text-sm">Active Medications</Text>
+                  </View>
+                  <View className="w-px h-8 bg-gray-600" />
+                  <View className="items-center flex-1">
+                    <Text className="text-green-400 text-2xl font-pbold">
+                      {medications.filter(med => med.reminder?.enabled).length}
+                    </Text>
+                    <Text className="text-gray-400 text-sm">With Reminders</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Today's Reminders Section */}
+          <View className="px-4 mt-2">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-gray-400 text-lg">Today&apos;s Reminders</Text>
+              {todaysMedications.length > 0 && (
+                <Text className="text-secondary-200 text-sm">{todaysMedications.length} due</Text>
+              )}
+            </View>
+            {todaysMedications.length > 0 ? (
+              todaysMedications.map((med, index) => (
                 <View key={med.id || index} className="mb-2">
                   <ReminderItem
                     item={med}
-                    isExpanded={expandedMedicationIndex === index}
-                    toggleExpand={() => setExpandedMedicationIndex(expandedMedicationIndex === index ? null : index)}
-                    onToggleReminder={(enabled) => {
-                      // Handle reminder toggle for all medications
-                      const updatedMed = {
-                        ...med,
-                        reminder: {
-                          ...med.reminder,
-                          enabled
-                        }
-                      };
-                      handleUpdateMedication(index, updatedMed);
-                    }}
-                    onUpdateReminderTimes={(times) => {
-                      // Handle reminder times update for all medications
-                      const updatedMed = {
-                        ...med,
-                        reminder: {
-                          ...med.reminder,
-                          times,
-                          enabled: times.length > 0
-                        }
-                      };
-                      handleUpdateMedication(index, updatedMed);
-                    }}
+                    isExpanded={expandedTodayIndex === index}
+                    toggleExpand={() => setExpandedTodayIndex(expandedTodayIndex === index ? null : index)}
+                    onToggleReminder={(enabled) => handleUpdateReminder(med.id, med.reminder?.reminderTimes || [], enabled, true)}
+                    onUpdateReminderTimes={(times) => handleUpdateReminder(med.id, times, true, true)}
                   />
                 </View>
               ))
             ) : (
-              <Text className="text-gray-500 text-center mt-4">No medications found.</Text>
+              <View className="bg-[#232533] rounded-xl p-4 mb-2">
+                <Text className="text-gray-500 text-center">No reminders scheduled for today</Text>
+                <Text className="text-gray-600 text-center text-sm mt-1">
+                  Add reminder times to your medications below
+                </Text>
+              </View>
             )}
           </View>
 
-          <TouchableOpacity
-            className="bg-gray-900 p-4 rounded-xl mx-4 mt-6 border border-secondary-200 shadow-lg active:opacity-80"
-            onPress={() => router.push('/create')}
-          >
-            <Text className="text-secondary text-center text-xl font-semibold">+ Add More</Text>
-          </TouchableOpacity>
+          {/* Other Active Medications Section */}
+          <View className="px-4 mt-4">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-gray-400 text-lg">Other Medications</Text>
+              {otherActiveMedications.length > 0 && (
+                <Text className="text-gray-500 text-sm">{otherActiveMedications.length} active</Text>
+              )}
+            </View>
+            {otherActiveMedications.length > 0 ? (
+              otherActiveMedications.map((med, index) => (
+                <View key={med.id || index} className="mb-2">
+                  <ReminderItem
+                    item={med}
+                    isExpanded={expandedOtherIndex === index}
+                    toggleExpand={() => setExpandedOtherIndex(expandedOtherIndex === index ? null : index)}
+                    onToggleReminder={(enabled) => handleUpdateReminder(med.id, med.reminder?.reminderTimes || [], enabled, false)}
+                    onUpdateReminderTimes={(times) => handleUpdateReminder(med.id, times, true, false)}
+                  />
+                </View>
+              ))
+            ) : todaysMedications.length === 0 ? (
+              <View className="bg-[#232533] rounded-xl p-4 mb-2">
+                <Text className="text-gray-500 text-center">No active medications found</Text>
+                <Text className="text-gray-600 text-center text-sm mt-1">
+                  Start by adding your first medication
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Action Buttons */}
+          <View className="px-4 mt-6 space-y-3">
+            <TouchableOpacity
+              className="bg-secondary-200 p-4 rounded-xl flex-row items-center justify-center shadow-lg active:opacity-80"
+              onPress={() => router.push('/create')}
+            >
+              <Text className="text-primary text-center text-lg font-psemibold">+ Add New Medication</Text>
+            </TouchableOpacity>
+            
+            {medications.length > 0 && (
+              <TouchableOpacity
+                className="bg-[#232533] border border-gray-600 p-4 rounded-xl flex-row items-center justify-center active:opacity-80"
+                onPress={() => router.push('/(medication)')}
+              >
+                <Text className="text-white text-center text-base font-pmedium">View All Medications</Text>
+              </TouchableOpacity>
+            )}
+          </View>
           <Footer />
         </ScrollView>
         

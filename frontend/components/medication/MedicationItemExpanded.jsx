@@ -128,9 +128,16 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
 
         <View className="flex-1">
           <View className="flex-row items-center justify-between mb-1">
-            <Text className="text-lg font-psemibold text-white">
-              {item.medicationSpecification?.name || item.name || 'Unknown Medication'}
-            </Text>
+            <View className="flex-row items-center flex-1">
+              <Text className="text-lg font-psemibold text-white">
+                {item.medicationSpecification?.name || item.name || 'Unknown Medication'}
+              </Text>
+              {item.isDemoMedication && (
+                <View className="bg-blue-500 px-2 py-1 rounded-full ml-2">
+                  <Text className="text-white text-xs font-pmedium">Sample</Text>
+                </View>
+              )}
+            </View>
             {isExpired && (
               <View className="bg-red-500 px-2 py-1 rounded-full">
                 <Text className="text-white text-xs font-pmedium">Expired</Text>
@@ -140,7 +147,10 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
           
           <View className="flex-row items-center mb-2">
             <Text className="text-sm font-pregular text-gray-300">
-              {item.dosage?.amount && item.dosage?.unit 
+              {/* Handle both demo medication format (dosage + dosageUnit) and regular format */}
+              {item.dosage && item.dosageUnit
+                ? `${item.dosage} ${item.dosageUnit}`
+                : item.dosage?.amount && item.dosage?.unit 
                 ? `${item.dosage.amount} ${item.dosage.unit}` 
                 : item.dosage_amount && item.dosage_unit
                 ? `${item.dosage_amount} ${item.dosage_unit}`
@@ -155,7 +165,7 @@ const MedicationItemExpanded = ({ item, toggleExpand, onMedicationUpdate }) => {
           <View className="flex-row items-center">
             <icons.Calendar color="#9CA3AF" size={14} />
             <Text className="text-xs font-pregular ml-1 text-gray-400">
-              {item.start_date ? new Date(item.start_date).toLocaleDateString() : 'No start date'} - {item.end_date ? new Date(item.end_date).toLocaleDateString() : 'Ongoing'}
+              {(item.start_date || item.startDate) ? new Date(item.start_date || item.startDate).toLocaleDateString() : 'No start date'} - {(item.end_date || item.endDate) ? new Date(item.end_date || item.endDate).toLocaleDateString() : 'Ongoing'}
             </Text>
           </View>
         </View>

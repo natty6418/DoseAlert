@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getMedications, deleteMedication, addMedication as saveMedicationToDb, updateMedication as updateMedicationInDb } from '../services/MedicationHandler';
 import { setupDatabase } from '../services/database';
 import { useAuth } from './AuthContext';
@@ -25,6 +26,7 @@ const AppProvider = ({ children }) => {
     vibrationEnabled: true,
     notificationsEnabled: true,
     language: 'en',
+    demoMedicationsDismissed: false,
   });
 
   // Medication management state
@@ -76,14 +78,36 @@ const AppProvider = ({ children }) => {
   const initializeApp = async () => {
     try {
       setIsLoading(true);
-      // Load app settings, check permissions, etc.
-      // You can add your app initialization logic here
+      // Load app settings from storage
+      await loadAppSettings();
       console.log('App initialized');
     } catch (error) {
       console.error('App initialization failed:', error);
       setError('Failed to initialize app');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const loadAppSettings = async () => {
+    try {
+      const savedSettings = await AsyncStorage.getItem('appSettings');
+      if (savedSettings) {
+        const parsedSettings = JSON.parse(savedSettings);
+        setAppSettings(prev => ({ ...prev, ...parsedSettings }));
+      }
+    } catch (error) {
+      console.error('Failed to load app settings:', error);
+    }
+  };
+
+  const saveAppSettings = async (newSettings) => {
+    try {
+      const updatedSettings = { ...appSettings, ...newSettings };
+      await AsyncStorage.setItem('appSettings', JSON.stringify(updatedSettings));
+      setAppSettings(updatedSettings);
+    } catch (error) {
+      console.error('Failed to save app settings:', error);
     }
   };
 
@@ -106,9 +130,8 @@ const AppProvider = ({ children }) => {
   };
 
   // App settings management
-  const updateAppSettings = (newSettings) => {
-    setAppSettings(prev => ({ ...prev, ...newSettings }));
-    // You might want to persist these to AsyncStorage
+  const updateAppSettings = async (newSettings) => {
+    await saveAppSettings(newSettings);
   };
 
   // Notification management
@@ -183,12 +206,15 @@ const AppProvider = ({ children }) => {
 
   const removeMedication = async (id) => {
     try {
-      if (user?.id) {
-        // Delete from database
+      // Find the medication to check if it's a demo medication
+      const medication = medications.find(med => med.id === id);
+      
+      if (medication && !medication.isDemoMedication && user?.id) {
+        // Only delete from database if it's not a demo medication and user is authenticated
         await deleteMedication(user.id, id);
       }
       
-      // Update local state
+      // Update local state (remove from both real and demo medications)
       setMedications(prev => prev.filter(med => med.id !== id));
       setActiveMedications(prev => prev.filter(med => med.id !== id));
       setMedicationHistory(prev => [...prev, ...prev.filter(med => med.id === id)]);
@@ -212,14 +238,27 @@ const AppProvider = ({ children }) => {
         // Fetch medications from local SQLite database
         const meds = await getMedications(user.id);
         console.log('Loaded medications:', meds.length, 'medications');
-        setMedications(meds);
-        setActiveMedications(meds.filter(med => med.isActive));
-      } else {
-        console.log('No user ID available, skipping medication load');
+        
+        // If no medications found, load demo medications for better UX (unless user dismissed them)
+        if (meds.length === 0 && !appSettings.demoMedicationsDismissed) {
+          console.log('No medications found, loading demo medications');
+          loadDemoMedications();
+        } else {
+          setMedications(meds);
+          setActiveMedications(meds.filter(med => med.isActive));
+        }
+      } else if (!appSettings.demoMedicationsDismissed) {
+        console.log('No user ID available, loading demo medications for guest');
+        loadDemoMedications();
       }
     } catch (error) {
       console.error('Failed to load medications:', error);
       setError('Failed to load medications');
+      // Load demo medications as fallback (unless user dismissed them)
+      if (!appSettings.demoMedicationsDismissed) {
+        console.log('Loading demo medications as fallback');
+        loadDemoMedications();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -465,6 +504,139 @@ const AppProvider = ({ children }) => {
     });
   };
 
+    // Demo/Instructional Medications
+  const createDemoMedications = () => {
+    const demoMedications = [
+      {
+        name: 'Vitamin D',
+        directions: 'Take with food for better absorption',
+        side_effects: [],
+        purpose: 'Bone health and immune support',
+        warnings: 'Consult doctor if taking blood thinners',
+        dosage_amount: '1000',
+        dosage_unit: 'IU',
+        frequency: 'Daily',
+        notes: 'This is a demo medication to help you learn how DoseAlert works. Feel free to delete it!',
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+      },
+      {
+        name: 'Omega-3',
+        directions: 'Take with meals',
+        side_effects: [],
+        purpose: 'Heart and brain health',
+        warnings: 'May increase bleeding risk',
+        dosage_amount: '1000',
+        dosage_unit: 'mg',
+        frequency: 'Twice daily',
+        notes: 'Example supplement - you can edit or delete this anytime.',
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 60 days from now
+      },
+      {
+        name: 'Multivitamin',
+        directions: 'Take with breakfast',
+        side_effects: [],
+        purpose: 'General nutritional support',
+        warnings: 'Contains iron - keep away from children',
+        dosage_amount: '1',
+        dosage_unit: 'tablet',
+        frequency: 'Daily',
+        notes: 'Sample daily supplement. Try adding reminder times to see how notifications work!',
+        start_date: new Date().toISOString().split('T')[0],
+        end_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 90 days from now
+      },
+    ];
+    return demoMedications;
+  };
+
+  const loadDemoMedications = async () => {
+    try {
+      if (!user?.id) {
+        console.log('No user ID available for demo medications');
+        return;
+      }
+
+      // Check if demo medications already exist
+      const existingMedications = await getMedications(user.id);
+      const hasDemos = existingMedications.some(med => 
+        med.notes && (
+          med.notes.includes('demo medication') || 
+          med.notes.includes('Example supplement') ||
+          med.notes.includes('Sample daily supplement')
+        )
+      );
+      
+      if (hasDemos) {
+        console.log('Demo medications already exist, skipping creation');
+        return;
+      }
+
+      const demoMeds = createDemoMedications();
+      console.log('Creating demo medications in database...');
+      
+      // Add each demo medication to the database
+      for (const demoMed of demoMeds) {
+        try {
+          await addMedication(demoMed);
+        } catch (error) {
+          console.error('Failed to add demo medication:', demoMed.name, error);
+        }
+      }
+      
+      // Reload medications from database to get the saved demo medications
+      await loadMedications();
+      console.log('Demo medications loaded successfully');
+    } catch (error) {
+      console.error('Error loading demo medications:', error);
+    }
+  };
+
+  const clearDemoMedications = async () => {
+    try {
+      if (!user?.id) {
+        console.log('No user ID available to clear demo medications');
+        return;
+      }
+
+      // Get all medications and filter out demo ones
+      const allMedications = await getMedications(user.id);
+      const demoMeds = allMedications.filter(med => 
+        med.notes && (
+          med.notes.includes('demo medication') || 
+          med.notes.includes('Example supplement') ||
+          med.notes.includes('Sample daily supplement')
+        )
+      );
+
+      // Delete demo medications from database
+      for (const demoMed of demoMeds) {
+        try {
+          await removeMedication(demoMed.id);
+        } catch (error) {
+          console.error('Failed to delete demo medication:', demoMed.name, error);
+        }
+      }
+
+      // Mark demo medications as dismissed so they don't auto-load again
+      await saveAppSettings({ demoMedicationsDismissed: true });
+
+      console.log('Demo medications cleared');
+    } catch (error) {
+      console.error('Error clearing demo medications:', error);
+    }
+  };
+
+  const hasDemoMedications = () => {
+    return medications.some(med => 
+      med.notes && (
+        med.notes.includes('demo medication') || 
+        med.notes.includes('Example supplement') ||
+        med.notes.includes('Sample daily supplement')
+      )
+    );
+  };
+
   const value = {
     // General App State
     isLoading,
@@ -496,6 +668,9 @@ const AppProvider = ({ children }) => {
     removeMedication,
     deactivateMedication,
     loadMedications,
+    loadDemoMedications,
+    clearDemoMedications,
+    hasDemoMedications,
 
     // Schedule State
     schedules,

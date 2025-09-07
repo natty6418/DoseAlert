@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, Modal, BackHandler } from 'react-native';
-import { useAuth } from '../../../contexts/AuthContext';
-import FormField from '../../../components/forms/FormField';
+import { View, Text, TouchableOpacity, Alert, Modal, BackHandler, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
-// import { updateUserProfile } from '../../../services/UserHandler';
+import { ArrowLeft, User, X } from 'lucide-react-native';
 
+import { useAuth } from '../../../contexts/AuthContext';
+import FormField from '../../../components/forms/FormField';
 
 const AccountInfo = () => {
   const { user, isGuest } = useAuth();
@@ -13,7 +13,6 @@ const AccountInfo = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [newFirstName, setNewFirstName] = useState(user?.first_name || user?.firstName || '');
   const [newLastName, setNewLastName] = useState(user?.last_name || user?.lastName || '');
-  // const [newEmail, setNewEmail] = useState(user?.email || '');
 
   // Redirect guest users to login
   useEffect(() => {
@@ -36,120 +35,182 @@ const AccountInfo = () => {
     }
   }, [isGuest, user]);
 
-  // Handle Save Changes
-    useEffect(() => {
-      const handleBackPress = () => {
-          // Navigate back to the previous screen (Settings in this case)
-          router.push('/settings');
-          return true; // Return true to prevent default back behavior
-      };
-  
-      // Add the event listener
-      BackHandler.addEventListener('hardwareBackPress', handleBackPress);
-  
-      // Cleanup the event listener on component unmount
-      return () => {
-          BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
-      };
+  useEffect(() => {
+    const handleBackPress = () => {
+      router.push('/settings');
+      return true;
+    };
+
+    BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+    return () => {
+      BackHandler.removeEventListener('hardwareBackPress', handleBackPress);
+    };
   }, []);
 
   const handleSaveChanges = async () => {
+    if (!newFirstName.trim() || !newLastName.trim()) {
+      Alert.alert('Error', 'Please fill in all fields.');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      // Mock profile update - in a real app this would call the API
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Simulate API call - replace with actual updateUserProfile call
+      // await updateUserProfile({ firstName: newFirstName, lastName: newLastName });
+      
+      Alert.alert('Success', 'Your account information has been updated.');
       setIsModalVisible(false);
-      Alert.alert('Success', 'Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
-      Alert.alert('Error', error.message || 'Failed to update profile.');
+      Alert.alert('Error', 'Failed to update your information. Please try again.');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Don't render anything if user is guest or no user data
+  // Don't render anything if user is guest (redirect handles this)
   if (isGuest || !user) {
-    return (
-      <SafeAreaView className="bg-black-100 h-full justify-center items-center">
-        <Text className="text-white text-lg">Loading...</Text>
-      </SafeAreaView>
-    );
+    return null;
   }
 
-
-
   return (
-    <SafeAreaView className="bg-black-100 h-full justify-center my-auto">
-    
-    <View className="flex-1 bg-[#161622] p-4">
-      <Text className="text-white text-2xl font-semibold mb-4">Account Info</Text>
+    <SafeAreaView className="bg-primary h-full">
+      <View className="flex-1 px-4">
+        {/* Header */}
+        <View className="flex-row items-center py-4">
+          <TouchableOpacity
+            onPress={() => router.push('/settings')}
+            className="mr-4"
+          >
+            <ArrowLeft size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+          <Text className="text-white text-xl font-psemibold">Account Information</Text>
+        </View>
 
-      <View className="bg-[#232533] p-4 rounded-lg">
-        <Text className="text-white mb-2">First Name</Text>
-        <Text className="bg-[#1f1f2b] text-white p-3 rounded-lg mb-4">
-          {user?.firstName || user?.first_name || 'Not provided'}
-        </Text>
+        <ScrollView className="flex-1">
+          {/* Profile Header */}
+          <View className="bg-[#232533] rounded-xl p-6 mb-6">
+            <View className="flex-row items-center">
+              <View className="w-20 h-20 bg-secondary-200 rounded-full items-center justify-center mr-4">
+                <Text className="text-primary text-2xl font-pbold">
+                  {((user?.first_name || user?.firstName)?.charAt(0) || '') + 
+                   ((user?.last_name || user?.lastName)?.charAt(0) || '')}
+                </Text>
+              </View>
+              <View className="flex-1">
+                <Text className="text-white text-2xl font-psemibold">
+                  {user?.first_name || user?.firstName} {user?.last_name || user?.lastName}
+                </Text>
+                <Text className="text-[#CDCDE0] text-base mt-1">{user?.email}</Text>
+                <Text className="text-green-400 text-sm mt-2">✓ Account Verified</Text>
+              </View>
+            </View>
+          </View>
 
-        <Text className="text-white mb-2">Last Name</Text>
-        <Text className="bg-[#1f1f2b] text-white p-3 rounded-lg mb-4">
-          {user?.lastName || user?.last_name || 'Not provided'}
-        </Text>
+          {/* Account Details */}
+          <View className="bg-[#232533] rounded-xl p-6 mb-6">
+            <Text className="text-white text-lg font-psemibold mb-4">Personal Information</Text>
+            
+            <View className="space-y-4">
+              <View>
+                <Text className="text-[#CDCDE0] text-sm mb-2">First Name</Text>
+                <View className="bg-[#1A1A2E] rounded-lg p-4">
+                  <Text className="text-white text-base">{user?.first_name || user?.firstName}</Text>
+                </View>
+              </View>
 
-        <Text className="text-white mb-2">Email</Text>
-        <Text className="bg-[#1f1f2b] text-white p-3 rounded-lg mb-4">
-          {user?.email || 'Not provided'}
-        </Text>
+              <View>
+                <Text className="text-[#CDCDE0] text-sm mb-2">Last Name</Text>
+                <View className="bg-[#1A1A2E] rounded-lg p-4">
+                  <Text className="text-white text-base">{user?.last_name || user?.lastName}</Text>
+                </View>
+              </View>
 
-        <TouchableOpacity
-          onPress={() => setIsModalVisible(true)}
-          className="p-4 bg-[#4CAF50] rounded-lg mt-4 items-center"
-        >
-          <Text className="text-white font-semibold">Edit Profile</Text>
-        </TouchableOpacity>
+              <View>
+                <Text className="text-[#CDCDE0] text-sm mb-2">Email Address</Text>
+                <View className="bg-[#1A1A2E] rounded-lg p-4">
+                  <Text className="text-white text-base">{user?.email}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View className="space-y-3">
+            <TouchableOpacity
+              className="bg-secondary-200 rounded-xl p-4 flex-row items-center justify-center"
+              onPress={() => setIsModalVisible(true)}
+            >
+              <User size={20} color="#0F0F23" className="mr-2" />
+              <Text className="text-primary font-psemibold text-base">Edit Profile</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="bg-[#232533] border border-[#9CA3AF] rounded-xl p-4 flex-row items-center justify-center"
+              onPress={() => {
+                Alert.alert('Change Password', 'Password change functionality will be available soon.');
+              }}
+            >
+              <Text className="text-[#9CA3AF] font-pmedium text-base">Change Password</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </View>
 
-      {/* Modal for Editing Profile */}
-      <Modal visible={isModalVisible} animationType="slide" transparent={true}>
-        <View className="flex-1 justify-center items-center bg-black bg-opacity-50">
-          <View className="bg-[#232533] p-6 rounded-lg w-4/5">
-            <Text className="text-white text-lg font-semibold mb-4">Edit Profile</Text>
+      {/* Edit Profile Modal */}
+      <Modal
+        visible={isModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View className="flex-1 justify-end bg-black/50">
+          <View className="bg-[#232533] rounded-t-3xl p-6 max-h-[80%]">
+            {/* Modal Header */}
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-white text-xl font-psemibold">Edit Profile</Text>
+              <TouchableOpacity onPress={() => setIsModalVisible(false)}>
+                <X size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+            </View>
 
-            <FormField 
-              title="First Name"
-              value={newFirstName || user?.firstName || user?.first_name || ''}
-              handleChangeText={setNewFirstName}
-              placeholder="Enter new first name"
-              otherStyles='mt-4'
-            />
+            {/* Form Fields */}
+            <View className="space-y-4 mb-6">
+              <FormField
+                title="First Name"
+                value={newFirstName}
+                placeholder="Enter your first name"
+                handleChangeText={setNewFirstName}
+              />
+              <FormField
+                title="Last Name"
+                value={newLastName}
+                placeholder="Enter your last name"
+                handleChangeText={setNewLastName}
+              />
+            </View>
 
-            <FormField 
-              title="Last Name"
-              value={newLastName || user?.lastName || user?.last_name || ''}
-              handleChangeText={setNewLastName}
-              placeholder="Enter new last name"
-              otherStyles='mt-7'
-            />
-
-            <View className="flex-row justify-between mt-4">
+            {/* Action Buttons */}
+            <View className="flex-row space-x-3">
               <TouchableOpacity
+                className="flex-1 bg-[#1A1A2E] rounded-xl p-4 items-center"
                 onPress={() => setIsModalVisible(false)}
-                className="bg-gray-500 p-3 rounded-lg w-1/3 items-center"
               >
-                <Text className="text-white font-semibold">Cancel</Text>
+                <Text className="text-[#9CA3AF] font-pmedium">Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
+                className="flex-1 bg-secondary-200 rounded-xl p-4 items-center"
                 onPress={handleSaveChanges}
                 disabled={isSaving}
-                className={`p-3 rounded-lg w-1/3 items-center ${isSaving ? 'bg-gray-500' : 'bg-[#4CAF50]'}`}
               >
-                <Text className="text-white font-semibold">{isSaving ? 'Saving...' : 'Save'}</Text>
+                <Text className="text-primary font-psemibold">
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
-    </View>
     </SafeAreaView>
   );
 };

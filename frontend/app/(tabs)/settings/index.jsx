@@ -1,137 +1,216 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Image, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, StatusBar } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from "react-native-safe-area-context";
+import { 
+  User, 
+  Bell, 
+  Shield, 
+  HelpCircle, 
+  Info, 
+  LogOut, 
+  ChevronRight,
+  UserPlus,
+  FileText
+} from 'lucide-react-native';
 
-import { icons } from '../../../constants';
 import { useAuth } from '../../../contexts/AuthContext';
 import { logoutUser } from '../../../services/UserHandler';
-import CustomButton from '../../../components/ui/CustomButton';
-
+import SettingsCard from '../../../components/ui/SettingsCard';
+import SettingsSection from '../../../components/ui/SettingsSection';
+import UserProfileCard from '../../../components/ui/UserProfileCard';
 
 const SettingsScreen = () => {
-    const { isGuest, clearTokens } = useAuth();
+    const { isGuest, user, clearTokens } = useAuth();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
 
     const handleSignOut = async () => {
         try {
-            // Call the backend logout API to blacklist the refresh token
             await logoutUser();
-            
-            // Clear local tokens (logoutUser already does this, but keeping for safety)
             await clearTokens();
-            
-            // Close modal and navigate to sign in
             setShowLogoutModal(false);
             router.replace('/(auth)/signIn');
         } catch (error) {
             console.error('Error during logout:', error);
-            // Even if the API call fails, clear local tokens
             await clearTokens();
             setShowLogoutModal(false);
             router.replace('/(auth)/signIn');
         }
     };
 
-    const authenticatedUserOptions = [
-        { name: 'Account Info', description: 'Edit your personal and delivery info', icon: icons.profile, route: 'settings/AccountInfo' },
-        
-        { name: 'Privacy Policy', description: 'See our terms and conditions', icon: icons.documents, route: 'settings/PrivacyPolicy' },
-        { name: 'Logout', description: 'Logout of DoseAlert on this device', icon: icons.logout, route: '/(auth)/signout' },
-    ];
-
-    const guestUserOptions = [
-        { name: 'Create Account / Sign In', description: 'Sync your data across devices', icon: icons.profile, route: '/(auth)/signIn', highlight: true },
-        
-        { name: 'Privacy Policy', description: 'See our terms and conditions', icon: icons.documents, route: 'settings/PrivacyPolicy' },
-    ];
-
-    const displayOptions = isGuest ? guestUserOptions : authenticatedUserOptions;
+    const ChevronIcon = () => <ChevronRight size={20} color="#9CA3AF" />;
 
     return (
-     <SafeAreaView className="bg-primary h-full px-4">   
-    <ScrollView className="flex-1 mt-3">
-        <Text className="text-white text-2xl font-pbold">Settings</Text>
+        <SafeAreaView className="bg-primary h-full">
+            <StatusBar barStyle="light-content" backgroundColor="#0F0F23" />
+            <View className="flex-1 px-4">
+                <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+                    {/* Header */}
+                    <View className="py-6">
+                        <Text className="text-white text-3xl font-pbold">Settings</Text>
+                        <Text className="text-[#CDCDE0] text-base mt-1">
+                            Manage your DoseAlert experience
+                        </Text>
+                    </View>
 
-        {isGuest && (
-            <View className="bg-orange-500/20 border border-orange-500 rounded-lg p-4 mt-4">
-                <Text className="text-orange-400 font-psemibold text-sm">
-                    You&apos;re using DoseAlert as a guest. Create an account to sync your data across devices and never lose your medication information.
-                </Text>
+                    {/* User Profile Card */}
+                    <UserProfileCard user={user} isGuest={isGuest} />
+
+                    {/* Guest User Notice */}
+                    {isGuest && (
+                        <View className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-xl p-4 mb-6">
+                            <View className="flex-row items-start">
+                                <UserPlus size={24} color="#3B82F6" className="mr-3 mt-1" />
+                                <View className="flex-1">
+                                    <Text className="text-blue-300 font-psemibold text-base mb-2">
+                                        Create an Account
+                                    </Text>
+                                    <Text className="text-blue-200 text-sm mb-4">
+                                        Sync your medications across devices, get cloud backup, and access premium features.
+                                    </Text>
+                                    <TouchableOpacity
+                                        className="bg-blue-500 px-4 py-2 rounded-lg self-start"
+                                        onPress={() => router.push('/(auth)/signIn')}
+                                    >
+                                        <Text className="text-white font-psemibold">Get Started</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* Account Section */}
+                    {!isGuest && (
+                        <SettingsSection title="Account" description="Manage your personal information">
+                            <SettingsCard
+                                title="Account Information"
+                                description="Edit your profile and contact details"
+                                IconComponent={User}
+                                onPress={() => router.push('/settings/AccountInfo')}
+                                rightElement={<ChevronIcon />}
+                            />
+                        </SettingsSection>
+                    )}
+
+                    {/* App Settings Section */}
+                    <SettingsSection title="App Settings" description="Customize your DoseAlert experience">
+                        <SettingsCard
+                            title="Notifications"
+                            description="Manage reminders and alert preferences"
+                            IconComponent={Bell}
+                            onPress={() => router.push('/settings/Notifications')}
+                            rightElement={<ChevronIcon />}
+                        />
+                        {!isGuest && (
+                            <SettingsCard
+                                title="Security & Privacy"
+                                description="Protect your account and data"
+                                IconComponent={Shield}
+                                onPress={() => router.push('/settings/Security')}
+                                rightElement={<ChevronIcon />}
+                            />
+                        )}
+                    </SettingsSection>
+
+                    {/* Support Section */}
+                    <SettingsSection title="Support" description="Get help and learn more">
+                        <SettingsCard
+                            title="Help & Support"
+                            description="FAQs, contact support, and user guides"
+                            IconComponent={HelpCircle}
+                            onPress={() => router.push('/settings/Help')}
+                            rightElement={<ChevronIcon />}
+                        />
+                        <SettingsCard
+                            title="Privacy Policy"
+                            description="Read our privacy policy and terms"
+                            IconComponent={FileText}
+                            onPress={() => router.push('/settings/PrivacyPolicy')}
+                            rightElement={<ChevronIcon />}
+                        />
+                        <SettingsCard
+                            title="About DoseAlert"
+                            description="App version, credits, and more"
+                            IconComponent={Info}
+                            onPress={() => router.push('/settings/About')}
+                            rightElement={<ChevronIcon />}
+                        />
+                    </SettingsSection>
+
+                    {/* Account Actions */}
+                    {!isGuest ? (
+                        <SettingsSection title="Account Actions">
+                            <SettingsCard
+                                title="Sign Out"
+                                description="Sign out of your DoseAlert account"
+                                IconComponent={LogOut}
+                                onPress={() => setShowLogoutModal(true)}
+                            />
+                        </SettingsSection>
+                    ) : (
+                        <SettingsSection title="Account">
+                            <SettingsCard
+                                title="Sign In / Create Account"
+                                description="Access your account or create a new one"
+                                IconComponent={UserPlus}
+                                onPress={() => router.push('/(auth)/signIn')}
+                                highlight={true}
+                                rightElement={<ChevronIcon />}
+                            />
+                        </SettingsSection>
+                    )}
+
+                    {/* Bottom spacing */}
+                    <View className="h-8" />
+                </ScrollView>
             </View>
-        )}
 
-        {/* Grid layout for settings */}
-        <View className="flex flex-wrap flex-row justify-between mt-4">
-        {displayOptions
-            .map((option, index) => (
-            <TouchableOpacity
-                key={index}
-                className={`w-[48%] ${
-                    option.highlight 
-                        ? 'bg-secondary-200/20 border border-secondary-200' 
-                        : 'bg-[#232533]'
-                } p-4 rounded-lg mb-4`}
-                onPress={() => {
-                    console.log('Navigating to:', option.route);
-                    if (option.name === 'Logout') {
-                        // Show logout confirmation modal
-                        setShowLogoutModal(true);
-                    } else {
-                        router.push(option.route);
-                    }
-                }}
+            {/* Logout Confirmation Modal */}
+            <Modal
+                visible={showLogoutModal}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={() => setShowLogoutModal(false)}
             >
-                <View className="flex items-center justify-center mb-2">
-                <Image 
-                    source={option.icon} 
-                    className="w-10 h-10" 
-                    tintColor="#c0ee77"
-                />
+                <View className="flex-1 justify-center items-center bg-black/50">
+                    <View className="w-4/5 bg-[#232533] rounded-2xl overflow-hidden">
+                        {/* Modal Header */}
+                        <View className="bg-red-500/10 border-b border-red-500/20 px-6 py-4">
+                            <Text className="text-red-400 font-psemibold text-lg text-center">
+                                Sign Out
+                            </Text>
+                        </View>
+                        
+                        {/* Modal Content */}
+                        <View className="px-6 py-6">
+                            <Text className="text-white font-pmedium text-center text-base mb-2">
+                                Are you sure you want to sign out?
+                            </Text>
+                            <Text className="text-[#CDCDE0] text-sm text-center">
+                                You&apos;ll need to sign in again to access your account and synced data.
+                            </Text>
+                        </View>
+                        
+                        {/* Modal Actions */}
+                        <View className="flex-row border-t border-[#1E1B3A]">
+                            <TouchableOpacity
+                                className="flex-1 py-4 items-center justify-center border-r border-[#1E1B3A]"
+                                onPress={() => setShowLogoutModal(false)}
+                            >
+                                <Text className="text-[#CDCDE0] font-pmedium">Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                className="flex-1 py-4 items-center justify-center"
+                                onPress={handleSignOut}
+                            >
+                                <Text className="text-red-400 font-psemibold">Sign Out</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </View>
-                <Text className={`font-semibold text-base text-center ${
-                    option.highlight 
-                        ? 'text-secondary-200' 
-                        : 'text-white'
-                }`}>
-                    {option.name}
-                </Text>
-                <Text className="text-[#CDCDE0] text-xs text-center">{option.description}</Text>
-            </TouchableOpacity>
-            ))}
-        </View>
-    </ScrollView>
-
-    {/* Logout Confirmation Modal */}
-    <Modal
-        visible={showLogoutModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowLogoutModal(false)}
-    >
-        <View className="flex-1 justify-center items-center bg-black/50">
-            <View className="w-3/4 bg-[#232533] px-5 py-10 rounded-2xl items-center justify-center gap-4">
-                <Text className="text-white font-pmedium text-center text-lg">Are you sure?</Text>
-                <Text className="text-[#CDCDE0] text-sm text-center mb-4">
-                    You will be signed out of DoseAlert on this device.
-                </Text>
-                <View className="flex-row gap-4">
-                    <CustomButton 
-                        handlePress={() => setShowLogoutModal(false)}
-                        title="Cancel" 
-                        containerStyles="px-6 bg-gray-600" 
-                    />
-                    <CustomButton 
-                        handlePress={handleSignOut}
-                        title="Sign Out" 
-                        containerStyles="px-6" 
-                    />
-                </View>
-            </View>
-        </View>
-    </Modal>
-    </SafeAreaView>
+            </Modal>
+        </SafeAreaView>
     );
 };
-  
+
 export default SettingsScreen;

@@ -7,7 +7,8 @@ const SelectableMedicationItem = ({
   onPress, 
   isSelectionMode = false, 
   isSelected = false, 
-  onSelect 
+  onSelect,
+  onLongPress
 }) => {
   const isActive = item.isActive;
   const currentDate = new Date();
@@ -22,22 +23,30 @@ const SelectableMedicationItem = ({
     }
   };
 
+  const handleLongPress = () => {
+    if (onLongPress) {
+      onLongPress();
+    }
+  };
+
   return (
     <TouchableOpacity
       className={`p-4 rounded-2xl shadow-sm border flex-row items-center ${
         isSelected 
-          ? 'bg-secondary-100 border-secondary-200' 
+          ? 'bg-blue-900 border-blue-700' 
           : isActive && !isExpired 
           ? 'bg-gray-800 border-gray-700' 
           : 'bg-gray-900 border-gray-800'
       }`}
       onPress={handlePress}
+      onLongPress={handleLongPress}
+      delayLongPress={500}
     >
       {/* Selection Checkbox */}
       {isSelectionMode && (
         <View className="mr-3">
           {isSelected ? (
-            <icons.CheckSquare color="#6366F1" size={24} />
+            <icons.CheckSquare color="#c0ee77" size={24} />
           ) : (
             <icons.Square color="#6B7280" size={24} />
           )}
@@ -47,15 +56,19 @@ const SelectableMedicationItem = ({
       {/* Status Indicator and Pill Icon */}
       <View className="flex-row items-center mr-4">
         <View className={`w-3 h-3 rounded-full mr-3 ${
-          isActive && !isExpired ? 'bg-accent' : 'bg-gray-500'
+          isSelected 
+            ? 'bg-secondary' 
+            : isActive && !isExpired ? 'bg-accent' : 'bg-gray-500'
         }`} />
         <View className={`p-3 rounded-full ${
-          isActive && !isExpired ? 'bg-secondary-200' : 'bg-gray-700'
+          isSelected 
+            ? 'bg-secondary-200' 
+            : isActive && !isExpired ? 'bg-secondary-200' : 'bg-gray-700'
         }`}>
           <Image
             source={icons.pill}
             resizeMode="contain"
-            tintColor={isActive && !isExpired ? "#FFF" : "#6B7280"}
+            tintColor={isSelected ? "#1E293B" : isActive && !isExpired ? "#FFF" : "#6B7280"}
             className="w-6 h-6"
           />
         </View>
@@ -83,7 +96,7 @@ const SelectableMedicationItem = ({
         <View className="flex-row items-center mb-2">
           <Text className={`text-sm font-pregular ${
             isSelected
-              ? 'text-gray-200'
+              ? 'text-white text-opacity-90'
               : isActive && !isExpired 
               ? 'text-gray-300' 
               : 'text-gray-500'
@@ -94,7 +107,7 @@ const SelectableMedicationItem = ({
           </Text>
           <Text className={`text-sm font-pregular mx-2 ${
             isSelected
-              ? 'text-gray-200'
+              ? 'text-white text-opacity-90'
               : isActive && !isExpired 
               ? 'text-gray-300' 
               : 'text-gray-500'
@@ -103,7 +116,7 @@ const SelectableMedicationItem = ({
           </Text>
           <Text className={`text-sm font-pregular ${
             isSelected
-              ? 'text-gray-200'
+              ? 'text-white text-opacity-90'
               : isActive && !isExpired 
               ? 'text-gray-300' 
               : 'text-gray-500'
@@ -115,14 +128,14 @@ const SelectableMedicationItem = ({
         <View className="flex-row items-center">
           <icons.Calendar color={
             isSelected
-              ? "#D1D5DB"
+              ? "#FFF"
               : isActive && !isExpired 
               ? "#9CA3AF" 
               : "#6B7280"
           } size={14} />
           <Text className={`text-xs font-pregular ml-1 ${
             isSelected
-              ? 'text-gray-300'
+              ? 'text-white text-opacity-80'
               : isActive && !isExpired 
               ? 'text-gray-400' 
               : 'text-gray-600'
