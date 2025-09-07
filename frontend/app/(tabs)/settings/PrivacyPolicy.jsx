@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ScrollView, BackHandler } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react-native';
+import ScreenHeader from '../../../components/ui/ScreenHeader';
 
 const PrivacyPolicy = () => {
   const [openSections, setOpenSections] = useState({});
@@ -67,16 +68,10 @@ const PrivacyPolicy = () => {
   return (
     <SafeAreaView className="bg-primary h-full">
       <View className="flex-1 px-4">
-        {/* Header */}
-        <View className="flex-row items-center py-4">
-          <TouchableOpacity
-            onPress={() => router.push('/settings')}
-            className="mr-4"
-          >
-            <ArrowLeft size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text className="text-white text-xl font-psemibold">Privacy Policy</Text>
-        </View>
+        <ScreenHeader 
+          title="Privacy Policy"
+          showBackButton={true}
+        />
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           {/* Header Section */}

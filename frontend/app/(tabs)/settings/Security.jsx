@@ -6,6 +6,7 @@ import { ArrowLeft, Shield, Lock, Key, Trash2, Eye } from 'lucide-react-native';
 import SettingsSection from '../../../components/ui/SettingsSection';
 import SettingsCard from '../../../components/ui/SettingsCard';
 import { useAuth } from '../../../contexts/AuthContext';
+import ScreenHeader from '../../../components/ui/ScreenHeader';
 
 const SecuritySettings = () => {
   const { isGuest } = useAuth();
@@ -106,16 +107,10 @@ const SecuritySettings = () => {
   return (
     <SafeAreaView className="bg-primary h-full">
       <View className="flex-1 px-4">
-        {/* Header */}
-        <View className="flex-row items-center py-4">
-          <TouchableOpacity
-            onPress={() => router.push('/settings')}
-            className="mr-4"
-          >
-            <ArrowLeft size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text className="text-white text-xl font-psemibold">Security & Privacy</Text>
-        </View>
+        <ScreenHeader 
+          title="Security & Privacy"
+          showBackButton={true}
+        />
 
         <ScrollView className="flex-1">
           <SettingsSection 

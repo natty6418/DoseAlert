@@ -19,6 +19,7 @@ import { logoutUser } from '../../../services/UserHandler';
 import SettingsCard from '../../../components/ui/SettingsCard';
 import SettingsSection from '../../../components/ui/SettingsSection';
 import UserProfileCard from '../../../components/ui/UserProfileCard';
+import ScreenHeader from '../../../components/ui/ScreenHeader';
 
 const SettingsScreen = () => {
     const { isGuest, user, clearTokens } = useAuth();
@@ -45,13 +46,10 @@ const SettingsScreen = () => {
             <StatusBar barStyle="light-content" backgroundColor="#0F0F23" />
             <View className="flex-1 px-4">
                 <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-                    {/* Header */}
-                    <View className="py-6">
-                        <Text className="text-white text-3xl font-pbold">Settings</Text>
-                        <Text className="text-[#CDCDE0] text-base mt-1">
-                            Manage your DoseAlert experience
-                        </Text>
-                    </View>
+                    <ScreenHeader 
+                        title="Settings"
+                        subtitle="Manage your DoseAlert experience"
+                    />
 
                     {/* User Profile Card */}
                     <UserProfileCard user={user} isGuest={isGuest} />

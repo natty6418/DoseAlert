@@ -6,6 +6,7 @@ import { ArrowLeft, User, X } from 'lucide-react-native';
 
 import { useAuth } from '../../../contexts/AuthContext';
 import FormField from '../../../components/forms/FormField';
+import ScreenHeader from '../../../components/ui/ScreenHeader';
 
 const AccountInfo = () => {
   const { user, isGuest } = useAuth();
@@ -76,16 +77,10 @@ const AccountInfo = () => {
   return (
     <SafeAreaView className="bg-primary h-full">
       <View className="flex-1 px-4">
-        {/* Header */}
-        <View className="flex-row items-center py-4">
-          <TouchableOpacity
-            onPress={() => router.push('/settings')}
-            className="mr-4"
-          >
-            <ArrowLeft size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text className="text-white text-xl font-psemibold">Account Information</Text>
-        </View>
+        <ScreenHeader 
+          title="Account Information"
+          showBackButton={true}
+        />
 
         <ScrollView className="flex-1">
           {/* Profile Header */}

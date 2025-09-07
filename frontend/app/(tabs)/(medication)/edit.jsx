@@ -14,6 +14,7 @@ import {
 } from '../../../components/medication/AddMedication';
 import FormField from '../../../components/forms/FormField';
 import { scheduleReminders, cancelScheduledReminders, addSchedule, deleteSchedulesForMedication } from '../../../services/Scheduler';
+import ScreenHeader from '../../../components/ui/ScreenHeader';
 
 const EditMedicationScreen = () => {
   const { updateMedication, deleteMedication, showLoading, hideLoading, showError, loadMedications } = useApp();
@@ -286,15 +287,15 @@ const EditMedicationScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-primary">
-      <View className="flex-row items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-700">
-        <TouchableOpacity onPress={() => router.back()} className="bg-gray-800 p-3 rounded-2xl">
-          <icons.ArrowLeft size={20} color="#ffffff" />
-        </TouchableOpacity>
-        <Text className="text-white text-xl font-psemibold">Edit Medication</Text>
-        <TouchableOpacity onPress={handleDeletePlan} testID="delete-button" className="bg-red-600 p-3 rounded-2xl">
-          <icons.Trash size={20} color="#ffffff" />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader 
+        title="Edit Medication"
+        showBackButton={true}
+        rightAction={{
+          icon: <icons.Trash size={20} color="#ffffff" />,
+          onPress: handleDeletePlan,
+          containerStyles: "bg-red-600 p-3 rounded-2xl"
+        }}
+      />
 
       <ScrollView className="flex-1 px-6 py-4">
         <View className="bg-gray-800 border border-gray-700 rounded-2xl p-5 mb-4">

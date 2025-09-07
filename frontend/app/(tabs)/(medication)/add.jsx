@@ -15,6 +15,7 @@ import {
 import FormField from '../../../components/forms/FormField';
 import { addSchedule } from '../../../services/Scheduler';
 import { scheduleReminders } from '../../../services/Scheduler';
+import ScreenHeader from '../../../components/ui/ScreenHeader';
 
 const AddMedicationScreen = () => {
   const { addMedication, showLoading, hideLoading, showError, loadMedications } = useApp();
@@ -207,15 +208,15 @@ const AddMedicationScreen = () => {
 
   return (
     <SafeAreaView className="flex-1 bg-primary ">
-      <View className="flex-row items-center justify-between px-6 py-4 bg-gray-900 border-b border-gray-700">
-        <TouchableOpacity onPress={() => router.back()} className="bg-gray-800 p-3 rounded-2xl">
-          <icons.ArrowLeft size={20} color="#ffffff" />
-        </TouchableOpacity>
-        <Text className="text-white text-xl font-psemibold">Add Medication</Text>
-        <TouchableOpacity onPress={handleSavePlan} className="bg-secondary py-3 px-5 rounded-2xl">
-          <Text className="text-primary font-psemibold">Save</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader 
+        title="Add Medication"
+        showBackButton={true}
+        rightAction={{
+          icon: <Text className="text-primary font-psemibold">Save</Text>,
+          onPress: handleSavePlan,
+          containerStyles: "bg-secondary py-3 px-5 rounded-2xl"
+        }}
+      />
 
       <ScrollView className="flex-1 px-6 py-4">
         <View className="bg-gray-800 border border-gray-700 rounded-2xl p-5 mb-4">

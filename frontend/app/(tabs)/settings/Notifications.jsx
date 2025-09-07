@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { ArrowLeft, Bell, Clock, Smartphone, Volume2 } from 'lucide-react-native';
 import SettingsSection from '../../../components/ui/SettingsSection';
 import SettingsCard from '../../../components/ui/SettingsCard';
+import ScreenHeader from '../../../components/ui/ScreenHeader';
 
 const NotificationSettings = () => {
   const [medicationReminders, setMedicationReminders] = useState(true);
@@ -37,16 +38,10 @@ const NotificationSettings = () => {
   return (
     <SafeAreaView className="bg-primary h-full">
       <View className="flex-1 px-4">
-        {/* Header */}
-        <View className="flex-row items-center py-4">
-          <TouchableOpacity
-            onPress={() => router.push('/settings')}
-            className="mr-4"
-          >
-            <ArrowLeft size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text className="text-white text-xl font-psemibold">Notifications</Text>
-        </View>
+        <ScreenHeader 
+          title="Notifications"
+          showBackButton={true}
+        />
 
         <ScrollView className="flex-1">
           <SettingsSection 

@@ -15,7 +15,9 @@ const MedicationItem = ({ item, onPress }) => {
     ? `${item.dosage} ${item.dosageUnit}`
     : (item.dosage?.amount && item.dosage?.unit 
         ? `${item.dosage.amount} ${item.dosage.unit}` 
-        : item.dosage || 'No dosage specified');
+        : item.dosageAmount && item.dosageUnit
+          ? `${item.dosageAmount} ${item.dosageUnit}`
+          : 'No dosage specified');
   const frequencyText = item.frequency || 'No frequency set';
   const startDate = item.start_date || item.startDate;
   const endDateForDisplay = item.end_date || item.endDate;

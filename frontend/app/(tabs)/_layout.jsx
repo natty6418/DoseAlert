@@ -1,7 +1,6 @@
 import { Image, View, Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import icons from '../../constants/icons';
-import { useAuth } from '../../contexts/AuthContext';
 
 const TabIcon = ({ icon, color, name, focused }) => {
 
@@ -24,8 +23,6 @@ const TabIcon = ({ icon, color, name, focused }) => {
 };
 
 const TabsLayout = () => {
-  const { isGuest } = useAuth();
-
   return (
     <Tabs
       initialRouteName='home'
@@ -68,12 +65,15 @@ const TabsLayout = () => {
           title: "Repository",
           headerShown: false,
           tabBarIcon: ({ color, focused }) => (
-            <TabIcon
-            icon={icons.medication}
-            color={color}
-            name="Repository"
-            focused={focused}
-            />
+            <View className="flex items-center justify-center gap-2">
+              <icons.Pill size={24} color={color} />
+              <Text
+                className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
+                style={{ color: color }}
+              >
+                Repository
+              </Text>
+            </View>
           ),
         }}
         />
@@ -83,15 +83,14 @@ const TabsLayout = () => {
           options={{
             title: "Report", 
             headerShown: false,
-            href: !isGuest ? "/report" : null,
             tabBarIcon: ({ color, focused }) => (
               <View className="flex items-center justify-center gap-2">
-                {/* <icons.Newspaper size={24} color={color} /> */}
+                <icons.Newspaper size={24} color={color} />
                 <Text
                   className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
                   style={{ color: color }}
                 >
-                  Report
+                  Analytics
                 </Text>
               </View>
             ),

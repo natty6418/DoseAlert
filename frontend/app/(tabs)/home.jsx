@@ -16,6 +16,10 @@ import MedicationItemExpanded from '../../components/medication/MedicationItemEx
 import { registerForPushNotificationsAsync } from '../../services/Scheduler';
 import * as Notifications from 'expo-notifications';
 import { useFocusEffect } from 'expo-router';
+import { 
+  autoMarkMissedDoses,
+  getPendingAdherenceResponses
+} from '../../services/AdherenceTracker';
 
 
 const Home = () => {
@@ -23,13 +27,13 @@ const Home = () => {
   const [expandedOtherIndex, setExpandedOtherIndex] = useState(null);
   const [todaysMedications, setTodaysMedications] = useState([]);
   const [otherActiveMedications, setOtherActiveMedications] = useState([]);
+  const [missedCount, setMissedCount] = useState(0);
   
   // Use new contexts
   const { 
     medications, 
     loadMedications, 
     updateMedication: updateMedicationContext,
-    setAdherenceResponseId,
     isLoading,
     hasDemoMedications,
     clearDemoMedications
@@ -45,35 +49,45 @@ const Home = () => {
     
   }, [isAuthenticated])
 
-  useFocusEffect(()=>{
-    // Data is already available from AppContext
-    // No need to manually set state
-  })
-
+  // Notification response handler - prevent race conditions with router.replace
   useEffect(() => {
     let subscription;
 
     (async () => {
-        const { status } = await Notifications.requestPermissionsAsync();
-        if (status !== 'granted') {
-            alert('Permission not granted for notifications.');
+        if (!user?.id) {
             return;
         }
 
         await registerForPushNotificationsAsync();
 
-        subscription = Notifications.addNotificationResponseReceivedListener(response => {
-            const { medicationId } = response.notification.request.content.data;
+        if (subscription) {
+            subscription.remove();
+        }
 
-            if (medicationId) {
-                console.log('Navigating to:', `/response/${medicationId}`);
-                setTimeout(() => {
-                // Set adherence response ID using AppContext
-                if (setAdherenceResponseId) {
-                    setAdherenceResponseId(medicationId);
+        subscription = Notifications.addNotificationResponseReceivedListener(response => {
+            const { medicationId, reminderId, scheduledTime, type } = response.notification.request.content.data;
+
+            if (window.navigationInProgress || window.responseScreenActive) {
+                return;
+            }
+            window.navigationInProgress = true;
+
+            setTimeout(() => {
+                if (!window.responseScreenActive) {
+                    window.navigationInProgress = false;
                 }
-                router.push(`/report`);
-                }, 100);
+            }, 2000);
+
+            if (type === 'simple_test') {
+                router.replace('/test-response');
+            } else if (medicationId) {
+                router.replace({
+                    pathname: `/response/${medicationId}`,
+                    params: {
+                        reminderId: reminderId || '',
+                        scheduledTime: scheduledTime || new Date().toISOString()
+                    }
+                });
             }
         });
     })();
@@ -83,7 +97,38 @@ const Home = () => {
             subscription.remove();
         }
     };
-}, []);
+}, [user?.id]); // Depend on user.id to re-setup when user changes
+
+  useFocusEffect(()=>{
+    // Data is already available from AppContext
+    // No need to manually set state
+  })
+
+  
+
+// Auto-mark missed medications and get count
+useEffect(() => {
+    const checkMissedMedications = async () => {
+        if (!user?.id) return;
+        
+        try {
+            // Auto-mark doses that are more than 1 hour overdue as missed
+            await autoMarkMissedDoses(user.id);
+            
+            // Get current pending responses to update count
+            const pending = await getPendingAdherenceResponses(user.id);
+            setMissedCount(pending.length);
+        } catch (error) {
+            console.error('Error checking missed medications:', error);
+        }
+    };
+
+    // Run immediately and then every 30 minutes
+    checkMissedMedications();
+    const interval = setInterval(checkMissedMedications, 30 * 60 * 1000); // 30 minutes
+
+    return () => clearInterval(interval);
+}, [user?.id]);
 
   useEffect(() => {
     if (user?.id) {
@@ -106,11 +151,7 @@ const Home = () => {
       return isActive && isNotExpired;
     });
 
-    console.log('All medications:', medications.length);
-    console.log('Active medications:', activeMedications.length);
-    activeMedications.forEach(med => {
-      console.log('Active med:', med.name || med.medicationSpecification?.name, 'hasReminder:', med.reminder?.enabled);
-    });
+    
 
     // Separate medications with today's reminders vs others
     const todaysReminders = [];
@@ -131,8 +172,7 @@ const Home = () => {
       }
     });
 
-    console.log('Today\'s reminders:', todaysReminders.length);
-    console.log('Other medications:', otherMedications.length);
+    
 
     setTodaysMedications(todaysReminders);
     setOtherActiveMedications(otherMedications);
@@ -170,7 +210,6 @@ const Home = () => {
       const medicationToUpdate = sourceArray.find(med => med.id === medicationId);
       
       if (!medicationToUpdate) {
-        console.log('Medication not found');
         return;
       }
       
@@ -194,6 +233,11 @@ const Home = () => {
     }
   };
 
+  
+
+  // Simple test notification to basic route
+  
+
   if (isLoading) return <LoadingSpinner />;
 
   return (
@@ -216,6 +260,31 @@ const Home = () => {
         </View>
         <ScrollView>
           <Greeting name={isGuest ? "Guest" : user?.first_name || "User"} />
+
+          
+
+          {/* Missed Medications Alert */}
+          {missedCount > 0 && (
+            <View className="px-4 mt-4 mb-2">
+              <TouchableOpacity
+                onPress={() => router.push('/missed')}
+                className="bg-red-600/20 border border-red-500/50 rounded-xl p-4 flex-row items-center"
+              >
+                <View className="bg-red-500 rounded-full p-2 mr-3">
+                  <icons.ExclamationTriangle color="white" size={20} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-red-300 font-psemibold text-base mb-1">
+                    {missedCount} Missed Dose{missedCount !== 1 ? 's' : ''}
+                  </Text>
+                  <Text className="text-red-400 text-sm">
+                    Tap to review and update if you took them
+                  </Text>
+                </View>
+                <icons.ChevronUp color="#EF4444" size={20} style={{ transform: [{ rotate: '90deg' }] }} />
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Demo Medications Banner */}
           {hasDemoMedications() && (
@@ -352,7 +421,7 @@ const Home = () => {
             
             {medications.length > 0 && (
               <TouchableOpacity
-                className="bg-[#232533] border border-gray-600 p-4 rounded-xl flex-row items-center justify-center active:opacity-80"
+                className="bg-[#232533] border border-gray-600 p-4 rounded-xl flex-row items-center justify-center mt-3 active:opacity-80"
                 onPress={() => router.push('/(medication)')}
               >
                 <Text className="text-white text-center text-base font-pmedium">View All Medications</Text>

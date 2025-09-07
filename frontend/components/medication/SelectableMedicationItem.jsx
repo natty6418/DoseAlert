@@ -103,7 +103,9 @@ const SelectableMedicationItem = ({
           }`}>
             {item.dosage?.amount && item.dosage?.unit 
               ? `${item.dosage.amount} ${item.dosage.unit}` 
-              : item.dosage || 'No dosage specified'}
+              : item.dosageAmount && item.dosageUnit
+                ? `${item.dosageAmount} ${item.dosageUnit}`
+                : 'No dosage specified'}
           </Text>
           <Text className={`text-sm font-pregular mx-2 ${
             isSelected

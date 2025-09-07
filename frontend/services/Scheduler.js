@@ -292,7 +292,11 @@ export const scheduleReminders = async (reminderTimes, message, medicationId) =>
             content: {
                 title: "Medication Reminder",
                 body: message,
-                data: {medicationId}
+                data: {
+                    medicationId,
+                    reminderId: null, // Will be set when we have reminder IDs
+                    scheduledTime: triggerDate.toISOString()
+                }
             },
             trigger: {
                 hour: hours,

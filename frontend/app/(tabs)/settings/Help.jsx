@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { ArrowLeft, HelpCircle, MessageCircle, Mail, Phone, FileText } from 'lucide-react-native';
 import SettingsSection from '../../../components/ui/SettingsSection';
 import SettingsCard from '../../../components/ui/SettingsCard';
+import ScreenHeader from '../../../components/ui/ScreenHeader';
 
 const HelpSupport = () => {
   useEffect(() => {
@@ -40,16 +41,10 @@ const HelpSupport = () => {
   return (
     <SafeAreaView className="bg-primary h-full">
       <View className="flex-1 px-4">
-        {/* Header */}
-        <View className="flex-row items-center py-4">
-          <TouchableOpacity
-            onPress={() => router.push('/settings')}
-            className="mr-4"
-          >
-            <ArrowLeft size={24} color="#FFFFFF" />
-          </TouchableOpacity>
-          <Text className="text-white text-xl font-psemibold">Help & Support</Text>
-        </View>
+        <ScreenHeader 
+          title="Help & Support"
+          showBackButton={true}
+        />
 
         <ScrollView className="flex-1">
           <SettingsSection 

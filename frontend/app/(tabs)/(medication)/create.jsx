@@ -13,6 +13,7 @@ import { fetchDrugLabelInfo, fetchDrugSideEffects } from '../../../services/exte
 import ErrorModal from '../../../components/modals/ErrorModal';
 import { useFocusEffect } from 'expo-router';
 import { router } from 'expo-router';
+import ScreenHeader from '../../../components/ui/ScreenHeader';
 
 const CreateScreen = () => {
  
@@ -209,29 +210,14 @@ const CreateScreen = () => {
 
   return (
     <SafeAreaView className="bg-primary h-full">
-      {/* Header Section */}
-      <View className="px-6 pt-4 pb-2">
-        <View className="flex-row items-center justify-between mb-1">
-          <View className="flex-1">
-            <Text className="text-white text-2xl font-pbold">My Medications</Text>
-            <Text className="text-gray-200 text-sm font-pregular">
-              {medications.length} medication{medications.length !== 1 ? 's' : ''} in your plan
-            </Text>
-          </View>
-          
-          {/* Cancel Selection Button - Only show when in selection mode */}
-          {isSelectionMode && (
-            <TouchableOpacity
-              onPress={toggleSelectionMode}
-              className="px-4 py-2 rounded-lg border bg-transparent border-gray-600"
-            >
-              <Text className="text-gray-300 font-psemibold">Cancel</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-        
-        {/* Selection Mode Controls - Removed from here */}
-      </View>
+      <ScreenHeader 
+        title="My Medications"
+        subtitle={`${medications.length} medication${medications.length !== 1 ? 's' : ''} in your plan`}
+        rightAction={isSelectionMode ? {
+          icon: <Text className="text-gray-300 font-psemibold">Cancel</Text>,
+          onPress: toggleSelectionMode
+        } : null}
+      />
 
       {/* Search Section */}
       <View className="px-6 mb-4">

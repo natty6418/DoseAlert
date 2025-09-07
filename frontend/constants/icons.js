@@ -45,7 +45,11 @@ import {
   ArrowLeft,
   Beaker,
   PlayCircle,
-  StopCircle
+  StopCircle,
+  Pill,
+  Package,
+  Folder,
+  Archive
 } from 'lucide-react-native';
 
 // const MagnifyingGlass = ({ size, color }) => {
@@ -102,5 +106,9 @@ export default {
   Trash: Trash2,
   Beaker,
   PlayCircle,
-  StopCircle
+  StopCircle,
+  Pill,
+  Package,
+  Folder,
+  Archive
 };

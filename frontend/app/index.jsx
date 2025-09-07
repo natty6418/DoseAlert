@@ -11,7 +11,8 @@ import { useAuth } from "../contexts/AuthContext";
 export default function App() {
 
   const { loading, hasUserMadeChoice, loginAsGuest } = useAuth();
-  if(!loading && hasUserMadeChoice()) return <Redirect href="/home" />
+  
+  
 
   const handleContinueAsGuest = async () => {
     try {
