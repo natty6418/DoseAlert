@@ -142,40 +142,5 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Celery Configuration
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
 
-# Celery Beat (Periodic Tasks) Configuration
-from celery.schedules import crontab
-CELERY_BEAT_SCHEDULE = {
-    'deactivate-expired-schedules': {
-        'task': 'schedules.tasks.deactivate_expired_schedules',
-        'schedule': crontab(hour=23, minute=59),  # Daily at 11:59 PM
-    },
-    'cleanup-old-reminders': {
-        'task': 'reminders.tasks.cleanup_old_reminders',
-        'schedule': crontab(hour=2, minute=0),  # Daily at 2 AM
-    },
-    'generate-daily-reminders': {
-        'task': 'schedules.tasks.generate_daily_reminders',
-        'schedule': crontab(hour=0, minute=0),  # Daily at midnight
-    },
-    'process-due-reminders': {
-        'task': 'schedules.tasks.process_due_reminders',
-        'schedule': crontab(minute='*/5'),  # Every 5 minutes
-    },
-    'auto-mark-missed-medications': {
-        'task': 'adherence.tasks.auto_mark_missed_medications',
-        'schedule': crontab(minute='*/10'),  # Every 10 minutes
-    },
-    'generate-adherence-insights': {
-        'task': 'adherence.tasks.generate_adherence_insights',
-        'schedule': crontab(hour=6, minute=0),  # Daily at 6 AM
-    },
-}
 

@@ -17,7 +17,7 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include(router.urls)),
     path("api/users/", include("users.urls")),
-    path("api/celery/", include("schedules.celery_urls")),
+    
     path("api/adherence/", include("adherence.api")),
     path("api/analytics/summary/", AnalyticsView.as_view(), name="analytics-summary"),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),

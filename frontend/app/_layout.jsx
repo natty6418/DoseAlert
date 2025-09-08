@@ -8,6 +8,7 @@ import { useApp } from '../contexts/AppContext';
 import Loading from '../components/ui/Loading';
 import * as Notifications from 'expo-notifications';
 import { registerForPushNotificationsAsync } from '../services/Scheduler';
+import { registerBackgroundTasks } from '../services/BackgroundTasks.js';
 import { useAuth } from '../contexts/AuthContext';
 
 const AppLayout = () => {
@@ -16,6 +17,10 @@ const AppLayout = () => {
   const { hasUserMadeChoice, isAuthenticated } = useAuth();
   const segments = useSegments();
   const navigationState = useRootNavigationState();
+
+  useEffect(() => {
+    registerBackgroundTasks();
+  }, []);
 
   // Notification listener setup
   useEffect(() => {

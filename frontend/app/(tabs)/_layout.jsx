@@ -60,7 +60,7 @@ const TabsLayout = () => {
         
         
         <Tabs.Screen
-        name="(medication)"
+        name="medication"
         options={{
           title: "Repository",
           headerShown: false,

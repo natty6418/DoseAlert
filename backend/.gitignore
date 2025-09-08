@@ -112,9 +112,7 @@ ipython_config.py
 # PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
 __pypackages__/
 
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
+
 
 # SageMath parsed files
 *.sage.py
@@ -208,10 +206,7 @@ logs/
 # Redis dump files
 dump.rdb
 
-# Celery beat schedule files
-celerybeat-schedule.dat
-celerybeat-schedule.dir
-celerybeat-schedule.bak
+
 
 # Backup files
 *.bak

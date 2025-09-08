@@ -433,5 +433,37 @@ export async function deleteSchedule(userId, scheduleId) {
   }
 }
 
+// Deactivate expired medications
+export async function deactivateExpiredMedications(userId) {
+  try {
+    const db = await ensureDbInitialized();
+    const today = new Date().toISOString().split('T')[0];
+
+    // Find medications that have expired
+    const expiredMedications = await db.select()
+      .from(medications)
+      .where(and(
+        eq(medications.userId, userId),
+        lt(medications.endDate, today)
+      ));
+
+    // Deactivate each expired medication by setting its end date to today
+    for (const med of expiredMedications) {
+      await db.update(medications)
+        .set({ 
+          endDate: today,
+          isDirty: true 
+        })
+        .where(eq(medications.id, med.id));
+    }
+
+    console.log(`Deactivated ${expiredMedications.length} expired medications.`);
+    return expiredMedications.length;
+  } catch (error) {
+    console.error('Error deactivating expired medications:', error);
+    throw new Error(`Failed to deactivate expired medications: ${error.message}`);
+  }
+}
+
 
 

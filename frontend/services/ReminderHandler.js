@@ -2,7 +2,7 @@
 // Handles reminder-related operations using Drizzle ORM with new schema
 
 import { getDatabase, isDatabaseInitialized, setupDatabase, reminders, medications  } from './database.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, lt } from 'drizzle-orm';
 
 // Ensure database is initialized before any operations
 const ensureDbInitialized = async () => {
@@ -87,5 +87,41 @@ export async function getReminder(userId, reminderId) {
   } catch (error) {
     console.error('Error getting reminder:', error);
     throw new Error(`Failed to get reminder: ${error.message}`);
+  }
+}
+
+// Cleanup old reminders
+export async function cleanupOldReminders(userId, days = 30) {
+  try {
+    const db = await ensureDbInitialized();
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const cutoffDateString = cutoffDate.toISOString();
+
+    // Find old reminders to be deleted
+    const oldReminders = await db.select({ id: reminders.id })
+      .from(reminders)
+      .innerJoin(medications, eq(reminders.medicationId, medications.id))
+      .where(and(
+        eq(medications.userId, userId),
+        lt(reminders.scheduledAt, cutoffDateString)
+      ));
+
+    if (oldReminders.length === 0) {
+      console.log('No old reminders to clean up.');
+      return 0;
+    }
+
+    const reminderIds = oldReminders.map(r => r.id);
+
+    // Delete old reminders
+    await db.delete(reminders)
+      .where(inArray(reminders.id, reminderIds));
+
+    console.log(`Cleaned up ${reminderIds.length} old reminders.`);
+    return reminderIds.length;
+  } catch (error) {
+    console.error('Error cleaning up old reminders:', error);
+    throw new Error(`Failed to clean up old reminders: ${error.message}`);
   }
 }

@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { Redirect, router } from "expo-router";
+import {  router } from "expo-router";
 import { View, Text, Image, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CustomButton from "../components/ui/CustomButton";
@@ -10,7 +10,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 export default function App() {
 
-  const { loading, hasUserMadeChoice, loginAsGuest } = useAuth();
+  const {  loginAsGuest } = useAuth();
   
   
 

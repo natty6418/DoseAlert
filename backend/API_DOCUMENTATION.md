@@ -562,53 +562,7 @@ Get analytics summary
 
 ---
 
-## Background Tasks (Celery)
 
-### POST `/api/celery/tasks/deactivate-expired/`
-Manually trigger deactivation of expired schedules
-
-**Permission:** Authenticated
-
-**Response:**
-```json
-{
-    "message": "Task started successfully",
-    "task_id": "string",
-    "status": "started"
-}
-```
-
-### POST `/api/celery/tasks/process-due-reminders/`
-Manually trigger processing of due reminders
-
-**Permission:** Authenticated
-
-### POST `/api/celery/tasks/cleanup-reminders/`
-Manually trigger cleanup of old reminders
-
-**Permission:** Authenticated
-
-### POST `/api/celery/tasks/bulk-deactivate/`
-Manually trigger bulk deactivation of expired schedules
-
-**Permission:** Authenticated
-
-### GET `/api/celery/tasks/status/{task_id}/`
-Check the status of a celery task
-
-**Permission:** Authenticated
-
-**Response:**
-```json
-{
-    "task_id": "string",
-    "status": "SUCCESS",
-    "ready": true,
-    "result": {}
-}
-```
-
----
 
 ## Data Models
 
