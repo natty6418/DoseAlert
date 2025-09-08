@@ -1,6 +1,6 @@
 django
-djangorestframework
-rest_framework_simplejwt
+djangorestframework  # Assuming you've already fixed this
+djangorestframework-simplejwt
 django-environ
 gunicorn
 psycopg2-binary
