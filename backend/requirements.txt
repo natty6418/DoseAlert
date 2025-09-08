@@ -1,5 +1,5 @@
 django
-rest_framework
+djangorestframework
 rest_framework_simplejwt
 django-environ
 gunicorn
