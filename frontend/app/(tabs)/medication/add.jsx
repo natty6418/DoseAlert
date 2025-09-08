@@ -23,7 +23,7 @@ const AddMedicationScreen = () => {
   const params = useLocalSearchParams();
   
   const scannedData = params.medicationData ? JSON.parse(params.medicationData) : null;
-  const returnPath = params.returnPath || '/(tabs)/(medication)/create';
+  const returnPath = params.returnPath || '/(tabs)/medication/create';
 
   const [formData, setFormData] = useState({
     name: scannedData?.name || 'Ibuprofen',

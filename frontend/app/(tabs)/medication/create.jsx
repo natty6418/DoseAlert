@@ -103,10 +103,10 @@ const CreateScreen = () => {
       
       // Navigate directly to add medication page with scanned data
       router.push({
-        pathname: '/(tabs)/(medication)/add',
+        pathname: '/(tabs)/medication/add',
         params: { 
           medicationData: JSON.stringify(medicationData),
-          returnPath: '/(tabs)/(medication)/create'
+          returnPath: '/(tabs)/medication/create'
         }
       });
     } catch (error) {
@@ -245,7 +245,7 @@ const CreateScreen = () => {
             {!searchTerm && (
               <View className="flex-row gap-4">
                 <TouchableOpacity
-                  onPress={() => router.push('/(tabs)/(medication)/add')}
+                  onPress={() => router.push('/(tabs)/medication/add')}
                   className="bg-secondary-200 px-6 py-3 rounded-xl flex-row items-center"
                 >
                   <icons.PlusCircle color="#FFF" size={20} />
@@ -309,7 +309,7 @@ const CreateScreen = () => {
             
             {/* Add Button */}
             <TouchableOpacity
-              onPress={() => router.push('/(tabs)/(medication)/add')}
+              onPress={() => router.push('/(tabs)/medication/add')}
               className="bg-secondary-200 shadow-lg rounded-full p-4"
             >
               <icons.PlusCircle color="#FFF" size={28} />

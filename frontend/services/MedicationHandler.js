@@ -135,7 +135,8 @@ export async function addMedication(userId, medicationData) {
       
       const result = await db.insert(medications).values({
         userId,
-        ...dbData
+        ...dbData,
+        isDirty: true
       }).returning();
       
       // Get schedules for the new medication (should be empty for new medications)
@@ -232,7 +233,7 @@ export async function updateMedication(userId, medicationId, updates) {
     const dbData = transformToDbFormat(updates);
     
     const result = await db.update(medications)
-      .set(dbData)
+      .set({ ...dbData, isDirty: true })
       .where(and(eq(medications.id, medicationId), eq(medications.userId, userId)))
       .returning();
     
@@ -264,7 +265,8 @@ export async function deleteMedication(userId, medicationId) {
   try {
     const db = await ensureDbInitialized();
     
-    await db.delete(medications)
+    await db.update(medications)
+      .set({ isDeleted: true, isDirty: true })
       .where(and(eq(medications.id, medicationId), eq(medications.userId, userId)));
     
     return true;

@@ -1,26 +1,18 @@
 // SyncService.js
-// Handles syncing medication data between local SQLite and backend API using new schema
+// Handles syncing all user data between local SQLite and backend API
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getStoredAccessToken } from './UserHandler.js';
-import { 
-  getDirtyMedications, 
-  createMedication, 
-  updateMedication, 
-  deleteMedication,
-  markMedicationSynced,
-  getMedicationsByUserId 
-} from '../db/queries.js';
+import { getDatabase } from './database.js';
+import { medications, schedules, adherenceRecords, adherenceStreaks } from '../db/schema.js';
+import { eq, and, or, isNull } from 'drizzle-orm';
 
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000';
 
 // API helper function with authentication
 const makeAuthenticatedAPIRequest = async (endpoint, options = {}) => {
   const accessToken = await getStoredAccessToken();
-  
-  if (!accessToken) {
-    throw new Error('No access token available');
-  }
+  if (!accessToken) throw new Error('No access token available');
 
   const url = `${BACKEND_URL}/api${endpoint}`;
   const config = {
@@ -32,9 +24,8 @@ const makeAuthenticatedAPIRequest = async (endpoint, options = {}) => {
     ...options,
   };
 
-  console.log(`Making authenticated API request to: ${url}`);
   const response = await fetch(url, config);
-  
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ detail: 'Network error' }));
     throw new Error(errorData.detail || errorData.message || 'API request failed');
@@ -43,302 +34,284 @@ const makeAuthenticatedAPIRequest = async (endpoint, options = {}) => {
   return response.json();
 };
 
-// Transform local medication data to backend format
-const transformToBackendFormat = (localMedication) => {
-  return {
-    name: localMedication.name,
-    directions: localMedication.directions,
-    side_effects: localMedication.sideEffects,
-    purpose: localMedication.purpose,
-    warnings: localMedication.warnings,
-    dosage_amount: localMedication.dosageAmount,
-    dosage_unit: localMedication.dosageUnit,
-    notes: localMedication.notes,
-    start_date: localMedication.startDate,
-    end_date: localMedication.endDate,
-    frequency: localMedication.frequency
-  };
+// ====== Data Transformation Functions ======
+
+const transformMedicationToBackend = (local) => ({
+  name: local.name,
+  directions: local.directions,
+  side_effects: local.sideEffects,
+  purpose: local.purpose,
+  warnings: local.warnings,
+  dosage_amount: local.dosageAmount,
+  dosage_unit: local.dosageUnit,
+  notes: local.notes,
+  start_date: local.startDate,
+  end_date: local.endDate,
+  frequency: local.frequency,
+});
+
+const transformScheduleToBackend = (local) => ({
+    medication: local.medicationBackendId, // Requires medication to be synced first
+    time_of_day: local.timeOfDay,
+    days_of_week: local.daysOfWeek,
+    timezone: local.timezone,
+    active: local.active,
+    reminder_enabled: local.reminderEnabled,
+});
+
+const transformAdherenceToBackend = (local) => ({
+    medication: local.medicationBackendId,
+    reminder: local.reminderBackendId,
+    status: local.status,
+    scheduled_time: local.scheduledTime,
+    actual_time: local.actualTime,
+    notes: local.notes,
+});
+
+
+const genericTransformFromBackend = (backend, userId, extraFields = {}) => ({
+  backendId: backend.id,
+  userId,
+  ...extraFields,
+  isDirty: false,
+  lastSynced: new Date().toISOString(),
+});
+
+// ====== Generic Sync Framework ======
+
+const syncConfig = {
+  medications: {
+    table: medications,
+    endpoint: '/meds/',
+    transformToBackend: transformMedicationToBackend,
+    transformFromBackend: (backend, userId) => genericTransformFromBackend(backend, userId, {
+      name: backend.name,
+      directions: backend.directions,
+      sideEffects: backend.side_effects,
+      purpose: backend.purpose,
+      warnings: backend.warnings,
+      dosageAmount: backend.dosage_amount,
+      dosageUnit: backend.dosage_unit,
+      notes: backend.notes,
+      startDate: backend.start_date,
+      endDate: backend.end_date,
+      frequency: backend.frequency,
+    }),
+  },
+  schedules: {
+    table: schedules,
+    endpoint: '/schedules/',
+    dependencies: { medicationId: 'medications' },
+    transformToBackend: transformScheduleToBackend,
+    transformFromBackend: (backend, userId) => genericTransformFromBackend(backend, userId, {
+        medicationId: backend.medication, // This needs to be converted to local ID
+        timeOfDay: backend.time_of_day,
+        daysOfWeek: backend.days_of_week,
+        timezone: backend.timezone,
+        active: backend.active,
+        reminderEnabled: backend.reminder_enabled,
+    }),
+  },
+  adherenceRecords: {
+    table: adherenceRecords,
+    endpoint: '/adherence/records/',
+    dependencies: { medicationId: 'medications', reminderId: 'reminders' },
+    transformToBackend: transformAdherenceToBackend,
+    transformFromBackend: (backend, userId) => genericTransformFromBackend(backend, userId, {
+        medicationId: backend.medication, // Convert to local ID
+        reminderId: backend.reminder, // Convert to local ID
+        status: backend.status,
+        scheduledTime: backend.scheduled_time,
+        actualTime: backend.actual_time,
+        isLate: backend.is_late,
+        minutesLate: backend.minutes_late,
+        notes: backend.notes,
+    }),
+  },
 };
 
-// Transform backend medication data to local format
-const transformFromBackendFormat = (backendMedication, userId) => {
-  return {
-    backendId: backendMedication.id,
-    userId: userId,
-    name: backendMedication.name,
-    directions: backendMedication.directions,
-    sideEffects: backendMedication.side_effects,
-    purpose: backendMedication.purpose,
-    warnings: backendMedication.warnings,
-    dosageAmount: backendMedication.dosage_amount,
-    dosageUnit: backendMedication.dosage_unit,
-    notes: backendMedication.notes,
-    startDate: backendMedication.start_date,
-    endDate: backendMedication.end_date,
-    frequency: backendMedication.frequency,
-    isDirty: false, // Just synced from backend
-    lastSynced: new Date().toISOString()
-  };
-};
+async function getLocalIdFromBackendId(table, backendId) {
+    if (!backendId) return null;
+    const db = getDatabase();
+    const result = await db.select({ id: table.id }).from(table).where(eq(table.backendId, backendId)).limit(1);
+    return result[0]?.id;
+}
 
-// Sync all local dirty medications to backend
-export async function syncLocalToBackend(userId) {
-  try {
-    console.log('Starting sync from local to backend...');
-    
-    // Get only dirty (modified) local medications for this user
-    const dirtyMedications = await getDirtyMedications(userId);
-    
-    const results = {
-      synced: 0,
-      failed: 0,
-      errors: []
-    };
+async function getBackendIdFromLocalId(table, localId) {
+    if (!localId) return null;
+    const db = getDatabase();
+    const result = await db.select({ backendId: table.backendId }).from(table).where(eq(table.id, localId)).limit(1);
+    return result[0]?.backendId;
+}
 
-    for (const medication of dirtyMedications) {
-      try {
-        const backendData = transformToBackendFormat(medication);
-        
-        if (medication.isDeleted) {
-          // Delete from backend if it has a backend ID
-          if (medication.backendId) {
-            await makeAuthenticatedAPIRequest(`/meds/${medication.backendId}/`, {
-              method: 'DELETE'
-            });
-            console.log(`Deleted medication from backend: ${medication.name}`);
-          }
-          // Mark as synced (will be cleaned up later)
-          await markMedicationSynced(medication.id);
-        } else if (medication.backendId) {
-          // Update existing medication on backend
-          const updatedMed = await makeAuthenticatedAPIRequest(`/meds/${medication.backendId}/`, {
-            method: 'PUT',
-            body: JSON.stringify(backendData)
-          });
-          
-          // Mark as synced
-          await markMedicationSynced(medication.id, updatedMed.id);
-          console.log(`Updated medication on backend: ${medication.name}`);
-        } else {
-          // Create new medication on backend
-          const createdMed = await makeAuthenticatedAPIRequest('/meds/', {
-            method: 'POST',
-            body: JSON.stringify(backendData)
-          });
-          
-          // Mark as synced with new backend ID
-          await markMedicationSynced(medication.id, createdMed.id);
-          console.log(`Created medication on backend: ${medication.name}`);
+
+// Generic function to sync a local table to the backend
+async function syncLocalToBackendForTable(config, userId) {
+  const db = getDatabase();
+  const { table, endpoint, transformToBackend, dependencies } = config;
+
+  const dirtyItems = await db.select().from(table).where(and(eq(table.isDirty, true)));
+  
+  const results = { synced: 0, failed: 0, errors: [] };
+
+  for (const item of dirtyItems) {
+    try {
+      // Resolve dependencies: get backend IDs for foreign keys
+      if (dependencies) {
+        for (const [localKey, dependencyTable] of Object.entries(dependencies)) {
+            const localId = item[localKey];
+            const backendId = await getBackendIdFromLocalId(syncConfig[dependencyTable].table, localId);
+            if (!backendId) {
+                throw new Error(`Dependency not met: ${dependencyTable} with local ID ${localId} is not synced.`);
+            }
+            item[`${localKey.replace('Id', '')}BackendId`] = backendId;
         }
-        
-        results.synced++;
-      } catch (error) {
-        results.failed++;
-        results.errors.push({
-          medication: medication.name,
-          error: error.message
+      }
+
+      const backendData = transformToBackend(item);
+
+      if (item.isDeleted) {
+        if (item.backendId) {
+          await makeAuthenticatedAPIRequest(`${endpoint}${item.backendId}/`, { method: 'DELETE' });
+        }
+      } else if (item.backendId) {
+        const updated = await makeAuthenticatedAPIRequest(`${endpoint}${item.backendId}/`, {
+          method: 'PUT',
+          body: JSON.stringify(backendData),
         });
-        console.error(`Failed to sync medication ${medication.name}:`, error);
-      }
-    }
-
-    return results;
-  } catch (error) {
-    console.error('Error syncing local to backend:', error);
-    throw error;
-  }
-}
-
-// Sync all backend medications to local (preventing duplicates)
-export async function syncBackendToLocal(userId) {
-  try {
-    console.log('Starting sync from backend to local...');
-    
-    // Get all medications from backend
-    const backendMedications = await makeAuthenticatedAPIRequest('/meds/');
-    
-    // Get all local medications to check for existing ones
-    const localMedications = await getMedicationsByUserId(userId);
-    const localByBackendId = new Map();
-    localMedications.forEach(med => {
-      if (med.backendId) {
-        localByBackendId.set(med.backendId, med);
-      }
-    });
-    
-    const results = {
-      synced: 0,
-      failed: 0,
-      errors: []
-    };
-
-    for (const backendMed of backendMedications) {
-      try {
-        const localData = transformFromBackendFormat(backendMed, userId);
-        
-        if (localByBackendId.has(backendMed.id)) {
-          // Update existing local medication
-          const existingLocal = localByBackendId.get(backendMed.id);
-          await updateMedication(existingLocal.id, {
-            ...localData,
-            isDirty: false, // Just synced
-            lastSynced: new Date().toISOString()
-          });
-          console.log(`Updated local medication: ${backendMed.name}`);
-        } else {
-          // Create new local medication
-          await createMedication(localData);
-          console.log(`Created local medication: ${backendMed.name}`);
-        }
-        
-        results.synced++;
-      } catch (error) {
-        results.failed++;
-        results.errors.push({
-          medication: backendMed.name,
-          error: error.message
+        await db.update(table).set({ isDirty: false, lastSynced: new Date().toISOString() }).where(eq(table.id, item.id));
+      } else {
+        const created = await makeAuthenticatedAPIRequest(endpoint, {
+          method: 'POST',
+          body: JSON.stringify(backendData),
         });
-        console.error(`Failed to sync medication ${backendMed.name} from backend:`, error);
+        await db.update(table).set({ backendId: created.id, isDirty: false, lastSynced: new Date().toISOString() }).where(eq(table.id, item.id));
       }
+      results.synced++;
+    } catch (error) {
+      results.failed++;
+      results.errors.push({ item: item.id, error: error.message });
     }
+  }
+  return results;
+}
 
-    // Mark any local medications that weren't found on backend as deleted
-    // (assuming they were deleted on backend by another device)
-    const backendIds = new Set(backendMedications.map(m => m.id));
-    for (const localMed of localMedications) {
-      if (localMed.backendId && !backendIds.has(localMed.backendId) && !localMed.isDeleted) {
-        try {
-          await updateMedication(localMed.id, {
-            isDeleted: true,
-            isDirty: false, // Already deleted on backend
-            lastSynced: new Date().toISOString()
-          });
-          console.log(`Marked local medication as deleted: ${localMed.name}`);
-        } catch (error) {
-          console.error(`Failed to mark medication as deleted: ${localMed.name}`, error);
+// Generic function to sync a backend table to local
+async function syncBackendToLocalForTable(config, userId) {
+  const db = getDatabase();
+  const { table, endpoint, transformFromBackend, dependencies } = config;
+
+  const backendItems = await makeAuthenticatedAPIRequest(endpoint);
+  const localItems = await db.select().from(table);
+  const localByBackendId = new Map(localItems.map(item => [item.backendId, item]));
+
+  const results = { synced: 0, failed: 0, errors: [] };
+
+  for (const backendItem of backendItems) {
+    try {
+        // Resolve dependencies: get local IDs for foreign keys
+        if (dependencies) {
+            for (const [localKey, dependencyTable] of Object.entries(dependencies)) {
+                const backendId = backendItem[localKey.replace('Id', '')];
+                const localId = await getLocalIdFromBackendId(syncConfig[dependencyTable].table, backendId);
+                if (!localId) {
+                    throw new Error(`Dependency not met: ${dependencyTable} with backend ID ${backendId} not found locally.`);
+                }
+                backendItem[localKey] = localId;
+            }
         }
+
+      const localData = transformFromBackend(backendItem, userId);
+      const existing = localByBackendId.get(backendItem.id);
+
+      if (existing) {
+        // Only update if backend data is newer (not implemented, simple overwrite)
+        await db.update(table).set(localData).where(eq(table.id, existing.id));
+      } else {
+        await db.insert(table).values(localData);
       }
+      results.synced++;
+    } catch (error) {
+      results.failed++;
+      results.errors.push({ item: backendItem.id, error: error.message });
     }
-
-    return results;
-  } catch (error) {
-    console.error('Error syncing backend to local:', error);
-    throw error;
   }
+  return results;
 }
 
-// Incremental sync - only sync changes since last sync
-export async function incrementalSync(userId) {
-  try {
-    console.log('Starting incremental sync...');
-    
-    // Only sync dirty (changed) local data to backend
-    const uploadResults = await syncLocalToBackend(userId);
-    
-    // Only download new data from backend based on last sync time
-    const lastSync = await getLastSyncTime();
-    let downloadResults = { synced: 0, failed: 0, errors: [] };
-    
-    if (!lastSync || await isSyncNeeded(1)) { // Sync if more than 1 hour
-      downloadResults = await syncBackendToLocal(userId);
-    }
-    
-    // Store last sync timestamp
-    await AsyncStorage.setItem('lastSyncTime', new Date().toISOString());
-    
-    return {
-      upload: uploadResults,
-      download: downloadResults,
-      lastSync: new Date().toISOString(),
-      type: 'incremental'
-    };
-  } catch (error) {
-    console.error('Error during incremental sync:', error);
-    throw error;
-  }
-}
 
-// Full bidirectional sync (typically used on login or initial sync)
+// ====== Main Sync Functions ======
+
 export async function fullSync(userId) {
-  try {
-    console.log('Starting full bidirectional sync...');
-    
-    // Push all dirty local data to backend
-    const uploadResults = await syncLocalToBackend(userId);
-    
-    // Pull all data from backend and reconcile with local
-    const downloadResults = await syncBackendToLocal(userId);
-    
-    // Store last sync timestamp
+  console.log('Starting full bidirectional sync...');
+  const results = {};
+
+  // Sync medications first as other tables depend on it
+  const medConfig = syncConfig.medications;
+  results.medications_upload = await syncLocalToBackendForTable(medConfig, userId);
+  results.medications_download = await syncBackendToLocalForTable(medConfig, userId);
+
+  // Sync other tables
+  for (const key in syncConfig) {
+    if (key === 'medications') continue;
+    const config = syncConfig[key];
+    results[`${key}_upload`] = await syncLocalToBackendForTable(config, userId);
+    results[`${key}_download`] = await syncBackendToLocalForTable(config, userId);
+  }
+
+  await AsyncStorage.setItem('lastSyncTime', new Date().toISOString());
+  console.log('Full sync completed.');
+  return results;
+}
+
+export async function incrementalSync(userId) {
+    console.log('Starting incremental sync...');
+    const results = {};
+  
+    // Upload changes for all tables, respecting dependencies
+    for (const key in syncConfig) {
+        results[`${key}_upload`] = await syncLocalToBackendForTable(syncConfig[key], userId);
+    }
+  
+    // Download all data from backend for now.
+    // A true incremental download would require the backend to support a `since` timestamp.
+    if (await isSyncNeeded(1)) { // Sync if more than 1 hour
+        for (const key in syncConfig) {
+            results[`${key}_download`] = await syncBackendToLocalForTable(syncConfig[key], userId);
+        }
+    }
+  
     await AsyncStorage.setItem('lastSyncTime', new Date().toISOString());
-    
-    return {
-      upload: uploadResults,
-      download: downloadResults,
-      lastSync: new Date().toISOString(),
-      type: 'full'
-    };
-  } catch (error) {
-    console.error('Error during full sync:', error);
-    throw error;
-  }
+    console.log('Incremental sync completed.');
+    return results;
 }
 
-// Get last sync time
+
+// ====== Utility Functions ======
+
 export async function getLastSyncTime() {
-  try {
-    return await AsyncStorage.getItem('lastSyncTime');
-  } catch (error) {
-    console.error('Error getting last sync time:', error);
-    return null;
-  }
+  return AsyncStorage.getItem('lastSyncTime');
 }
 
-// Check if sync is needed (e.g., if it's been more than X hours)
 export async function isSyncNeeded(hoursThreshold = 24) {
-  try {
-    const lastSync = await getLastSyncTime();
-    
-    if (!lastSync) {
-      return true; // Never synced before
-    }
-    
-    const lastSyncTime = new Date(lastSync);
-    const now = new Date();
-    const hoursSinceSync = (now - lastSyncTime) / (1000 * 60 * 60);
-    
-    return hoursSinceSync >= hoursThreshold;
-  } catch (error) {
-    console.error('Error checking if sync is needed:', error);
-    return true; // Default to needing sync if we can't determine
-  }
+  const lastSync = await getLastSyncTime();
+  if (!lastSync) return true;
+  const hoursSinceSync = (new Date() - new Date(lastSync)) / (1000 * 60 * 60);
+  return hoursSinceSync >= hoursThreshold;
 }
 
-// Clean up soft-deleted records that have been synced
-export async function cleanupDeletedRecords(userId) {
-  try {
-    console.log('Cleaning up soft-deleted records...');
-    
-    const allMedications = await getMedicationsByUserId(userId);
-    const deletedAndSynced = allMedications.filter(med => 
-      med.isDeleted && !med.isDirty && med.lastSynced
-    );
-    
+export async function cleanupDeletedRecords() {
+    const db = getDatabase();
     let cleanedCount = 0;
-    for (const medication of deletedAndSynced) {
-      try {
-        // Permanently delete from local database
-        await deleteMedication(medication.id);
-        cleanedCount++;
-        console.log(`Permanently deleted: ${medication.name}`);
-      } catch (error) {
-        console.error(`Failed to cleanup medication ${medication.name}:`, error);
-      }
+    for (const key in syncConfig) {
+        const { table } = syncConfig[key];
+        const deletedAndSynced = await db.select().from(table).where(and(eq(table.isDeleted, true), eq(table.isDirty, false)));
+        for (const item of deletedAndSynced) {
+            await db.delete(table).where(eq(table.id, item.id));
+            cleanedCount++;
+        }
     }
-    
+    console.log(`Permanently deleted ${cleanedCount} records.`);
     return { cleanedCount };
-  } catch (error) {
-    console.error('Error cleaning up deleted records:', error);
-    throw error;
-  }
 }
+''

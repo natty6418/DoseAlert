@@ -210,7 +210,9 @@ export async function deleteSchedule(userId, scheduleId) {
 export async function deleteSchedulesForMedication(medicationId) {
   try {
     const db = await ensureDbInitialized();
-    await db.delete(schedules).where(eq(schedules.medicationId, medicationId));
+    await db.update(schedules)
+      .set({ isDeleted: true, isDirty: true })
+      .where(eq(schedules.medicationId, medicationId));
     return true;
   } catch (error) {
     console.error('Error deleting schedules for medication:', error);

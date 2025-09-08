@@ -1,0 +1,8 @@
+django
+rest_framework
+rest_framework_simplejwt
+django-environ
+gunicorn
+psycopg2-binary
+dj-database-url
+whitenoise

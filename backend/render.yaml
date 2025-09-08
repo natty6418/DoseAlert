@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: dosealert
+    dockerfilePath: Dockerfile
+    buildCommand: "./run.sh"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: dosealert-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
+
+  - type: pserv
+    name: dosealert-db
+    env: postgres
+    plan: free
+    postgresMajorVersion: 13

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, StatusBar, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { 
@@ -11,11 +11,13 @@ import {
   LogOut, 
   ChevronRight,
   UserPlus,
-  FileText
+  FileText,
+  RefreshCw
 } from 'lucide-react-native';
 
 import { useAuth } from '../../../contexts/AuthContext';
 import { logoutUser } from '../../../services/UserHandler';
+import { fullSync } from '../../../services/SyncService';
 import SettingsCard from '../../../components/ui/SettingsCard';
 import SettingsSection from '../../../components/ui/SettingsSection';
 import UserProfileCard from '../../../components/ui/UserProfileCard';
@@ -24,6 +26,23 @@ import ScreenHeader from '../../../components/ui/ScreenHeader';
 const SettingsScreen = () => {
     const { isGuest, user, clearTokens } = useAuth();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [syncing, setSyncing] = useState(false);
+
+    const handleSync = async () => {
+        if (syncing || isGuest || !user?.id) return;
+        setSyncing(true);
+        try {
+            console.log('Starting manual sync for user:', user.id);
+            const syncResult = await fullSync(user.id);
+            console.log('Manual sync completed!', syncResult);
+            // TODO: Add a toast notification for success
+        } catch (error) {
+            console.error('Manual sync failed:', error);
+            // TODO: Add a toast notification for error
+        } finally {
+            setSyncing(false);
+        }
+    };
 
     const handleSignOut = async () => {
         try {
@@ -39,7 +58,15 @@ const SettingsScreen = () => {
         }
     };
 
+    const handleGoToAuth = async () => {
+        if (isGuest) {
+            await clearTokens();
+        }
+        router.push('/(auth)/signIn');
+    };
+
     const ChevronIcon = () => <ChevronRight size={20} color="#9CA3AF" />;
+    const SyncingIcon = () => <ActivityIndicator size="small" color="#9CA3AF" />;
 
     return (
         <SafeAreaView className="bg-primary h-full">
@@ -68,7 +95,7 @@ const SettingsScreen = () => {
                                     </Text>
                                     <TouchableOpacity
                                         className="bg-blue-500 px-4 py-2 rounded-lg self-start"
-                                        onPress={() => router.push('/(auth)/signIn')}
+                                        onPress={handleGoToAuth}
                                     >
                                         <Text className="text-white font-psemibold">Get Started</Text>
                                     </TouchableOpacity>
@@ -100,13 +127,23 @@ const SettingsScreen = () => {
                             rightElement={<ChevronIcon />}
                         />
                         {!isGuest && (
-                            <SettingsCard
-                                title="Security & Privacy"
-                                description="Protect your account and data"
-                                IconComponent={Shield}
-                                onPress={() => router.push('/settings/Security')}
-                                rightElement={<ChevronIcon />}
-                            />
+                            <>
+                                <SettingsCard
+                                    title="Security & Privacy"
+                                    description="Protect your account and data"
+                                    IconComponent={Shield}
+                                    onPress={() => router.push('/settings/Security')}
+                                    rightElement={<ChevronIcon />}
+                                />
+                                <SettingsCard
+                                    title={syncing ? "Syncing Data..." : "Sync with Cloud"}
+                                    description="Manually sync your data with the cloud"
+                                    IconComponent={RefreshCw}
+                                    onPress={handleSync}
+                                    disabled={syncing}
+                                    rightElement={syncing ? <SyncingIcon /> : <ChevronIcon />}
+                                />
+                            </>
                         )}
                     </SettingsSection>
 
@@ -151,7 +188,7 @@ const SettingsScreen = () => {
                                 title="Sign In / Create Account"
                                 description="Access your account or create a new one"
                                 IconComponent={UserPlus}
-                                onPress={() => router.push('/(auth)/signIn')}
+                                onPress={handleGoToAuth}
                                 highlight={true}
                                 rightElement={<ChevronIcon />}
                             />
