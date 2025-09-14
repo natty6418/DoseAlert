@@ -3,7 +3,6 @@ services:
     name: dosealert
     rootDir: backend
     dockerfilePath: Dockerfile
-    buildCommand: "./run.sh"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
