@@ -3,21 +3,13 @@
 // No local user accounts - all authentication happens via backend
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiClient } from './apiConfig.js';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
 console.log("Using BACKEND_URL:", BACKEND_URL);
 
 // Extract user-friendly error message from API response
-const extractErrorMessage = (errorText) => {
-  // Try to parse as JSON first, fallback to text
-  let errorData;
-  try {
-    errorData = JSON.parse(errorText);
-  } catch {
-    // If not JSON, use the raw text as the error message
-    return errorText || 'API request failed';
-  }
-  
+const extractErrorMessage = (errorData) => {
   // Handle structured error responses (like Django validation errors)
   if (typeof errorData === 'object' && errorData !== null) {
     // Check for common error message fields
@@ -43,36 +35,45 @@ const extractErrorMessage = (errorText) => {
     }
   }
   
-  return errorText || 'API request failed';
+  return 'API request failed';
 };
 
-// API helper function
+// API helper function using axios
 const makeAPIRequest = async (endpoint, options = {}) => {
-  // Ensure we don't double up on /api if BACKEND_URL already includes it
-  const baseUrl = BACKEND_URL.endsWith('/api') ? BACKEND_URL : `${BACKEND_URL}/api`;
-  const url = `${baseUrl}${endpoint}`;
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  };
-
-  console.log(`Making API request to: ${url}`);
-  const response = await fetch(url, config);
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.log('Error response:', errorText);
-    const res = await response.json()
-    console.log('Error response parsed as JSON:', res.message);
+  try {
+    console.log(`Making API request to: ${endpoint}`);
     
-    const userFriendlyMessage = extractErrorMessage(errorText);
+    // Convert fetch-style options to axios format
+    const axiosOptions = { ...options };
+    
+    // Convert 'body' to 'data' for axios
+    if (axiosOptions.body) {
+      axiosOptions.data = axiosOptions.body;
+      delete axiosOptions.body;
+    }
+    
+    // If data is a string (JSON), parse it for axios
+    if (typeof axiosOptions.data === 'string') {
+      try {
+        axiosOptions.data = JSON.parse(axiosOptions.data);
+      } catch {
+        // If it's not JSON, keep it as is
+      }
+    }
+    
+    const response = await apiClient.request({
+      url: endpoint,
+      ...axiosOptions,
+    });
+    return response.data;
+  } catch (error) {
+    console.log('API Error:', error.response?.data || error.message);
+    
+    // Extract user-friendly error message
+    const errorData = error.response?.data;
+    const userFriendlyMessage = errorData ? extractErrorMessage(errorData) : error.userMessage || error.message;
     throw new Error(userFriendlyMessage);
   }
-
-  return response.json();
 };
 
 // Register a new user via backend API
@@ -238,17 +239,31 @@ export async function refreshAccessToken(refreshToken) {
       throw new Error('No refresh token available');
     }
 
-    const response = await makeAPIRequest('/auth/refresh/', {
+    // Use the existing makeAPIRequest function but bypass the interceptor
+    const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:8000';
+    const baseUrl = BACKEND_URL.endsWith('/api') ? BACKEND_URL : `${BACKEND_URL}/api`;
+    
+    // Create a direct fetch request to avoid interceptor loops
+    const response = await fetch(`${baseUrl}/auth/refresh/`, {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         refresh: storedRefreshToken
       }),
     });
 
-    // Store the new access token
-    await AsyncStorage.setItem('accessToken', response.access);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
 
-    return { access: response.access };
+    const data = await response.json();
+
+    // Store the new access token
+    await AsyncStorage.setItem('accessToken', data.access);
+
+    return { access: data.access };
   } catch (error) {
     console.error('Error refreshing token:', error);
     // If refresh fails, clear all tokens to force re-login

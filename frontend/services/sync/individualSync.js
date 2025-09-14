@@ -1,8 +1,8 @@
 // individualSync.js
 // Individual sync operations (fallback when batch sync fails)
 
-import { getDatabase } from '../database.js';
-import { eq, and } from 'drizzle-orm';
+import { getDatabase, medications } from '../database.js';
+import { eq, and, inArray } from 'drizzle-orm';
 import { syncConfig } from './syncConfig.js';
 import { makeAuthenticatedAPIRequest } from './apiUtils.js';
 import { getBackendIdFromLocalId, getLocalIdFromBackendId } from './dbUtils.js';
@@ -179,7 +179,22 @@ export async function syncBackendToLocalForTable(config, userId) {
     backendItems.map(item => ({ id: item.id, user: item.user || item.user_id || 'NO_USER_FIELD' })));
   
   // CRITICAL: Filter local items by userId to prevent data mixing
-  const localItems = await db.select().from(table).where(eq(table.userId, userId));
+  let localItems;
+  if (table.userId) {
+    localItems = await db.select().from(table).where(eq(table.userId, userId));
+  } else if (table.medicationId) {
+    // For tables like schedules, we need to get all local items belonging to the user's medications
+    const userMedicationIds = await db.select({ id: medications.id }).from(medications).where(eq(medications.userId, userId));
+    const medIds = userMedicationIds.map(m => m.id);
+    if (medIds.length > 0) {
+        localItems = await db.select().from(table).where(inArray(table.medicationId, medIds));
+    } else {
+        localItems = [];
+    }
+  } else {
+    // Fallback for tables without direct or indirect user relation (should not happen for synced tables)
+    localItems = await db.select().from(table);
+  }
   const localByBackendId = new Map(localItems.map(item => [item.backendId, item]));
 
   const results = { synced: 0, failed: 0, errors: [] };

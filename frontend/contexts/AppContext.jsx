@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getMedications, deleteMedication, addMedication as saveMedicationToDb, updateMedication as updateMedicationInDb } from '../services/MedicationHandler';
 import { setupDatabase } from '../services/database';
 import { useAuth } from './AuthContext';
+import { fullSync } from '../services/sync';
 
 const AppContext = createContext({});
 
@@ -57,7 +58,7 @@ const AppProvider = ({ children }) => {
   const [missedDoses, setMissedDoses] = useState([]);
 
   // App initialization
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
 
   useEffect(() => {
     const initializeApp = async () => {
@@ -78,12 +79,36 @@ const AppProvider = ({ children }) => {
 
   // Load medications when user and app settings are available
   useEffect(() => {
-    if (user?.id && isAppSettingsLoaded) {
-      console.log('Triggering medication load for user:', user.id);
-      
-      loadMedications();
-    }
-  }, [user?.id, isAppSettingsLoaded]);
+    const syncAndLoadData = async () => {
+      if (user?.id && isAppSettingsLoaded) {
+        // For authenticated (non-guest) users, perform a full sync
+        if (!isGuest) {
+          setIsLoading(true);
+          setError(null);
+          try {
+            console.log(`Authenticated user detected (ID: ${user.id}). Starting full data sync.`);
+            await fullSync(user.id);
+            console.log('Sync complete. Loading synced data from local database.');
+            // After sync, loadMedications will read the fresh data from the local DB
+            await loadMedications();
+          } catch (error) {
+            console.error('Full sync and data load failed:', error);
+            setError('Failed to sync your data. Please check your connection and try again.');
+            // Optionally, load local data as a fallback
+            await loadMedications();
+          } finally {
+            setIsLoading(false);
+          }
+        } else {
+          // For guest users, just load whatever is in the local DB
+          console.log('Guest user detected. Loading local data.');
+          await loadMedications();
+        }
+      }
+    };
+
+    syncAndLoadData();
+  }, [user?.id, isGuest, isAppSettingsLoaded]);
 
   const loadAppSettings = async () => {
     try {
