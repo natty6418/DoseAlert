@@ -1,1 +1,0 @@
-ALTER TABLE `schedules` ADD `reminder_enabled` integer DEFAULT true;

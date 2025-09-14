@@ -1,15 +1,12 @@
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import sync_meds
+from .viewsets import MedicationViewSet
 
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import IsAuthenticated
-from .models import Medication
-from .serializers import MedicationSerializer
+router = DefaultRouter()
+router.register(r'', MedicationViewSet, basename='meds')
 
-class MedicationViewSet(ModelViewSet):
-    serializer_class = MedicationSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return Medication.objects.filter(user=self.request.user).order_by("-created_at")
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+urlpatterns = [
+    path('sync/', sync_meds, name='sync-meds'),
+    path('', include(router.urls)),
+]

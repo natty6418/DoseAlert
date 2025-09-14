@@ -1,16 +1,35 @@
-import * as SQLite from 'expo-sqlite'
+import * as SQLite from 'expo-sqlite';
+import * as FileSystem from 'expo-file-system';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { migrate } from 'drizzle-orm/expo-sqlite/migrator';
 import migrations from '../drizzle/migrations.js';
+
+// --- Development Helper: Function to delete the database file ---
+const deleteDatabaseFile = async () => {
+  const dbName = "dosealert.db";
+  const dbPath = `${FileSystem.documentDirectory}SQLite/${dbName}`;
+  try {
+    const fileInfo = await FileSystem.getInfoAsync(dbPath);
+    if (fileInfo.exists) {
+      await FileSystem.deleteAsync(dbPath);
+      console.log('Database file deleted successfully.');
+    }
+  } catch (error) {
+    console.error('Error deleting database file:', error);
+  }
+};
+// --- End of Development Helper ---
+
 // Schema imports for Drizzle ORM operations
-
-
 
 let db = null;
 let initPromise = null; // Track initialization promise to prevent concurrent initialization
 
 // Initialize SQLite database
 const initDatabase = async () => {
+  // To reset the database during development, uncomment the following line:
+  // await deleteDatabaseFile();
+
   try {
     // If database is already initialized, return it
     if (db) return db;

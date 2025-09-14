@@ -74,9 +74,8 @@ class Schedule(models.Model):
         
         super().save(*args, **kwargs)
         
-        # Create reminders for new active schedules
-        if is_new and self.active and not self.is_medication_expired:
-            self.create_initial_reminders()
+        # if is_new and self.active and not self.is_medication_expired:
+        #     self.create_initial_reminders()
     
     def create_initial_reminders(self):
         """Create reminders for this schedule"""

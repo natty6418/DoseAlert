@@ -414,7 +414,7 @@ useEffect(() => {
           <View className="px-4 mt-6 space-y-3">
             <TouchableOpacity
               className="bg-secondary-200 p-4 rounded-xl flex-row items-center justify-center shadow-lg active:opacity-80"
-              onPress={() => router.push('/create')}
+              onPress={() => router.push('/medication/create')}
             >
               <Text className="text-primary text-center text-lg font-psemibold">+ Add New Medication</Text>
             </TouchableOpacity>

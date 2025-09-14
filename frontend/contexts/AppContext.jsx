@@ -17,7 +17,7 @@ export const useApp = () => {
 
 const AppProvider = ({ children }) => {
   // App-wide state
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [theme, setTheme] = useState('dark');
   const [notifications, setNotifications] = useState([]);
@@ -28,6 +28,7 @@ const AppProvider = ({ children }) => {
     language: 'en',
     demoMedicationsDismissed: false,
   });
+  const [isAppSettingsLoaded, setIsAppSettingsLoaded] = useState(false);
 
   // Medication management state
   const [medications, setMedications] = useState([]);
@@ -56,38 +57,33 @@ const AppProvider = ({ children }) => {
   const [missedDoses, setMissedDoses] = useState([]);
 
   // App initialization
-  const { user, isGuest } = useAuth();
+  const { user } = useAuth();
 
   useEffect(() => {
-    setupDatabase();
+    const initializeApp = async () => {
+      try {
+        await setupDatabase();
+        await loadAppSettings();
+        console.log('App initialized');
+      } catch (error) {
+        console.error('App initialization failed:', error);
+        setError('Failed to initialize app');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
     initializeApp();
   }, []);
 
-  // Load medications when user becomes available
+  // Load medications when user and app settings are available
   useEffect(() => {
-    console.log('User changed:', user?.id, 'isGuest:', isGuest);
-    if (user?.id) {
+    if (user?.id && isAppSettingsLoaded) {
       console.log('Triggering medication load for user:', user.id);
-      // Add a small delay to ensure database is fully initialized
-      setTimeout(() => {
-        loadMedications();
-      }, 100);
+      
+      loadMedications();
     }
-  }, [user?.id]);
-
-  const initializeApp = async () => {
-    try {
-      setIsLoading(true);
-      // Load app settings from storage
-      await loadAppSettings();
-      console.log('App initialized');
-    } catch (error) {
-      console.error('App initialization failed:', error);
-      setError('Failed to initialize app');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  }, [user?.id, isAppSettingsLoaded]);
 
   const loadAppSettings = async () => {
     try {
@@ -98,6 +94,8 @@ const AppProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Failed to load app settings:', error);
+    } finally {
+      setIsAppSettingsLoaded(true);
     }
   };
 
@@ -209,7 +207,7 @@ const AppProvider = ({ children }) => {
       // Find the medication to check if it's a demo medication
       const medication = medications.find(med => med.id === id);
       
-      if (medication && !medication.isDemoMedication && user?.id) {
+      if (medication && user?.id) {
         // Only delete from database if it's not a demo medication and user is authenticated
         await deleteMedication(user.id, id);
       }
@@ -244,7 +242,7 @@ const AppProvider = ({ children }) => {
           console.log('No medications found, loading demo medications');
           loadDemoMedications();
         } else {
-          setMedications(meds);
+          setMedications(meds.filter(med => !med.isDeleted));
           setActiveMedications(meds.filter(med => med.isActive));
         }
       } else if (!appSettings.demoMedicationsDismissed) {
@@ -519,6 +517,7 @@ const AppProvider = ({ children }) => {
         notes: 'This is a demo medication to help you learn how DoseAlert works. Feel free to delete it!',
         start_date: new Date().toISOString().split('T')[0],
         end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+        
       },
       {
         name: 'Omega-3',
@@ -571,19 +570,19 @@ const AppProvider = ({ children }) => {
         console.log('Demo medications already exist, skipping creation');
         return;
       }
-
-      const demoMeds = createDemoMedications();
-      console.log('Creating demo medications in database...');
-      
-      // Add each demo medication to the database
-      for (const demoMed of demoMeds) {
-        try {
-          await addMedication(demoMed);
-        } catch (error) {
-          console.error('Failed to add demo medication:', demoMed.name, error);
-        }
-      }
-      
+      if (!appSettings.demoMedicationsDismissed) {
+          const demoMeds = createDemoMedications();
+          console.log('Creating demo medications in database...');
+          
+          // Add each demo medication to the database
+          for (const demoMed of demoMeds) {
+            try {
+              await addMedication(demoMed);
+            } catch (error) {
+              console.error('Failed to add demo medication:', demoMed.name, error);
+            }
+          }
+      } 
       // Reload medications from database to get the saved demo medications
       await loadMedications();
       console.log('Demo medications loaded successfully');
@@ -655,7 +654,6 @@ const AppProvider = ({ children }) => {
     removeNotification,
     clearAllNotifications,
     toggleTheme,
-    initializeApp,
 
     // Medication State
     medications,

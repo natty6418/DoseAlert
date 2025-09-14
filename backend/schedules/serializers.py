@@ -7,3 +7,8 @@ class ScheduleSerializer(serializers.ModelSerializer):
         model = Schedule
         fields = "__all__"
         read_only_fields = ("user","created_at")
+
+class ScheduleSyncSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Schedule
+        exclude = ('user',)

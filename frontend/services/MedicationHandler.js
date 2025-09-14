@@ -2,7 +2,7 @@
 // Handles medication CRUD logic using Drizzle ORM
 
 import { getDatabase, isDatabaseInitialized, setupDatabase, medications, schedules } from './database.js';
-import { eq, and, desc, inArray } from 'drizzle-orm';
+import { eq, and, desc, inArray, lt } from 'drizzle-orm';
 
 // Ensure database is initialized before any operations
 const ensureDbInitialized = async () => {
@@ -163,19 +163,27 @@ export async function addMedication(userId, medicationData) {
 }
 
 // Get all medications for authenticated user
-export async function getMedications(userId) {
+export async function getMedications(userId, includeDeleted = false) {
   try {
     const db = await ensureDbInitialized();
-    
+
+    // Base conditions: always filter by userId
+    const conditions = [eq(medications.userId, userId)];
+
+    // Conditionally add the isDeleted filter
+    if (!includeDeleted) {
+      conditions.push(eq(medications.isDeleted, false));
+    }
+
     // First get all medications
     const medicationResults = await db.select()
       .from(medications)
-      .where(eq(medications.userId, userId))
+      .where(and(...conditions))
       .orderBy(desc(medications.createdAt));
-    
+
     // Get medication IDs to query schedules
     const medicationIds = medicationResults.map(med => med.id);
-    
+
     // Then get all schedules for these medications
     let scheduleResults = [];
     if (medicationIds.length > 0) {
@@ -183,17 +191,17 @@ export async function getMedications(userId) {
         .from(schedules)
         .where(inArray(schedules.medicationId, medicationIds));
     }
-    
+
     // Transform medications and include reminder data from schedules
     const transformedMedications = medicationResults.map(medication => {
       // Find schedules for this medication
       const medicationSchedules = scheduleResults.filter(
         schedule => schedule.medicationId === medication.id
       );
-      
+
       return transformFromDbFormat(medication, medicationSchedules);
     });
-    
+
     return transformedMedications;
   } catch (error) {
     console.error('Error getting medications:', error);

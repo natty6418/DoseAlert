@@ -1,0 +1,41 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Django backend for DoseAlert medication management system"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "amqp==5.3.1",
+    "asgiref==3.9.1",
+    "billiard==4.2.1",
+    "celery==5.3.6",
+    "click==8.2.1",
+    "click-didyoumean==0.3.1",
+    "click-plugins==1.1.1.2",
+    "click-repl==0.3.0",
+    "colorama==0.4.6",
+    "dj-database-url==3.0.1",
+    "Django==5.2.5",
+    "django-cors-headers>=4.8.0",
+    "django-environ==0.12.0",
+    "djangorestframework==3.16.1",
+    "djangorestframework_simplejwt==5.5.1",
+    "kombu==5.5.4",
+    "packaging==25.0",
+    "prompt_toolkit==3.0.51",
+    "psycopg==3.2.9",
+    "psycopg-binary==3.2.9",
+    "psycopg2-binary==2.9.10",
+    "PyJWT==2.10.1",
+    "python-dateutil==2.9.0.post0",
+    "redis==5.2.1",
+    "setuptools==78.1.1",
+    "six==1.17.0",
+    "sqlparse==0.5.3",
+    "typing_extensions==4.14.1",
+    "tzdata==2025.2",
+    "vine==5.1.0",
+    "wcwidth==0.2.13",
+    "wheel==0.45.1",
+    "whitenoise==6.9.0",
+]

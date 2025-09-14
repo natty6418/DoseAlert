@@ -5,7 +5,8 @@ from .views import (
     AdherenceStreakViewSet,
     record_adherence,
     adherence_summary,
-    adherence_report
+    adherence_report,
+    sync_adherence_records
 )
 
 # Create router for viewsets
@@ -21,4 +22,5 @@ urlpatterns = [
     path('respond/', record_adherence, name='record-adherence'),
     path('summary/', adherence_summary, name='adherence-summary'),
     path('report/', adherence_report, name='adherence-report'),
+    path('sync/', sync_adherence_records, name='sync-adherence'),
 ]

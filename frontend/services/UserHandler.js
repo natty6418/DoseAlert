@@ -4,7 +4,8 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const BACKEND_URL = process.env.BACKEND_URL || 'http://10.225.63.41:8000';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+console.log("Using BACKEND_URL:", BACKEND_URL);
 
 // Extract user-friendly error message from API response
 const extractErrorMessage = (errorText) => {
@@ -47,7 +48,9 @@ const extractErrorMessage = (errorText) => {
 
 // API helper function
 const makeAPIRequest = async (endpoint, options = {}) => {
-  const url = `${BACKEND_URL}/api${endpoint}`;
+  // Ensure we don't double up on /api if BACKEND_URL already includes it
+  const baseUrl = BACKEND_URL.endsWith('/api') ? BACKEND_URL : `${BACKEND_URL}/api`;
+  const url = `${baseUrl}${endpoint}`;
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -62,6 +65,8 @@ const makeAPIRequest = async (endpoint, options = {}) => {
   if (!response.ok) {
     const errorText = await response.text();
     console.log('Error response:', errorText);
+    const res = await response.json()
+    console.log('Error response parsed as JSON:', res.message);
     
     const userFriendlyMessage = extractErrorMessage(errorText);
     throw new Error(userFriendlyMessage);

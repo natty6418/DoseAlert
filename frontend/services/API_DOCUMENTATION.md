@@ -245,6 +245,59 @@ Delete medication
 
 **Permission:** Authenticated (own medications only)
 
+### POST `/api/meds/sync/`
+Synchronize a batch of medications from a client.
+
+**Permission:** Authenticated
+
+For each medication object:
+- If `is_deleted` is `true` and ID exists, deletes the medication
+- If ID is provided and `is_deleted` is `false`/missing, updates the medication
+- If ID is `null`/missing and `is_deleted` is `false`/missing, creates a new medication
+
+**Request Body:** An array of medication objects.
+```json
+[
+    {
+        "id": 101, 
+        "name": "Aspirin 81mg",
+        "notes": "Updated note."
+    },
+    {
+        "id": 102,
+        "is_deleted": true
+    },
+    {
+        "id": null,
+        "name": "Ibuprofen 200mg",
+        "notes": "Take with food."
+    }
+]
+```
+
+**Response (Success):** An array of status objects, in the same order as the request.
+```json
+[
+    { "status": "updated", "id": 101 },
+    { "status": "deleted", "id": 102 },
+    { "status": "created", "id": 152 }
+]
+```
+
+**Error Response:** If any errors occur, the entire transaction is rolled back.
+```json
+{
+    "error": "Errors occurred during sync, rolling back all changes.",
+    "details": [
+        {
+            "status": "error",
+            "id": 999,
+            "errors": "Medication not found for deletion."
+        }
+    ]
+}
+```
+
 ---
 
 ## Schedules
@@ -305,6 +358,45 @@ Delete schedule
 
 **Permission:** Authenticated (own schedules only)
 
+### POST `/api/schedules/sync/`
+Synchronize a batch of schedules from a client.
+
+**Permission:** Authenticated
+
+For each schedule object:
+- If `is_deleted` is `true` and ID exists, deletes the schedule
+- If ID is provided and `is_deleted` is `false`/missing, updates the schedule
+- If ID is `null`/missing and `is_deleted` is `false`/missing, creates a new schedule
+
+**Request Body:** An array of schedule objects.
+```json
+[
+    {
+        "id": 22,
+        "active": false
+    },
+    {
+        "id": 23,
+        "is_deleted": true
+    },
+    {
+        "id": null,
+        "medication": 1,
+        "time_of_day": "21:00:00",
+        "days_of_week": "Mon,Tue,Wed,Thu,Fri"
+    }
+]
+```
+
+**Response (Success):** An array of status objects, in the same order as the request.
+```json
+[
+    { "status": "updated", "id": 22 },
+    { "status": "deleted", "id": 23 },
+    { "status": "created", "id": 103 }
+]
+```
+
 ---
 
 ## Reminders
@@ -340,6 +432,74 @@ List all reminders for authenticated user
 Get specific reminder
 
 **Permission:** Authenticated (own reminders only)
+
+### POST `/api/reminders/`
+Create a new reminder
+
+**Permission:** Authenticated
+
+**Request Body:**
+```json
+{
+    "schedule": 1,
+    "scheduled_at": "2025-09-10T10:00:00Z",
+    "medication": 1
+}
+```
+
+### PUT/PATCH `/api/reminders/{id}/`
+Update reminder
+
+**Permission:** Authenticated (own reminders only)
+
+### DELETE `/api/reminders/{id}/`
+Delete reminder
+
+**Permission:** Authenticated (own reminders only)
+
+### DELETE `/api/reminders/delete_all/`
+Delete all reminders for the authenticated user
+
+**Permission:** Authenticated
+
+### POST `/api/reminders/sync/`
+Synchronize a batch of reminders from a client.
+
+**Permission:** Authenticated
+
+For each reminder object:
+- If `is_deleted` is `true` and ID exists, deletes the reminder
+- If ID is provided and `is_deleted` is `false`/missing, updates the reminder
+- If ID is `null`/missing and `is_deleted` is `false`/missing, creates a new reminder
+
+**Request Body:** An array of reminder objects.
+```json
+[
+    {
+        "id": 55,
+        "status": "sent"
+    },
+    {
+        "id": 56,
+        "is_deleted": true
+    },
+    {
+        "id": null,
+        "schedule": 1,
+        "scheduled_at": "2025-09-11T10:00:00Z",
+        "status": "pending"
+    }
+]
+```
+
+**Response (Success):** An array of status objects, in the same order as the request.
+```json
+[
+    { "status": "updated", "id": 55 },
+    { "status": "deleted", "id": 56 },
+    { "status": "created", "id": 102 }
+]
+```
 
 ---
 
@@ -403,6 +563,64 @@ Record adherence response for a medication reminder
 ```
 
 **Status Options:** `taken`, `missed`, `skipped`
+
+### POST `/api/adherence/sync/`
+Synchronize a batch of adherence records from a client.
+
+**Permission:** Authenticated
+
+For each adherence record object:
+- If `is_deleted` is `true` and ID exists, deletes the adherence record
+- If ID is provided and `is_deleted` is `false`/missing, updates the adherence record
+- If ID is `null`/missing and `is_deleted` is `false`/missing, creates a new adherence record
+
+**Request Body:** An array of adherence record objects.
+```json
+[
+    {
+        "id": 101,
+        "status": "taken",
+        "notes": "Updated note"
+    },
+    {
+        "id": 102,
+        "is_deleted": true
+    },
+    {
+        "id": null,
+        "reminder": 1,
+        "medication": 1,
+        "status": "taken",
+        "scheduled_time": "2025-09-09T08:00:00Z",
+        "actual_time": "2025-09-09T08:05:00Z",
+        "notes": "Took with breakfast"
+    }
+]
+```
+
+**Response (Success):** An array of status objects, in the same order as the request.
+```json
+[
+    { "status": "updated", "id": 101 },
+    { "status": "deleted", "id": 102 },
+    { "status": "created", "id": 201 }
+]
+```
+
+**Response (Failure):**
+If any record in the batch fails, the entire transaction is rolled back and a `400 Bad Request` is returned with details.
+```json
+{
+    "error": "Errors occurred during sync, rolling back all changes.",
+    "details": [
+        {
+            "status": "error",
+            "id": 999,
+            "errors": "Adherence record not found for deletion."
+        }
+    ]
+}
+```
 
 ### GET `/api/adherence/summary/`
 Get adherence summary statistics

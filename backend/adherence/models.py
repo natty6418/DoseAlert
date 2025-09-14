@@ -5,6 +5,22 @@ from datetime import timedelta
 
 User = get_user_model()
 
+class AdherenceManager(models.Manager):
+    def pending_responses(self):
+        """Get adherence records waiting for user response"""
+        return self.filter(
+            status='pending',
+            scheduled_time__lt=timezone.now()
+        )
+    
+    def overdue_responses(self, hours=1):
+        """Get adherence records that are overdue for response"""
+        cutoff_time = timezone.now() - timedelta(hours=hours)
+        return self.filter(
+            status='pending',
+            scheduled_time__lt=cutoff_time
+        )
+
 class AdherenceRecord(models.Model):
     ADHERENCE_STATUS_CHOICES = [
         ('taken', 'Taken'),
@@ -29,6 +45,8 @@ class AdherenceRecord(models.Model):
     notes = models.TextField(blank=True)  # User notes about taking/missing medication
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    objects = AdherenceManager()
     
     class Meta:
         ordering = ['-scheduled_time']
@@ -101,24 +119,3 @@ class AdherenceStreak(models.Model):
     
     def __str__(self):
         return f"{self.medication.name} - {self.adherence_percentage}% adherence"
-
-
-class AdherenceManager(models.Manager):
-    def pending_responses(self):
-        """Get adherence records waiting for user response"""
-        return self.filter(
-            status='pending',
-            scheduled_time__lt=timezone.now()
-        )
-    
-    def overdue_responses(self, hours=1):
-        """Get adherence records that are overdue for response"""
-        cutoff_time = timezone.now() - timedelta(hours=hours)
-        return self.filter(
-            status='pending',
-            scheduled_time__lt=cutoff_time
-        )
-
-
-# Add the custom manager to AdherenceRecord
-AdherenceRecord.objects = AdherenceManager()

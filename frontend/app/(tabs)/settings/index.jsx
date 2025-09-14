@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Modal, StatusBar } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { 
@@ -17,7 +17,6 @@ import {
 
 import { useAuth } from '../../../contexts/AuthContext';
 import { logoutUser } from '../../../services/UserHandler';
-import { fullSync } from '../../../services/SyncService';
 import SettingsCard from '../../../components/ui/SettingsCard';
 import SettingsSection from '../../../components/ui/SettingsSection';
 import UserProfileCard from '../../../components/ui/UserProfileCard';
@@ -26,23 +25,6 @@ import ScreenHeader from '../../../components/ui/ScreenHeader';
 const SettingsScreen = () => {
     const { isGuest, user, clearTokens } = useAuth();
     const [showLogoutModal, setShowLogoutModal] = useState(false);
-    const [syncing, setSyncing] = useState(false);
-
-    const handleSync = async () => {
-        if (syncing || isGuest || !user?.id) return;
-        setSyncing(true);
-        try {
-            console.log('Starting manual sync for user:', user.id);
-            const syncResult = await fullSync(user.id);
-            console.log('Manual sync completed!', syncResult);
-            // TODO: Add a toast notification for success
-        } catch (error) {
-            console.error('Manual sync failed:', error);
-            // TODO: Add a toast notification for error
-        } finally {
-            setSyncing(false);
-        }
-    };
 
     const handleSignOut = async () => {
         try {
@@ -66,7 +48,6 @@ const SettingsScreen = () => {
     };
 
     const ChevronIcon = () => <ChevronRight size={20} color="#9CA3AF" />;
-    const SyncingIcon = () => <ActivityIndicator size="small" color="#9CA3AF" />;
 
     return (
         <SafeAreaView className="bg-primary h-full">
@@ -136,12 +117,11 @@ const SettingsScreen = () => {
                                     rightElement={<ChevronIcon />}
                                 />
                                 <SettingsCard
-                                    title={syncing ? "Syncing Data..." : "Sync with Cloud"}
-                                    description="Manually sync your data with the cloud"
+                                    title="Data Sync"
+                                    description="Manage cloud synchronization and backup"
                                     IconComponent={RefreshCw}
-                                    onPress={handleSync}
-                                    disabled={syncing}
-                                    rightElement={syncing ? <SyncingIcon /> : <ChevronIcon />}
+                                    onPress={() => router.push('/settings/Sync')}
+                                    rightElement={<ChevronIcon />}
                                 />
                             </>
                         )}

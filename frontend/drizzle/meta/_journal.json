@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1756806242714,
-      "tag": "0000_slim_leader",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1756807606627,
-      "tag": "0001_aberrant_human_fly",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "6",
-      "when": 1756828597806,
-      "tag": "0002_superb_albert_cleary",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "6",
-      "when": 1756836884217,
-      "tag": "0003_added reminder enabled flag",
+      "when": 1757770583616,
+      "tag": "0000_salty_the_call",
       "breakpoints": true
     }
   ]

@@ -1,6 +1,7 @@
 services:
   - type: web
     name: dosealert
+    rootDir: backend
     dockerfilePath: Dockerfile
     buildCommand: "./run.sh"
     envVars:

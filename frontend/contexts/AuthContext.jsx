@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import PropTypes from 'prop-types';
 import { refreshAccessToken } from '../services/UserHandler';
+import { migrateGuestDataToUser, hasGuestDataToMigrate } from '../services/GuestMigration';
+import { completePostAuthMigration } from '../services/PostAuthMigration';
 
 const AuthContext = createContext({});
 
@@ -211,9 +213,52 @@ const AuthProvider = ({ children }) => {
   };
 
   const upgradeFromGuest = async (tokens, userData) => {
-    await AsyncStorage.removeItem('isGuest');
-    setIsGuest(false);
-    await storeTokens(tokens, userData);
+    try {
+      console.log('🔄 Upgrading guest user to authenticated user...');
+      
+      // Check if there's guest data to migrate
+      const guestDataInfo = await hasGuestDataToMigrate();
+      
+      if (guestDataInfo.hasData) {
+        console.log(`📦 Found ${guestDataInfo.medicationCount} guest medications to migrate`);
+        
+        // Migrate guest data to the new user ID
+        const migrationResult = await migrateGuestDataToUser(userData.id);
+        
+        console.log('✅ Guest data migration completed:', migrationResult);
+        
+        // Complete the migration by syncing to backend
+        console.log('🔄 Starting post-migration sync...');
+        setTimeout(async () => {
+          try {
+            const postMigrationResult = await completePostAuthMigration(userData.id);
+            console.log('📋 Post-migration sync result:', postMigrationResult);
+          } catch (error) {
+            console.error('❌ Post-migration sync failed:', error);
+          }
+        }, 2000); // Delay to allow UI to settle
+        
+      } else {
+        console.log('ℹ️ No guest data found to migrate');
+      }
+      
+      // Remove guest status and store authenticated user data
+      await AsyncStorage.removeItem('isGuest');
+      setIsGuest(false);
+      await storeTokens(tokens, userData);
+      
+      console.log('🎉 Successfully upgraded from guest to authenticated user');
+      
+    } catch (error) {
+      console.error('❌ Error upgrading from guest:', error);
+      // If migration fails, still proceed with authentication but log the error
+      await AsyncStorage.removeItem('isGuest');
+      setIsGuest(false);
+      await storeTokens(tokens, userData);
+      
+      // Optionally show a warning to user that some data may need to be re-entered
+      console.warn('⚠️ Guest data migration failed, but user authentication succeeded');
+    }
   };
 
   const isAuthenticated = () => {

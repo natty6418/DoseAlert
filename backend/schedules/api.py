@@ -1,15 +1,12 @@
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .viewsets import ScheduleViewSet
+from .views import sync_schedules
 
-from rest_framework.viewsets import ModelViewSet
-from rest_framework.permissions import IsAuthenticated
-from .models import Schedule
-from .serializers import ScheduleSerializer
+router = DefaultRouter()
+router.register(r'', ScheduleViewSet, basename='schedules')
 
-class ScheduleViewSet(ModelViewSet):
-    serializer_class = ScheduleSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return Schedule.objects.filter(user=self.request.user).select_related("medication").order_by("-created_at")
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+urlpatterns = [
+    path('sync/', sync_schedules, name='sync-schedules'),
+    path('', include(router.urls)),
+]

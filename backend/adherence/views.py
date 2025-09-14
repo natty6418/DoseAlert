@@ -22,7 +22,7 @@ class AdherenceRecordViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return AdherenceRecord.objects.filter(user=self.request.user)
+        return AdherenceRecord.objects.filter(user=self.request.user).select_related('medication', 'reminder')
     
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
@@ -100,14 +100,14 @@ def record_adherence(request):
             )
             streak.update_streak(adherence_status)
             
-            # Update reminder status
-            if adherence_status == 'taken':
-                reminder.status = 'sent'
-            else:
-                reminder.status = 'failed'
-            
-            reminder.save()
-            
+            # # Update reminder status
+            # if adherence_status == 'taken':
+            #     reminder.status = 'sent'
+            # else:
+            #     reminder.status = 'failed'
+            #
+            # reminder.save()
+            #
             return Response({
                 'message': 'Adherence recorded successfully',
                 'adherence_record': AdherenceRecordSerializer(adherence).data,
@@ -382,3 +382,73 @@ def adherence_report(request):
     }
     
     return Response(report_data)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def sync_adherence_records(request):
+    """
+    Synchronize a batch of adherence records from a client.
+    
+    For each adherence record object:
+    - If 'is_deleted' is True and ID exists, deletes the adherence record
+    - If ID is provided and 'is_deleted' is False/missing, updates the adherence record
+    - If ID is null/missing and 'is_deleted' is False/missing, creates a new adherence record
+    """
+    data = request.data
+    if not isinstance(data, list):
+        return Response({"error": "Request body must be a list of adherence record objects."}, status=status.HTTP_400_BAD_REQUEST)
+
+    results = []
+    
+    try:
+        with transaction.atomic():
+            for item_data in data:
+                adherence_id = item_data.get('id')
+                is_deleted = item_data.get('is_deleted', False)
+                
+                if is_deleted and adherence_id:
+                    # DELETE logic
+                    try:
+                        adherence = AdherenceRecord.objects.get(id=adherence_id, user=request.user)
+                        adherence.delete()
+                        results.append({'status': 'deleted', 'id': adherence_id})
+                    except AdherenceRecord.DoesNotExist:
+                        results.append({'status': 'error', 'id': adherence_id, 'errors': 'Adherence record not found for deletion.'})
+                elif is_deleted and not adherence_id:
+                    # Can't delete without an ID
+                    results.append({'status': 'error', 'id': None, 'errors': 'Cannot delete adherence record without ID.'})
+                elif adherence_id and not is_deleted:
+                    # UPDATE logic
+                    try:
+                        adherence = AdherenceRecord.objects.get(id=adherence_id, user=request.user)
+                        # Remove sync-specific fields that shouldn't be saved to the model
+                        clean_data = {k: v for k, v in item_data.items() if k not in ['user', 'is_deleted']}
+                        serializer = AdherenceRecordSerializer(instance=adherence, data=clean_data, partial=True)
+                        if serializer.is_valid():
+                            serializer.save()
+                            results.append({'status': 'updated', 'id': adherence.id})
+                        else:
+                            results.append({'status': 'error', 'id': adherence_id, 'errors': serializer.errors})
+                    except AdherenceRecord.DoesNotExist:
+                        results.append({'status': 'error', 'id': adherence_id, 'errors': 'Adherence record not found.'})
+                elif not adherence_id and not is_deleted:
+                    # CREATE logic
+                    clean_data = {k: v for k, v in item_data.items() if k not in ['id', 'user', 'is_deleted']}
+                    serializer = AdherenceRecordSerializer(data=clean_data)
+                    if serializer.is_valid():
+                        new_adherence = serializer.save(user=request.user)
+                        results.append({'status': 'created', 'id': new_adherence.id})
+                    else:
+                        results.append({'status': 'error', 'id': None, 'errors': serializer.errors})
+            
+            has_errors = any(r['status'] == 'error' for r in results)
+            if has_errors:
+                raise Exception("Errors occurred during sync, rolling back all changes.")
+
+    except Exception as e:
+        return Response({
+            'error': str(e),
+            'details': [r for r in results if r['status'] == 'error']
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(results, status=status.HTTP_200_OK)
