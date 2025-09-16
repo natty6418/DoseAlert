@@ -37,7 +37,7 @@
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-community/netinfo": "11.4.1",
     "@react-native-firebase/app": "^21.2.0",
-    "@react-native-picker/picker": "^2.9.0",
+    "@react-native-picker/picker": "2.11.1",
     "@shopify/react-native-skia": "2.2.12",
     "@testing-library/react-native": "^13.3.0",
     "ajv": "^8.12.0",
