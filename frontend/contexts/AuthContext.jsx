@@ -40,38 +40,33 @@ const AuthProvider = ({ children }) => {
   const [isGuest, setIsGuest] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Get a valid access token, refreshing if necessary
+  // Get the current access token (do not pre-emptively decode/refresh)
   const getValidAccessToken = async () => {
     if (isGuest) {
       throw new Error('Operation not available for guest users');
     }
-    if (!accessToken || !refreshToken) {
-      throw new Error('No tokens available');
+
+    // If a refresh is in progress, wait briefly and read latest token
+    if (isRefreshing) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const latest = await AsyncStorage.getItem('accessToken');
+      if (latest) return latest;
     }
 
-    // Check if token is expired or will expire soon
-    if (isTokenExpired(accessToken)) {
-      if (isRefreshing) {
-        // If already refreshing, wait a bit and return current token
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        return accessToken;
-      }
+    if (accessToken) return accessToken;
 
+    if (refreshToken) {
       try {
         setIsRefreshing(true);
-        
         const response = await refreshAccessToken(refreshToken);
-        
-        if (response.access) {
+        if (response?.access) {
           setAccessToken(response.access);
           await AsyncStorage.setItem('accessToken', response.access);
           return response.access;
-        } else {
-          throw new Error('No access token in refresh response');
         }
+        throw new Error('No access token in refresh response');
       } catch (error) {
         console.error('Token refresh failed:', error);
-        // Clear tokens and force re-login
         await clearTokens();
         throw new Error('Authentication expired. Please log in again.');
       } finally {
@@ -79,7 +74,7 @@ const AuthProvider = ({ children }) => {
       }
     }
 
-    return accessToken;
+    throw new Error('No tokens available');
   };
 
   // Make an authenticated API request with automatic token refresh
@@ -96,22 +91,47 @@ const AuthProvider = ({ children }) => {
         },
       });
 
-      // If we get 401, the token might be invalid, try one more time
-      if (response.status === 401 && !isRefreshing) {
+      // If we get 401, attempt a single explicit refresh and retry
+      if (response.status === 401) {
         try {
-          const newToken = await getValidAccessToken();
-          return fetch(url, {
-            ...options,
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${newToken}`,
-              ...options.headers,
-            },
-          });
+          if (!isRefreshing) {
+            setIsRefreshing(true);
+            const refreshed = await refreshAccessToken(refreshToken);
+            if (refreshed?.access) {
+              setAccessToken(refreshed.access);
+              await AsyncStorage.setItem('accessToken', refreshed.access);
+              return fetch(url, {
+                ...options,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${refreshed.access}`,
+                  ...options.headers,
+                },
+              });
+            }
+            throw new Error('No access token in refresh response');
+          } else {
+            // If a refresh is already in progress, wait and retry with the latest token
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const latest = await AsyncStorage.getItem('accessToken');
+            if (latest) {
+              return fetch(url, {
+                ...options,
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${latest}`,
+                  ...options.headers,
+                },
+              });
+            }
+            throw new Error('No access token available after refresh');
+          }
         } catch (refreshError) {
           console.error('Failed to refresh token on 401:', refreshError);
           await clearTokens();
           throw new Error('Authentication expired. Please log in again.');
+        } finally {
+          setIsRefreshing(false);
         }
       }
 

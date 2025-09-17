@@ -2,22 +2,16 @@ import { Image, View, Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import icons from '../../constants/icons';
 
-const TabIcon = ({ icon, color, name, focused }) => {
+const TabIcon = ({ icon, color, size }) => {
 
   return (
-    <View className="flex items-center justify-center gap-2">
+    <View className="flex items-center justify-center">
       <Image
         source={icon}
         resizeMode="contain"
         tintColor={color}
-        className="w-6 h-6"
+        style={{ width: size, height: size }}
       />
-      <Text
-        className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
-        style={{ color: color }}
-      >
-        {name}
-      </Text>
     </View>
   );
 };
@@ -29,12 +23,18 @@ const TabsLayout = () => {
       screenOptions={{
         tabBarActiveTintColor: "#c0ee77",
         tabBarInactiveTintColor: "#9CA3AF",
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: {
+          fontSize: 13,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 8,
+        },
         tabBarStyle: {
           backgroundColor: "#0F0F23",
           borderTopWidth: 1,
           borderTopColor: "#1E1B3A",
-          height: 84,
+          height: 92,
         },
       }}
     >
@@ -43,12 +43,12 @@ const TabsLayout = () => {
           options={{
             title: "Home",
             headerShown: false,
-            tabBarIcon: ({ color, focused }) => (
+            tabBarLabel: 'Home',
+            tabBarIcon: ({ color, size, focused }) => (
               <TabIcon
                 icon={icons.home}
                 color={color}
-                name="Home"
-                focused={focused}
+                size={size}
               />
             ),
           }}
@@ -64,16 +64,9 @@ const TabsLayout = () => {
         options={{
           title: "Repository",
           headerShown: false,
-          tabBarIcon: ({ color, focused }) => (
-            <View className="flex items-center justify-center gap-2">
-              <icons.Pill size={24} color={color} />
-              <Text
-                className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
-                style={{ color: color }}
-              >
-                Repository
-              </Text>
-            </View>
+          tabBarLabel: 'Repository',
+          tabBarIcon: ({ color, size, focused }) => (
+            <icons.Pill size={size} color={color} />
           ),
         }}
         />
@@ -83,16 +76,9 @@ const TabsLayout = () => {
           options={{
             title: "Report", 
             headerShown: false,
-            tabBarIcon: ({ color, focused }) => (
-              <View className="flex items-center justify-center gap-2">
-                <icons.Newspaper size={24} color={color} />
-                <Text
-                  className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
-                  style={{ color: color }}
-                >
-                  Analytics
-                </Text>
-              </View>
+            tabBarLabel: 'Analytics',
+            tabBarIcon: ({ color, size, focused }) => (
+              <icons.Newspaper size={size} color={color} />
             ),
           }}
         />
@@ -102,16 +88,9 @@ const TabsLayout = () => {
           options={{
             title: "Settings",
             headerShown: false,
-            tabBarIcon: ({ color, focused }) => (
-              <View className="flex items-center justify-center gap-2">
-                <icons.Cog size={24} color={color} />
-                <Text
-                  className={`${focused ? "font-psemibold" : "font-pregular"} text-xs`}
-                  style={{ color: color }}
-                >
-                  Settings
-                </Text>
-              </View>
+            tabBarLabel: 'Settings',
+            tabBarIcon: ({ color, size, focused }) => (
+              <icons.Cog size={size} color={color} />
             ),
           }}
         />

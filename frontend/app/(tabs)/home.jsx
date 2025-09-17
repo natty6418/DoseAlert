@@ -241,8 +241,8 @@ useEffect(() => {
   if (isLoading) return <LoadingSpinner />;
 
   return (
-    <SafeAreaView className="bg-primary h-full py-4">
-      <View className="flex-1 h-full">
+    <SafeAreaView edges={['top']} className="bg-primary flex-1 pt-4">
+      <View className="flex-1">
         <View className="flex-row items-center justify-between px-4 py-2 rounded-b-2xl">
           
 
@@ -258,7 +258,7 @@ useEffect(() => {
             <icons.UserCircle color="#c0ee77" size={36} />
           </TouchableOpacity>
         </View>
-        <ScrollView>
+        <ScrollView contentContainerStyle={{ paddingBottom: 12 }}>
           <Greeting name={isGuest ? "Guest" : user?.first_name || "User"} />
 
           
